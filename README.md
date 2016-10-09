@@ -1,14 +1,14 @@
 Camera View
 ====================
 
-A View/Fragment that display the Android camera.
+A View that displays a clock.
 
 
 Where to Download
 -----------------
 ```groovy
 dependencies {
-  compile 'com.xlythe:camera-view:1.0.0'
+  compile 'com.xlythe:clock-view:0.0.1'
 }
 ```
 
@@ -16,133 +16,119 @@ Permissions
 -----------------
 The following permissions are required in your AndroidManfiest.xml
 ```xml
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
-<!-- Optional -->
-<uses-permission android:name="android.permission.VIBRATE" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="com.google.android.permission.PROVIDE_BACKGROUND" />
+<uses-feature android:name="android.hardware.type.watch" android:required="false" />
 ```
 
-CameraFragment
+ClockView
 -----------------
-Extend CameraFragment and override the required methods. Both pictures and videos are saved to a cache directory and may be overwritten or deleted. It's advised that you copy the files to persistent storage, depending on your usecase. 
-```java
-public class MainFragment extends CameraFragment {
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return View.inflate(getContext(), ..., container);
-    }
-
-    @Override
-    public void onImageCaptured(File file) {
-        ...
-    }
-
-    @Override
-    public void onVideoCaptured(File file) {
-        ...
-    }
-}
-```
-
-Your layout MUST contain @id/layout_camera [Any], @id/layout_permissions [Any], @id/camera [CameraView], id/capture [Any], and @id/request_permissions [Any].
 ```xml
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:camera="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <FrameLayout
-        android:id="@id/layout_permissions"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <Button
-            android:id="@id/request_permissions"
-            android:text="Request Permissions"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
-
-    </FrameLayout>
-
-    <LinearLayout
-        android:id="@id/layout_camera"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <com.xlythe.view.camera.CameraView
-            android:id="@id/camera"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@id/capture"
-            android:text="Capture"
-            android:layout_width="match_parent"
-            android:layout_height="58dp" />
-
-    </LinearLayout>
-
-</FrameLayout>
-```
-Optionally, you may also include @id/duration [TextView], @id/progress [ProgressBar], @id/toggle [ToggleButton]
-
-CameraView
------------------
-CameraView includes the optional attributes quality [high, medium, low], maxVideoDuration [milliseconds], and maxVideoSize [bits].
-```xml
-<com.xlythe.view.camera.CameraView
-    xmlns:camera="http://schemas.android.com/apk/res-auto"
-    android:id="@id/camera"
+<com.xlythe.view.clock.ClockView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/clockView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    camera:quality="high"
-    camera:maxVideoDuration="10000"
-    camera:maxVideoSize="10000000" />
-```
-For the most part, you'll be interacting directly with CameraFragment and can stop here.
+    android:background="#ffe3e3e3">
 
-CameraView Lifecycle
+    <TextView
+        android:id="@id/clock_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textSize="40sp"
+        android:textColor="#ffffffff"/>
+
+    <ImageView
+        android:src="@drawable/tick_roman"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@id/clock_hours"
+        android:src="@drawable/hour_hand"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal" />
+
+    <ImageView
+        android:id="@id/clock_minutes"
+        android:src="@drawable/minute_hand"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal" />
+
+    <ImageView
+        android:id="@id/clock_seconds"
+        android:src="@drawable/second_hand"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal" />
+
+</com.xlythe.view.clock.ClockView>
+```
+
+Widget
 -----------------
-After obtaining permissions, call CameraView.open() in onStart() and CameraView.close() in onStop.
+```xml
+<receiver android:name=".MyClockWidget" >
+    <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        <action android:name="com.xlythe.sample.clock.CLOCK_WIDGET_UPDATE" /> <!-- REPLACE WITH YOUR PACKAGE NAME -->
+    </intent-filter>
+    <meta-data android:name="android.appwidget.provider" android:resource="@xml/clock_widget_info" />
+</receiver>
+```
+```xml
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="@dimen/default_clock_size"
+    android:minHeight="@dimen/default_clock_size"
+    android:initialLayout="@layout/clock_widget"
+    android:initialKeyguardLayout="@layout/clock_widget"
+    android:previewImage="@drawable/widget"
+    android:updatePeriodMillis="1"
+    android:widgetCategory="home_screen|keyguard"
+    android:resizeMode="vertical|horizontal"/>
+```
 ```java
-@Override
-public void onStart() {
-    super.onStart();
-    mCamera.open();
-}
-
-@Override
-public void onStop() {
-    mCamera.close();
-    super.onStop();
+public class MyClockWidget extends ClockWidget {
+    @Override
+    public ClockView onCreateClockView(Context context) {
+        return (ClockView) View.inflate(context, R.layout.clock_view, null);
+    }
 }
 ```
 
-CameraView Methods
+Watchface
 -----------------
-Takes a picture and saves it to the given file
-```java
-mCameraView.takePicture(file);
+```xml
+<service
+    android:name=".MyWatchfaceService"
+    android:label="@string/app_name"
+    android:permission="android.permission.BIND_WALLPAPER" >
+    <meta-data
+        android:name="android.service.wallpaper"
+        android:resource="@xml/watch_face" />
+    <meta-data
+        android:name="com.google.android.wearable.watchface.preview"
+        android:resource="@drawable/ic_launcher_wear" />
+    <intent-filter>
+        <action android:name="android.service.wallpaper.WallpaperService" />
+        <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+    </intent-filter>
+</service>
+
+<meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
 ```
-Starts recording until stopRecording is called, the max duration is reached, or the max file size is reached
-```java
-mCameraView.startRecording(file);
+```xml
+<wallpaper />
 ```
-Stops recording
 ```java
-mCameraView.stopRecording();
-```
-Toggles between the various cameras on the device (typically the front and back cameras)
-```java
-mCameraView.toggleCamera();
+public class MyWatchfaceService extends WatchfaceService {
+    @Override
+    public ClockView onCreateClockView(Context context) {
+        return (ClockView) View.inflate(context, R.layout.clock_view, null);
+    }
+}
 ```
 
 License
