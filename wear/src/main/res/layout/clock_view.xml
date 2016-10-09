@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.xlythe.view.clock.ClockView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/clockView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffe3e3e3">
+
+    <ImageView
+        android:src="@drawable/tick_roman"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@id/clock_hours"
+        android:src="@drawable/hour_hand"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal" />
+
+    <ImageView
+        android:id="@id/clock_minutes"
+        android:src="@drawable/minute_hand"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal" />
+
+    <ImageView
+        android:id="@id/clock_seconds"
+        android:src="@drawable/second_hand"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal" />
+
+</com.xlythe.view.clock.ClockView>

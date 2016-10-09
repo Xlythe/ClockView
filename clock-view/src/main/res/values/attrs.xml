@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Standard gravity constant that a child supplies to its parent.
+         Defines how the child view should be positioned, on both the X and Y axes, within its enclosing layout. -->
+    <attr name="layout_gravity">
+        <!-- Push object to the top of its container, not changing its size. -->
+        <flag name="top" value="0x30" />
+        <!-- Push object to the bottom of its container, not changing its size. -->
+        <flag name="bottom" value="0x50" />
+        <!-- Push object to the left of its container, not changing its size. -->
+        <flag name="left" value="0x03" />
+        <!-- Push object to the right of its container, not changing its size. -->
+        <flag name="right" value="0x05" />
+        <!-- Place object in the vertical center of its container, not changing its size. -->
+        <flag name="center_vertical" value="0x10" />
+        <!-- Place object in the horizontal center of its container, not changing its size. -->
+        <flag name="center_horizontal" value="0x01" />
+        <!-- Place the object in the center of its container in both the vertical and horizontal axis, not changing its size. -->
+        <flag name="center" value="0x11" />
+        <!-- Push object to the beginning of its container, not changing its size. -->
+        <flag name="start" value="0x00800003" />
+        <!-- Push object to the end of its container, not changing its size. -->
+        <flag name="end" value="0x00800005" />
+    </attr>
+    <declare-styleable name="PercentBasedLayout_LayoutParams">
+        <attr name="layout_width" format="float|dimension">
+            <enum name="match_parent" value="-1" />
+            <enum name="wrap_content" value="-2" />
+        </attr>
+        <attr name="layout_height" format="float|dimension">
+            <enum name="match_parent" value="-1" />
+            <enum name="wrap_content" value="-2" />
+        </attr>
+        <attr name="layout_margin" format="float|dimension" />
+        <attr name="layout_marginTop" format="float|dimension" />
+        <attr name="layout_marginBottom" format="float|dimension" />
+        <attr name="layout_marginLeft" format="float|dimension" />
+        <attr name="layout_marginRight" format="float|dimension" />
+        <attr name="layout_gravity" />
+    </declare-styleable>
+</resources>

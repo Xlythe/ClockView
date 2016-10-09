@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="clock_time" type="id" />
+    <item name="clock_seconds" type="id" />
+    <item name="clock_minutes" type="id" />
+    <item name="clock_hours" type="id" />
+</resources>
