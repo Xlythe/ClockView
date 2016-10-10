@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
@@ -30,6 +31,8 @@ public abstract class ClockWidget extends AppWidgetProvider {
 
     private static final String PREFERENCE_PREAMBLE = "settings_";
     private static final String PREFERENCE_WIDGET_SIZE_PREAMBLE = PREFERENCE_PREAMBLE + "widget_size_";
+
+    private ClockView mClockView;
 
     @NonNull
     protected static String getUpdateAction(Context context) {
@@ -60,24 +63,29 @@ public abstract class ClockWidget extends AppWidgetProvider {
         }
     }
 
-    public abstract ClockView onCreateClockView(Context context);
+    public abstract ClockView onCreateClockView(Context context, @Nullable ClockView convertView, int appWidgetId);
 
     private void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         // Create a clock view
-        ClockView clockView = onCreateClockView(context);
-        clockView.setSecondHandEnabled(false);
+        mClockView = onCreateClockView(context, mClockView, appWidgetId);
+        if (mClockView == null) {
+            Log.w(TAG(appWidgetId), "Ignoring widget. No clock provided.");
+            return;
+        }
+
+        mClockView.setSecondHandEnabled(false);
 
         // Set the bounds
         int clockSize = getWidgetSize(context, appWidgetId);
         Rect rect = new Rect(0, 0, clockSize, clockSize);
-        BitmapUtils.measure(clockView, rect);
+        BitmapUtils.measure(mClockView, rect);
 
         // Invalidate the clock (requires being measured first)
-        clockView.onTimeTick();
+        mClockView.onTimeTick();
 
         // Draw the view onto the widget
         RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.clock_widget);
-        remoteViews.setImageViewBitmap(R.id.content, BitmapUtils.draw(clockView, rect));
+        remoteViews.setImageViewBitmap(R.id.content, BitmapUtils.draw(mClockView, rect));
 
         if (DEBUG) {
             Log.v(TAG(appWidgetId), "Updating the widget ui");
@@ -102,9 +110,9 @@ public abstract class ClockWidget extends AppWidgetProvider {
 
     @Override
     public void onDisabled(Context context) {
-        super.onDisabled(context);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         alarmManager.cancel(createClockTickIntent(context));
+        super.onDisabled(context);
     }
 
     @Override
