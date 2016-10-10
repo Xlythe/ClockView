@@ -154,6 +154,12 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         public void onAmbientModeChanged(boolean inAmbientMode) {
             super.onAmbientModeChanged(inAmbientMode);
             mWatchface.setAmbientModeEnabled(inAmbientMode);
+            mWatchface.setSecondHandEnabled(!inAmbientMode);
+            if (mWatchface.isSecondHandEnabled()) {
+                mWatchface.start();
+            } else {
+                mWatchface.stop();
+            }
             invalidate();
         }
 
