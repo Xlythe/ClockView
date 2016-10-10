@@ -27,7 +27,8 @@ public abstract class ClockWidget extends AppWidgetProvider {
     private static final String TAG = ClockWidget.class.getSimpleName();
     private static final boolean DEBUG = false;
 
-    private static final String CLOCK_WIDGET_UPDATE = ".CLOCK_WIDGET_UPDATE";
+    public static final String CLOCK_WIDGET_UPDATE = ".CLOCK_WIDGET_UPDATE";
+    public static final String EXTRA_APP_WIDGET_ID = "app_widget_id";
 
     private static final String PREFERENCE_PREAMBLE = "settings_";
     private static final String PREFERENCE_WIDGET_SIZE_PREAMBLE = PREFERENCE_PREAMBLE + "widget_size_";
@@ -35,7 +36,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
     private ClockView mClockView;
 
     @NonNull
-    protected static String getUpdateAction(Context context) {
+    public static String getUpdateAction(Context context) {
         return context.getPackageName() + CLOCK_WIDGET_UPDATE;
     }
 
@@ -54,9 +55,13 @@ public abstract class ClockWidget extends AppWidgetProvider {
     public void onReceive(Context context, Intent intent) {
         if (getUpdateAction(context).equals(intent.getAction())) {
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(context, ClockWidget.class));
-            for (int appWidgetID : appWidgetIds) {
-                updateAppWidget(context, appWidgetManager, appWidgetID);
+            if (intent.hasExtra(EXTRA_APP_WIDGET_ID)) {
+                updateAppWidget(context, appWidgetManager, intent.getIntExtra(EXTRA_APP_WIDGET_ID, 0));
+            } else {
+                int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(context, ClockWidget.class));
+                for (int appWidgetID : appWidgetIds) {
+                    updateAppWidget(context, appWidgetManager, appWidgetID);
+                }
             }
         } else {
             super.onReceive(context, intent);
