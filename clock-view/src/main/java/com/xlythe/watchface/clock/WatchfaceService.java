@@ -82,15 +82,26 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .build();
-            mGoogleApiClient.connect();
 
-            mWatchface.setCircular(false);
             mWatchface.setOnTimeTickListener(new ClockView.OnTimeTickListener() {
                 @Override
                 public void onTimeTick() {
                     invalidate();
                 }
             });
+        }
+
+        private void connect() {
+            if (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting()) {
+                return;
+            }
+            mGoogleApiClient.connect();
+        }
+
+        private void disconnect() {
+            if (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting()) {
+                mGoogleApiClient.disconnect();
+            }
         }
 
         @Override
@@ -149,6 +160,15 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         @Override
         public void onVisibilityChanged(boolean visible) {
             super.onVisibilityChanged(visible);
+
+            // Connect to the GoogleApiClient while we're visible
+            if (visible) {
+                connect();
+            } else {
+                disconnect();
+            }
+
+            // Start a timer for the seconds hand while we're visible, assuming we support seconds
             mWatchface.setSecondHandEnabled(visible);
             if (mWatchface.isSecondHandEnabled()) {
                 mWatchface.start();
@@ -162,7 +182,6 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         public void onAmbientModeChanged(boolean inAmbientMode) {
             super.onAmbientModeChanged(inAmbientMode);
             mWatchface.setAmbientModeEnabled(inAmbientMode);
-            mWatchface.setSecondHandEnabled(!inAmbientMode);
             if (mWatchface.isSecondHandEnabled()) {
                 mWatchface.start();
             } else {
@@ -182,8 +201,8 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         @Override
         public void onPropertiesChanged(Bundle properties) {
             super.onPropertiesChanged(properties);
-            boolean lowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
-            boolean burnInProtection = properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false);
+            mWatchface.setLowBitAmbient(properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false));
+            mWatchface.setBurnInProtection(properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false));
         }
 
         @Override

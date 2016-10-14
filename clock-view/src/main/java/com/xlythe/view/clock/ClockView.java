@@ -25,10 +25,12 @@ public class ClockView extends FrameLayout {
 
     private static final String BUNDLE_SUPER = "super";
     private static final String EXTRA_DIGITAL_ENABLED = "digital_enabled";
-    private static final String EXTRA_IS_CIRCULAR = "is_circular";
     private static final String EXTRA_SECONDS_ENABLED = "seconds_enabled";
     private static final String EXTRA_AMBIENT_MODE_ENABLED = "ambient_mode_enabled";
     private static final String EXTRA_PARTIAL_ROTATION_ENABLED = "partial_rotation_enabled";
+    private static final String EXTRA_LOW_BIT_AMBIENT = "low_bit_ambient";
+    private static final String EXTRA_BURN_IN_PROTECTION = "burn_in_protection";
+
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     @Nullable
@@ -41,10 +43,11 @@ public class ClockView extends FrameLayout {
     private ImageView mHours;
 
     private boolean mDigitalEnabled = false;
-    private boolean mIsCircular = true;
     private boolean mSecondsEnabled = true;
     private boolean mAmbientModeEnabled = false;
     private boolean mPartialRotationEnabled = false;
+    private boolean mLowBitAmbient = false;
+    private boolean mBurnInProtection = false;
 
     @Nullable
     private OnTimeTickListener mOnTimeTickListener;
@@ -159,16 +162,8 @@ public class ClockView extends FrameLayout {
         return mDigitalEnabled;
     }
 
-    public boolean isCircular() {
-        return mIsCircular;
-    }
-
-    public void setCircular(boolean isCircular) {
-        mIsCircular = isCircular;
-    }
-
     public boolean isSecondHandEnabled() {
-        return mSecondsEnabled;
+        return !isDigitalEnabled() && !isAmbientModeEnabled() && mSecondsEnabled;
     }
 
     public void setSecondHandEnabled(boolean enabled) {
@@ -187,15 +182,32 @@ public class ClockView extends FrameLayout {
         mPartialRotationEnabled = enabled;
     }
 
+    public boolean isLowBitAmbient() {
+        return mLowBitAmbient;
+    }
+
+    public void setLowBitAmbient(boolean lowBitAmbient) {
+        mLowBitAmbient = lowBitAmbient;
+    }
+
+    public boolean isBurnInProtection() {
+        return mBurnInProtection;
+    }
+
+    public void setBurnInProtection(boolean burnInProtection) {
+        mBurnInProtection = burnInProtection;
+    }
+
     @Override
     public Parcelable onSaveInstanceState() {
         Bundle bundle = new Bundle();
         bundle.putParcelable(BUNDLE_SUPER, super.onSaveInstanceState());
         bundle.putBoolean(EXTRA_DIGITAL_ENABLED, mDigitalEnabled);
-        bundle.putBoolean(EXTRA_IS_CIRCULAR, mIsCircular);
         bundle.putBoolean(EXTRA_SECONDS_ENABLED, mSecondsEnabled);
         bundle.putBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
         bundle.putBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
+        bundle.putBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
+        bundle.putBoolean(EXTRA_BURN_IN_PROTECTION, mBurnInProtection);
         return bundle;
     }
 
@@ -204,10 +216,11 @@ public class ClockView extends FrameLayout {
         Bundle bundle = (Bundle) state;
         super.onRestoreInstanceState(bundle.getParcelable(BUNDLE_SUPER));
         mDigitalEnabled = bundle.getBoolean(EXTRA_DIGITAL_ENABLED, mDigitalEnabled);
-        mIsCircular = bundle.getBoolean(EXTRA_IS_CIRCULAR, mIsCircular);
         mSecondsEnabled = bundle.getBoolean(EXTRA_SECONDS_ENABLED, mSecondsEnabled);
         mAmbientModeEnabled = bundle.getBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
         mPartialRotationEnabled = bundle.getBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
+        mLowBitAmbient = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
+        mBurnInProtection = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mBurnInProtection);
     }
 
     public void onTimeTick() {
