@@ -2,6 +2,8 @@ package com.xlythe.watchface.clock.utils;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataEvent;
@@ -22,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class CommUtils {
     private static final ExecutorService sExecutorService = Executors.newSingleThreadExecutor();
+    private static final Handler sHandler = new Handler(Looper.getMainLooper());
 
     /**
      * Send a message to all connected devices
@@ -102,8 +105,13 @@ public class CommUtils {
         sExecutorService.submit(new Runnable() {
             @Override
             public void run() {
-                String value = get(client, key);
-                callback.onCallback(value);
+                final String value = get(client, key);
+                sHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        callback.onCallback(value);
+                    }
+                });
             }
         });
     }

@@ -27,6 +27,7 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
     private static final String TAG = WatchfaceService.class.getSimpleName();
 
     private GoogleApiClient mGoogleApiClient;
+    private Engine mEngine;
 
     public abstract ClockView onCreateClockView(Context context);
 
@@ -42,7 +43,14 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
 
     @Override
     public Engine onCreateEngine() {
-        return new Engine();
+        mEngine = new Engine();
+        return mEngine;
+    }
+
+    public void invalidate() {
+        if (mEngine != null) {
+            mEngine.invalidate();
+        }
     }
 
     private class Engine extends CanvasWatchFaceService.Engine implements
