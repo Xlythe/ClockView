@@ -7,39 +7,19 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.DataEvent;
-import com.google.android.gms.wearable.DataEventBuffer;
-import com.google.android.gms.wearable.Wearable;
 import com.xlythe.view.clock.ClockView;
 import com.xlythe.view.clock.utils.BitmapUtils;
 
 public abstract class WatchfaceService extends CanvasWatchFaceService {
-    private static final String TAG = WatchfaceService.class.getSimpleName();
 
-    private GoogleApiClient mGoogleApiClient;
     private Engine mEngine;
 
     public abstract ClockView onCreateClockView(Context context);
-
-    protected GoogleApiClient getGoogleApiClient() {
-        return mGoogleApiClient;
-    }
-
-    protected void onConnected(Bundle bundle) {
-    }
-
-    protected void onDataChanged(DataEventBuffer dataEvents) {
-    }
 
     @Override
     public Engine onCreateEngine() {
@@ -53,18 +33,8 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements
-            DataApi.DataListener,
-            GoogleApiClient.ConnectionCallbacks,
-            GoogleApiClient.OnConnectionFailedListener {
-        private static final int MAX_DELAY = 30 * 60 * 1000; // 30min
-        private static final int DEFAULT_DELAY = 1000; // 1 sec
+    private class Engine extends CanvasWatchFaceService.Engine {
 
-        // Comm variables
-        private int mDelay = DEFAULT_DELAY;
-        private Handler mHandler = new Handler();
-
-        // View variables
         private ClockView mWatchface;
 
         @Override
@@ -77,78 +47,12 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
             mWatchface = onCreateClockView(WatchfaceService.this);
-            mGoogleApiClient = new GoogleApiClient.Builder(getApplicationContext())
-                    .addApi(Wearable.API)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .build();
-
             mWatchface.setOnTimeTickListener(new ClockView.OnTimeTickListener() {
                 @Override
                 public void onTimeTick() {
                     invalidate();
                 }
             });
-        }
-
-        private void connect() {
-            if (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting()) {
-                return;
-            }
-            mGoogleApiClient.connect();
-        }
-
-        private void disconnect() {
-            if (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting()) {
-                mGoogleApiClient.disconnect();
-            }
-        }
-
-        @Override
-        public void onConnected(Bundle bundle) {
-            WatchfaceService.this.onConnected(bundle);
-            Wearable.DataApi.addListener(mGoogleApiClient, this);
-            mDelay = DEFAULT_DELAY;
-        }
-
-        @Override
-        public void onConnectionSuspended(int i) {
-            Log.d(TAG, "onConnectionSuspended: " + i);
-            mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mGoogleApiClient.reconnect();
-                }
-            }, Math.min(MAX_DELAY, mDelay *= 2));
-        }
-
-        @Override
-        public void onConnectionFailed(ConnectionResult connectionResult) {
-            Log.d(TAG, "onConnectionFailed: " + connectionResult.getErrorCode());
-            mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mGoogleApiClient.connect();
-                }
-            }, Math.min(MAX_DELAY, mDelay *= 2));
-        }
-
-        @Override
-        public void onDataChanged(DataEventBuffer dataEvents) {
-            WatchfaceService.this.onDataChanged(dataEvents);
-            for (DataEvent event : dataEvents) {
-                if (event.getType() == DataEvent.TYPE_CHANGED) {
-                    invalidate();
-                    return;
-                }
-            }
-        }
-
-        @Override
-        public void onDestroy() {
-            Wearable.DataApi.removeListener(mGoogleApiClient, this);
-            mGoogleApiClient.disconnect();
-            super.onDestroy();
         }
 
         @Override
@@ -160,13 +64,6 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         @Override
         public void onVisibilityChanged(boolean visible) {
             super.onVisibilityChanged(visible);
-
-            // Connect to the GoogleApiClient while we're visible
-            if (visible) {
-                connect();
-            } else {
-                disconnect();
-            }
 
             // Start a timer for the seconds hand while we're visible, assuming we support seconds
             mWatchface.setSecondHandEnabled(visible);
