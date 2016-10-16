@@ -19,6 +19,13 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
 
     private Engine mEngine;
 
+    private final ClockView.OnTimeTickListener mOnTimeTickListener = new ClockView.OnTimeTickListener() {
+        @Override
+        public void onTimeTick() {
+            invalidate();
+        }
+    };
+
     public abstract ClockView onCreateClockView(Context context);
 
     @Override
@@ -47,12 +54,7 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
             mWatchface = onCreateClockView(WatchfaceService.this);
-            mWatchface.setOnTimeTickListener(new ClockView.OnTimeTickListener() {
-                @Override
-                public void onTimeTick() {
-                    invalidate();
-                }
-            });
+            mWatchface.setOnTimeTickListener(mOnTimeTickListener);
         }
 
         @Override
@@ -117,8 +119,10 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
             // Invalidate the old canvas
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
-            // Invalidate the time
+            // Invalidate the time. Temporarily remove the OnTimeTickListener so that we don't cause an infinite loop
+            mWatchface.setOnTimeTickListener(null);
             mWatchface.onTimeTick();
+            mWatchface.setOnTimeTickListener(mOnTimeTickListener);
 
             // Draw the view
             BitmapUtils.draw(mWatchface, canvas, bounds);
