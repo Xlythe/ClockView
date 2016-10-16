@@ -120,9 +120,6 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
             // Invalidate the time
             mWatchface.onTimeTick();
 
-            // Update the view dimensions
-            BitmapUtils.measure(mWatchface, bounds);
-
             // Draw the view
             BitmapUtils.draw(mWatchface, canvas, bounds);
         }

@@ -231,10 +231,6 @@ public class ClockView extends FrameLayout {
         if (mTimeView != null) {
             mTimeView.setText(DateFormat.format("hh:mm", timeInMillis));
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
-
-            // The TextView isn't propagating its call to requestLayout up to us,
-            // though I'm not sure why. As a workaround, we'll call requestLayout for it.
-            requestLayout();
         }
 
         final int hour = calendar.get(Calendar.HOUR);
