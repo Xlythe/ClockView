@@ -83,7 +83,6 @@ public abstract class ClockWidget extends AppWidgetProvider {
         // Set the bounds
         int clockSize = getWidgetSize(context, appWidgetId);
         Rect rect = new Rect(0, 0, clockSize, clockSize);
-        BitmapUtils.measure(mClockView, rect);
 
         // Invalidate the clock (requires being measured first)
         mClockView.onTimeTick();
@@ -110,7 +109,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
     public void onEnabled(Context context) {
         super.onEnabled(context);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis() + 30 * 1000, 30 * 1000, createClockTickIntent(context));
+        alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis() + 60 * 1000, 60 * 1000, createClockTickIntent(context));
     }
 
     @Override
