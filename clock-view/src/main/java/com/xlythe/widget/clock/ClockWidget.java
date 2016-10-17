@@ -71,7 +71,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
     public abstract ClockView onCreateClockView(Context context, @Nullable ClockView convertView, int appWidgetId);
 
     @Nullable
-    public Intent getConfigurationIntent() {
+    public Intent getConfigurationIntent(Context context) {
         return null;
     }
 
@@ -97,7 +97,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
         remoteViews.setImageViewBitmap(R.id.content, BitmapUtils.draw(mClockView, rect));
 
         // Launch a config activity when tapped (if set up)
-        Intent configIntent = getConfigurationIntent();
+        Intent configIntent = getConfigurationIntent(context);
         if (configIntent != null) {
             configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
             configIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
