@@ -5,8 +5,9 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <include layout="@layout/clock_view"
+    <include
+        layout="@layout/clock_view"
         android:layout_width="@dimen/default_clock_size"
-        android:layout_height="@dimen/default_clock_size"/>
+        android:layout_height="@dimen/default_clock_size" />
 
 </FrameLayout>

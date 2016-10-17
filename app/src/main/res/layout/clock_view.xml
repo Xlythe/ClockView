@@ -10,33 +10,33 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:textSize="40sp"
-        android:textColor="#ffffffff"/>
+        android:textColor="#ffffffff"
+        android:textSize="40sp" />
 
     <ImageView
-        android:src="@drawable/tick_roman"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:src="@drawable/tick_roman" />
 
     <ImageView
         android:id="@id/clock_hours"
-        android:src="@drawable/hour_hand"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:src="@drawable/hour_hand" />
 
     <ImageView
         android:id="@id/clock_minutes"
-        android:src="@drawable/minute_hand"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:src="@drawable/minute_hand" />
 
     <ImageView
         android:id="@id/clock_seconds"
-        android:src="@drawable/second_hand"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:src="@drawable/second_hand" />
 
 </com.xlythe.view.clock.ClockView>

@@ -24,12 +24,10 @@ import com.xlythe.view.clock.utils.BitmapUtils;
 import com.xlythe.view.clock.utils.MathUtils;
 
 public abstract class ClockWidget extends AppWidgetProvider {
-    private static final String TAG = ClockWidget.class.getSimpleName();
-    private static final boolean DEBUG = false;
-
     public static final String CLOCK_WIDGET_UPDATE = ".CLOCK_WIDGET_UPDATE";
     public static final String EXTRA_APP_WIDGET_ID = "app_widget_id";
-
+    private static final String TAG = ClockWidget.class.getSimpleName();
+    private static final boolean DEBUG = false;
     private static final String PREFERENCE_PREAMBLE = "settings_";
     private static final String PREFERENCE_WIDGET_SIZE_PREAMBLE = PREFERENCE_PREAMBLE + "widget_size_";
 

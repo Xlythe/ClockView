@@ -153,13 +153,13 @@ public class ClockView extends FrameLayout {
         return mSeconds != null || mMinutes != null || mHours != null;
     }
 
+    public boolean isDigitalEnabled() {
+        return mDigitalEnabled;
+    }
+
     public void setDigitalEnabled(boolean digitalEnabled) {
         mDigitalEnabled = digitalEnabled;
         onTimeTick();
-    }
-
-    public boolean isDigitalEnabled() {
-        return mDigitalEnabled;
     }
 
     public boolean isSecondHandEnabled() {
