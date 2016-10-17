@@ -12,6 +12,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.widget.ImageView;
@@ -21,6 +23,9 @@ import android.widget.ImageView;
  * best draw performance and supporting custom borders & selectors.
  */
 public class CircularImageView extends ImageView {
+    private static final String STATE_SUPER = "super";
+    private static final String STATE_ENABLED = "circular_enabled";
+
     // For logging purposes
     private static final String TAG = CircularImageView.class.getSimpleName();
 
@@ -31,6 +36,8 @@ public class CircularImageView extends ImageView {
     private BitmapShader mShader;
     private Bitmap mImage;
     private Paint mPaint;
+
+    private boolean mEnableCircular = true;
 
     public CircularImageView(Context context) {
         super(context);
@@ -63,10 +70,33 @@ public class CircularImageView extends ImageView {
     }
 
     @Override
+    protected Parcelable onSaveInstanceState() {
+        Bundle bundle = new Bundle();
+        bundle.putParcelable(STATE_SUPER, super.onSaveInstanceState());
+        bundle.putBoolean(STATE_ENABLED, mEnableCircular);
+        return bundle;
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Parcelable state) {
+        Bundle bundle = (Bundle) state;
+        mEnableCircular = bundle.getBoolean(STATE_ENABLED);
+        super.onRestoreInstanceState(bundle.getParcelable(STATE_SUPER));
+    }
+
+    @Override
     public void onDraw(Canvas canvas) {
+        if (!mEnableCircular) {
+            super.onDraw(canvas);
+            return;
+        }
+
         // Don't draw anything without an image
         if (mImage == null) {
-            return;
+            mImage = drawableToBitmap(getDrawable());
+            if (mImage == null) {
+                return;
+            }
         }
 
         // Nothing to draw (Empty bounds)
@@ -84,11 +114,12 @@ public class CircularImageView extends ImageView {
         // Apply mShader to mPaint
         mPaint.setShader(mShader);
 
-        // Get the exact X/Y axis of the view
-        int center = mCanvasSize / 2;
-
         // Draw the circular image itself
-        canvas.drawCircle(center, center, mCanvasSize / 2, mPaint);
+        canvas.save();
+        canvas.translate(-mCanvasSize / 2, -mCanvasSize / 2);
+        canvas.translate(getWidth() / 2, getHeight() / 2);
+        canvas.drawCircle(mCanvasSize / 2, mCanvasSize / 2, mCanvasSize / 2, mPaint);
+        canvas.restore();
     }
 
     @Override
@@ -152,7 +183,12 @@ public class CircularImageView extends ImageView {
         int intrinsicWidth = drawable.getIntrinsicWidth();
         int intrinsicHeight = drawable.getIntrinsicHeight();
         if (!(intrinsicWidth > 0 && intrinsicHeight > 0)) {
-            return null;
+            if (!(getWidth() > 0 && getHeight() > 0)) {
+                return null;
+            } else {
+                intrinsicWidth = getWidth();
+                intrinsicHeight = getHeight();
+            }
         }
 
         try {
@@ -183,5 +219,9 @@ public class CircularImageView extends ImageView {
             matrix.setScale(scale, scale);
             mShader.setLocalMatrix(matrix);
         }
+    }
+
+    public void setCircularEnabled(boolean enabled) {
+        mEnableCircular = enabled;
     }
 }
