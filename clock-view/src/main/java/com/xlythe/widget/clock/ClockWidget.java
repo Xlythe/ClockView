@@ -113,7 +113,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
     }
 
     private PendingIntent createClockTickIntent(Context context) {
-        return PendingIntent.getBroadcast(context, 0, new Intent(CLOCK_WIDGET_UPDATE), PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getBroadcast(context, 0, new Intent(getUpdateAction(context)), PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     @Override
