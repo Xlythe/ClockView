@@ -70,6 +70,11 @@ public abstract class ClockWidget extends AppWidgetProvider {
 
     public abstract ClockView onCreateClockView(Context context, @Nullable ClockView convertView, int appWidgetId);
 
+    @Nullable
+    public Intent getConfigurationIntent() {
+        return null;
+    }
+
     private void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         // Create a clock view
         mClockView = onCreateClockView(context, mClockView, appWidgetId);
@@ -90,6 +95,14 @@ public abstract class ClockWidget extends AppWidgetProvider {
         // Draw the view onto the widget
         RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.clock_widget);
         remoteViews.setImageViewBitmap(R.id.content, BitmapUtils.draw(mClockView, rect));
+
+        // Launch a config activity when tapped (if set up)
+        Intent configIntent = getConfigurationIntent();
+        if (configIntent != null) {
+            configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+            configIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            remoteViews.setOnClickPendingIntent(R.id.content, PendingIntent.getActivity(context, appWidgetId, configIntent, 0));
+        }
 
         if (DEBUG) {
             Log.v(TAG(appWidgetId), "Updating the widget ui");
