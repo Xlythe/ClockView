@@ -52,7 +52,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
             if (intent.hasExtra(EXTRA_APP_WIDGET_ID)) {
                 updateAppWidget(context, appWidgetManager, intent.getIntExtra(EXTRA_APP_WIDGET_ID, 0));
             } else {
-                int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(context, ClockWidget.class));
+                int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(context, getClass()));
                 for (int appWidgetID : appWidgetIds) {
                     updateAppWidget(context, appWidgetManager, appWidgetID);
                 }
@@ -122,7 +122,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
     public void onEnabled(Context context) {
         super.onEnabled(context);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis() + 60 * 1000, 60 * 1000, createClockTickIntent(context));
+        alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis(), 60 * 1000, createClockTickIntent(context));
     }
 
     @Override
