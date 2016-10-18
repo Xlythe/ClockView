@@ -99,6 +99,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
         if (configIntent != null) {
             configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
             configIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            configIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
             remoteViews.setOnClickPendingIntent(R.id.content, PendingIntent.getActivity(context, appWidgetId, configIntent, 0));
         }
 
