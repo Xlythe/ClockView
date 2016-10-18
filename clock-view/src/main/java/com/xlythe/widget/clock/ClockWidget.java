@@ -24,7 +24,7 @@ import com.xlythe.view.clock.utils.BitmapUtils;
 import com.xlythe.view.clock.utils.MathUtils;
 
 public abstract class ClockWidget extends AppWidgetProvider {
-    public static final String CLOCK_WIDGET_UPDATE = ".CLOCK_WIDGET_UPDATE";
+    public static final String ACTION_CLOCK_WIDGET_UPDATE = "com.xlythe.widget.clock.CLOCK_WIDGET_UPDATE";
     public static final String EXTRA_APP_WIDGET_ID = "app_widget_id";
     private static final String TAG = ClockWidget.class.getSimpleName();
     private static final boolean DEBUG = false;
@@ -32,11 +32,6 @@ public abstract class ClockWidget extends AppWidgetProvider {
     private static final String PREFERENCE_WIDGET_SIZE_PREAMBLE = PREFERENCE_PREAMBLE + "widget_size_";
 
     private ClockView mClockView;
-
-    @NonNull
-    public static String getUpdateAction(Context context) {
-        return context.getPackageName() + CLOCK_WIDGET_UPDATE;
-    }
 
     private static String TAG(int appId) {
         return TAG + "[" + appId + "]";
@@ -51,7 +46,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (getUpdateAction(context).equals(intent.getAction())) {
+        if (ACTION_CLOCK_WIDGET_UPDATE.equals(intent.getAction())) {
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
             if (intent.hasExtra(EXTRA_APP_WIDGET_ID)) {
                 updateAppWidget(context, appWidgetManager, intent.getIntExtra(EXTRA_APP_WIDGET_ID, 0));
@@ -114,7 +109,9 @@ public abstract class ClockWidget extends AppWidgetProvider {
     }
 
     private PendingIntent createClockTickIntent(Context context) {
-        return PendingIntent.getBroadcast(context, 0, new Intent(getUpdateAction(context)), PendingIntent.FLAG_UPDATE_CURRENT);
+        Intent intent = new Intent(ACTION_CLOCK_WIDGET_UPDATE);
+        intent.setPackage(context.getPackageName());
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     @Override

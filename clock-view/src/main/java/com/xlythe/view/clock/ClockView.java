@@ -168,6 +168,9 @@ public class ClockView extends FrameLayout {
 
     public void setSecondHandEnabled(boolean enabled) {
         mSecondsEnabled = enabled;
+        if (mSeconds != null) {
+            mSeconds.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
     }
 
     public boolean isPartialRotationEnabled() {
