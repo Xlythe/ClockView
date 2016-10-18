@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -92,6 +93,9 @@ public abstract class ClockWidget extends AppWidgetProvider {
         // Launch a config activity when tapped (if set up)
         Intent configIntent = getConfigurationIntent(context);
         if (configIntent != null) {
+            // Set a custom data field so that this intent is treated separately from other PendingIntents to the same receiver
+            configIntent.setData(new Uri.Builder().scheme("app").authority(context.getPackageName()).appendPath(Integer.toString(appWidgetId)).build());
+
             configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
             configIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             configIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
