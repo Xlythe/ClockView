@@ -168,9 +168,6 @@ public class ClockView extends FrameLayout {
 
     public void setSecondHandEnabled(boolean enabled) {
         mSecondsEnabled = enabled;
-        if (mSeconds != null) {
-            mSeconds.setVisibility(enabled ? View.VISIBLE : View.GONE);
-        }
     }
 
     public boolean isPartialRotationEnabled() {
@@ -234,6 +231,10 @@ public class ClockView extends FrameLayout {
         if (mTimeView != null) {
             mTimeView.setText(DateFormat.format("hh:mm", timeInMillis));
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
+        }
+
+        if (mSeconds != null) {
+            mSeconds.setVisibility(isSecondHandEnabled() ? View.VISIBLE : View.GONE);
         }
 
         final int hour = calendar.get(Calendar.HOUR);
