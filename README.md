@@ -8,7 +8,7 @@ Where to Download
 -----------------
 ```groovy
 dependencies {
-  compile 'com.xlythe:clock-view:0.0.1'
+  compile 'com.xlythe:clock-view:1.0.6'
 }
 ```
 
