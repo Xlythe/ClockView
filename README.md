@@ -1,4 +1,4 @@
-Camera View
+Clock View
 ====================
 
 A View that displays a clock.
