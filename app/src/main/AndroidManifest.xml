@@ -30,7 +30,7 @@
         <receiver android:name=".MyClockWidget">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.xlythe.sample.clock.CLOCK_WIDGET_UPDATE" /> <!-- REPLACE WITH YOUR PACKAGE NAME -->
+                <action android:name="com.xlythe.widget.clock.CLOCK_WIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
