@@ -233,10 +233,6 @@ public class ClockView extends FrameLayout {
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
         }
 
-        if (mSeconds != null) {
-            mSeconds.setVisibility(isSecondHandEnabled() ? View.VISIBLE : View.GONE);
-        }
-
         final int hour = calendar.get(Calendar.HOUR);
         final int second = calendar.get(Calendar.SECOND);
         final int minute = calendar.get(Calendar.MINUTE);
@@ -257,7 +253,7 @@ public class ClockView extends FrameLayout {
             mMinutes.setVisibility(isDigitalEnabled() ? View.GONE : View.VISIBLE);
         }
         if (mSeconds != null) {
-            if (mSecondsEnabled && !isDigitalEnabled()) {
+            if (isSecondHandEnabled() && !isDigitalEnabled()) {
                 degrees = second * 6;
                 mSeconds.setRotation(degrees);
                 mSeconds.setVisibility(View.VISIBLE);
