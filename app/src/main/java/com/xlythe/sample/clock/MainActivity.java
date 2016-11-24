@@ -7,19 +7,32 @@ import android.view.View;
 import com.xlythe.view.clock.ClockView;
 
 public class MainActivity extends AppCompatActivity {
+    private ClockView mClockView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final ClockView clockView = (ClockView) findViewById(R.id.clockView);
-        clockView.start();
+        mClockView = (ClockView) findViewById(R.id.clockView);
 
-        clockView.setOnClickListener(new View.OnClickListener() {
+        mClockView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                clockView.setDigitalEnabled(!clockView.isDigitalEnabled());
+                mClockView.setDigitalEnabled(!mClockView.isDigitalEnabled());
             }
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mClockView.start();
+    }
+
+    @Override
+    protected void onStop() {
+        mClockView.stop();
+        super.onStop();
     }
 }

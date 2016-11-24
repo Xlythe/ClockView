@@ -23,6 +23,9 @@ public class ClockView extends FrameLayout {
     protected static final String TAG = ClockView.class.getSimpleName();
     private static final boolean DEBUG = false;
 
+    private static final long ONE_SECOND = 1000;
+    private static final long ONE_MINUTE = 60 * 1000;
+
     private static final String BUNDLE_SUPER = "super";
     private static final String EXTRA_DIGITAL_ENABLED = "digital_enabled";
     private static final String EXTRA_SECONDS_ENABLED = "seconds_enabled";
@@ -58,7 +61,7 @@ public class ClockView extends FrameLayout {
         @Override
         public void run() {
             onTimeTick();
-            mHandler.postDelayed(this, 1000);
+            mHandler.postDelayed(this, isSecondHandEnabled() ? ONE_SECOND : ONE_MINUTE);
         }
     };
 
@@ -229,7 +232,7 @@ public class ClockView extends FrameLayout {
         calendar.setTimeInMillis(timeInMillis);
 
         if (mTimeView != null) {
-            mTimeView.setText(DateFormat.format("hh:mm", timeInMillis));
+            mTimeView.setText(DateFormat.format(DateFormat.is24HourFormat(getContext()) ? "kk:mm" : "hh:mm", timeInMillis));
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
         }
 
