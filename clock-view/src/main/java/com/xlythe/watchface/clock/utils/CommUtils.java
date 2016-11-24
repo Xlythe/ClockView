@@ -202,6 +202,9 @@ public class CommUtils {
         for (DataEvent event : dataEvents) {
             if (event.getDataItem().getUri().getPath().equals("/" + key)) {
                 // Parse the bytes into something useful
+                if (event.getDataItem().getData() == null) {
+                    return null;
+                }
                 return new String(event.getDataItem().getData());
             }
         }

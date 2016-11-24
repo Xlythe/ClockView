@@ -40,6 +40,15 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         }
     }
 
+    protected WatchFaceStyle getWatchFaceStyle() {
+        return new WatchFaceStyle.Builder(WatchfaceService.this)
+                .setCardPeekMode(WatchFaceStyle.PEEK_MODE_SHORT)
+                .setBackgroundVisibility(WatchFaceStyle
+                        .BACKGROUND_VISIBILITY_INTERRUPTIVE)
+                .setShowSystemUiTime(false)
+                .build();
+    }
+
     private class Engine extends CanvasWatchFaceService.Engine {
 
         private ClockView mWatchface;
@@ -47,12 +56,7 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
-            setWatchFaceStyle(new WatchFaceStyle.Builder(WatchfaceService.this)
-                    .setCardPeekMode(WatchFaceStyle.PEEK_MODE_SHORT)
-                    .setBackgroundVisibility(WatchFaceStyle
-                            .BACKGROUND_VISIBILITY_INTERRUPTIVE)
-                    .setShowSystemUiTime(false)
-                    .build());
+            setWatchFaceStyle(getWatchFaceStyle());
             mWatchface = onCreateClockView(WatchfaceService.this);
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
         }
