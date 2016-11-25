@@ -201,6 +201,10 @@ public class ClockView extends FrameLayout {
         mBurnInProtection = burnInProtection;
     }
 
+    protected String getDateFormat() {
+        return DateFormat.is24HourFormat(getContext()) ? "kk:mm" : "hh:mm";
+    }
+
     @Override
     public Parcelable onSaveInstanceState() {
         Bundle bundle = new Bundle();
@@ -232,7 +236,7 @@ public class ClockView extends FrameLayout {
         calendar.setTimeInMillis(timeInMillis);
 
         if (mTimeView != null) {
-            mTimeView.setText(DateFormat.format(DateFormat.is24HourFormat(getContext()) ? "kk:mm" : "hh:mm", timeInMillis));
+            mTimeView.setText(DateFormat.format(getDateFormat(), timeInMillis));
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
         }
 
