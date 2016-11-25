@@ -26,6 +26,7 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +39,7 @@ public class CommUtils {
     private static final ExecutorService sExecutorService = Executors.newSingleThreadExecutor();
     private static final Handler sHandler = new Handler(Looper.getMainLooper());
     private static final long TIMEOUT = 1000;
+    private static final String EMPTY_VALUE = "com.xlythe.watchface.clock.utils.EMPTY_VALUE";
 
     /**
      * Send a message to all connected devices
@@ -116,27 +118,28 @@ public class CommUtils {
      */
     @AnyThread
     public static void put(Context context, final String key, final String value) {
-        GoogleApiClient client = new GoogleApiClient.Builder(context.getApplicationContext())
-                .addApi(Wearable.API)
-                .build();
-        put(context, client, key, value, true /* isFirstRun */);
+        put(context, key, value, true /* runBugfixHelper */);
     }
 
     /**
      * Put a message that can be read on all devices
      */
     @AnyThread
-    private static void put(final Context context, final GoogleApiClient client, final String key, final String value, final boolean isFirstRun) {
-        final BugfixHelper bugfixHelper = isFirstRun ? new BugfixHelper(context, client) : null;
+    private static void put(final Context context,
+                            final String key,
+                            final String value,
+                            final boolean runBugfixHelper) {
+        final GoogleApiClient client = new GoogleApiClient.Builder(context.getApplicationContext())
+                .addApi(Wearable.API)
+                .build();
+        final BugfixHelper bugfixHelper = runBugfixHelper ? new BugfixHelper(context) : null;
         sExecutorService.submit(new Runnable() {
             @Override
             public void run() {
-                if (!client.isConnected()) {
-                    ConnectionResult result = client.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
-                    if (!result.isSuccess()) {
-                        Log.w(TAG, "Failed to connect to GoogleApiClient: [" + result.getErrorCode() + "]" + result.getErrorMessage());
-                        return;
-                    }
+                ConnectionResult result = client.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
+                if (!result.isSuccess()) {
+                    Log.w(TAG, "Failed to connect to GoogleApiClient: [" + result.getErrorCode() + "]" + result.getErrorMessage());
+                    return;
                 }
 
                 if (bugfixHelper != null) {
@@ -145,10 +148,7 @@ public class CommUtils {
 
                 put(client, key, value);
 
-                // Only disconnect if the bugfix helper isn't running
-                if (bugfixHelper != null) {
-                    client.disconnect();
-                }
+                client.disconnect();
             }
         });
     }
@@ -213,26 +213,31 @@ public class CommUtils {
         // Open up the uri
         DataItem dataItem = Wearable.DataApi.getDataItem(client, uri).await().getDataItem();
 
-        if (dataItem != null) {
+        if (dataItem != null && dataItem.getData() != null) {
             // Parse the bytes into something useful
-            return new String(dataItem.getData());
-        } else {
-            return null;
+            String value = new String(dataItem.getData());
+            if (!EMPTY_VALUE.equals(value)) {
+                return value;
+            }
         }
+        return null;
     }
 
     /**
      * Retrieve a message saved via put
      */
     @AnyThread
+    @Nullable
     public static String get(DataEventBuffer dataEvents, String key) {
         for (DataEvent event : dataEvents) {
             if (event.getDataItem().getUri().getPath().equals("/" + key)) {
                 // Parse the bytes into something useful
-                if (event.getDataItem().getData() == null) {
-                    return null;
+                if (event.getDataItem().getData() != null) {
+                    String value = new String(event.getDataItem().getData());
+                    if (!EMPTY_VALUE.equals(value)) {
+                        return value;
+                    }
                 }
-                return new String(event.getDataItem().getData());
             }
         }
         return null;
@@ -279,17 +284,21 @@ public class CommUtils {
     }
 
     /**
-     * Due to a bug in GMSCore, put does not always work.
-     * We'll listen for changes and, if we don't hear any, we'll try again.
+     * Due to a bug in GMSCore, sending data sometimes fails because it thinks it's already in the state given.
+     * (eg. You send 'true' and it thinks it already is in 'true' mode so it does nothing). To get around this
+     * bug, we first send our original message. Then, if we notice an eerie silence, we send it again with the wrong
+     * value and immediately again with the right value.
      */
     private static class BugfixHelper {
-        private static final long BUGFIX_DELAY = 300;
+        private static final long BUGFIX_DELAY = 350;
 
         private final Context mContext;
         private final GoogleApiClient mClient;
 
         private final Handler mHandler = new Handler(Looper.getMainLooper());
-        private final DataApi.DataListener mListener;
+
+        @Nullable
+        private DataApi.DataListener mListener;
 
         @Nullable
         private final Activity mActivity;
@@ -298,15 +307,12 @@ public class CommUtils {
         @Nullable
         private final ActivityLifecycleCallbacks mActivityLifecycleCallbacks;
 
-        BugfixHelper(Context context, final GoogleApiClient client) {
+        @AnyThread
+        BugfixHelper(Context context) {
             mContext = context;
-            mClient = client;
-            mListener = new DataApi.DataListener() {
-                @Override
-                public void onDataChanged(DataEventBuffer dataEventBuffer) {
-                    cleanup(true /* disconnect */);
-                }
-            };
+            mClient = new GoogleApiClient.Builder(context.getApplicationContext())
+                    .addApi(Wearable.API)
+                    .build();
 
             if (context instanceof Activity) {
                 mActivity = (Activity) context;
@@ -315,7 +321,8 @@ public class CommUtils {
                     @Override
                     public void onActivityStopped(Activity activity) {
                         if (mActivity == activity) {
-                            cleanup(true /* disconnect */);
+                            Log.v(TAG, "Activity stopped. Canceling bugfix.");
+                            cleanup();
                         }
                     }
                 };
@@ -327,25 +334,49 @@ public class CommUtils {
             }
         }
 
+        @WorkerThread
         void onConnected(final String key, final String value) {
+            ConnectionResult result = mClient.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
+            if (!result.isSuccess()) {
+                Log.w(TAG, "Failed to connect to GoogleApiClient: [" + result.getErrorCode() + "]" + result.getErrorMessage());
+                return;
+            }
+            mListener = new DataApi.DataListener() {
+                @Override
+                public void onDataChanged(DataEventBuffer dataEventBuffer) {
+                    if (equals(value, get(dataEventBuffer, key))) {
+                        Log.v(TAG, "Sync detected properly. Bugfix canceled.");
+                        cleanup();
+                    }
+                }
+
+                private boolean equals(@Nullable Object a, @Nullable Object b) {
+                    return a == b || (a != null && a.equals(b));
+                }
+            };
             Wearable.DataApi.addListener(mClient, mListener);
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    put(mContext, mClient, key, null, false /* isFirstRun */);
-                    put(mContext, mClient, key, value, false /* isFirstRun */);
-                    cleanup(false /* disconnect */);
+                    Log.v(TAG, "Failed to detect sync. Retrying.");
+                    CommUtils.put(mContext, key, EMPTY_VALUE, false /* runBugfixHelper */);
+                    CommUtils.put(mContext, key, value, false /* runBugfixHelper */);
+                    cleanup();
                 }
             }, BUGFIX_DELAY);
         }
 
-        private void cleanup(boolean disconnect) {
+        private void cleanup() {
             mHandler.removeCallbacksAndMessages(null);
-            Wearable.DataApi.removeListener(mClient, mListener);
+
             if (mApplication != null) {
                 mApplication.unregisterActivityLifecycleCallbacks(mActivityLifecycleCallbacks);
             }
-            if (disconnect) {
+
+            if (mClient.isConnected()) {
+                if (mListener != null) {
+                    Wearable.DataApi.removeListener(mClient, mListener);
+                }
                 mClient.disconnect();
             }
         }
