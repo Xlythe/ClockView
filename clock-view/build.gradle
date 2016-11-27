@@ -22,9 +22,9 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:support-v4:25.0.1'
-    compile 'com.google.android.gms:play-services-wearable:10.0.0'
-    compile 'com.google.android.support:wearable:1.4.0'
+    compile 'com.android.support:support-v4:+'
+    compile 'com.google.android.gms:play-services-wearable:+'
+    compile 'com.google.android.support:wearable:+'
 }
 
 apply from: 'https://raw.githubusercontent.com/bourdakos1/jCenter-Upload/master/upload.gradle'
