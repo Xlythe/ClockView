@@ -5,8 +5,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -209,8 +211,9 @@ public class CircularImageView extends ImageView implements Animator.OnInvalidat
 
         try {
             // Create Bitmap object out of the drawable
-            Bitmap bitmap = Bitmap.createBitmap(intrinsicWidth, intrinsicHeight, Bitmap.Config.ARGB_8888);
+            Bitmap bitmap = mImage != null && mImage.isMutable() ? mImage : Bitmap.createBitmap(intrinsicWidth, intrinsicHeight, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
+            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
             drawable.draw(canvas);
             return bitmap;
