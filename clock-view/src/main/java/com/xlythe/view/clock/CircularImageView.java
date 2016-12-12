@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.widget.ImageView;
@@ -22,7 +23,7 @@ import android.widget.ImageView;
  * Custom ImageView for circular images in Android while maintaining the
  * best draw performance and supporting custom borders & selectors.
  */
-public class CircularImageView extends ImageView {
+public class CircularImageView extends ImageView implements Animator.OnInvalidateListener {
     private static final String STATE_SUPER = "super";
     private static final String STATE_ENABLED = "circular_enabled";
 
@@ -67,6 +68,11 @@ public class CircularImageView extends ImageView {
         // Initialize paint objects
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
+    }
+
+    @Override
+    public void onInvalidate() {
+        invalidateImage();
     }
 
     @Override
@@ -125,44 +131,53 @@ public class CircularImageView extends ImageView {
     @Override
     public void setImageURI(Uri uri) {
         super.setImageURI(uri);
-
-        // Extract a Bitmap out of the drawable & set it as the main shader
-        mImage = drawableToBitmap(getDrawable());
-        if (mCanvasSize > 0) {
-            updateBitmapShader();
-        }
+        overrideCallback();
+        invalidateImage();
     }
 
     @Override
     public void setImageResource(int resId) {
         super.setImageResource(resId);
-
-        // Extract a Bitmap out of the drawable & set it as the main shader
-        mImage = drawableToBitmap(getDrawable());
-        if (mCanvasSize > 0) {
-            updateBitmapShader();
-        }
+        overrideCallback();
+        invalidateImage();
     }
 
     @Override
     public void setImageDrawable(Drawable drawable) {
         super.setImageDrawable(drawable);
-
-        // Extract a Bitmap out of the drawable & set it as the main shader
-        mImage = drawableToBitmap(getDrawable());
-        if (mCanvasSize > 0) {
-            updateBitmapShader();
-        }
+        overrideCallback();
+        invalidateImage();
     }
 
     @Override
     public void setImageBitmap(Bitmap bm) {
         super.setImageBitmap(bm);
+        invalidateImage(bm);
+    }
 
-        // Extract a Bitmap out of the drawable & set it as the main shader
-        mImage = bm;
-        if (mCanvasSize > 0)
+    /**
+     * In order to support animations, we need to listen to the drawable's request for invalidation.
+     */
+    private void overrideCallback() {
+        if (getDrawable() == null) {
+            return;
+        }
+
+        if (getDrawable() instanceof Animator) {
+            Animator animator = (Animator) getDrawable();
+            animator.setOnInvalidateListener(this);
+        }
+    }
+
+    private void invalidateImage() {
+        invalidateImage(drawableToBitmap(getDrawable()));
+    }
+
+    private void invalidateImage(Bitmap bitmap) {
+        mImage = bitmap;
+        if (mCanvasSize > 0) {
             updateBitmapShader();
+        }
     }
 
     /**
@@ -171,6 +186,7 @@ public class CircularImageView extends ImageView {
      * @param drawable Drawable to extract a Bitmap from.
      * @return A Bitmap created from the drawable parameter.
      */
+    @Nullable
     public Bitmap drawableToBitmap(Drawable drawable) {
         if (drawable == null) {
             // Don't do anything without a proper drawable
@@ -199,7 +215,6 @@ public class CircularImageView extends ImageView {
             drawable.draw(canvas);
             return bitmap;
         } catch (OutOfMemoryError e) {
-            // Simply return null of failed bitmap creations
             Log.e(TAG, "Encountered OutOfMemoryError while generating bitmap!", e);
             return null;
         }
