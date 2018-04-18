@@ -8,17 +8,23 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.AnyThread;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.support.annotation.WorkerThread;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.Api;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -26,9 +32,11 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableStatusCodes;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Shorthand for communicating with Android Wear
@@ -44,72 +52,41 @@ public class CommUtils {
      * Send a message to all connected devices
      */
     @AnyThread
-    public static void broadcast(final Context context, final String path, final String message) {
-        final GoogleApiClient client = new GoogleApiClient.Builder(context.getApplicationContext()).addApi(Wearable.API).build();
-        sExecutorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                ConnectionResult result = client.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
-                if (!result.isSuccess()) {
-                    Log.w(TAG, "Failed to connect to GoogleApiClient: " + CommUtils.toString(result));
-                    return;
+    private static void broadcast(Context context, String path, String message) {
+        sExecutorService.submit(() -> {
+            try {
+                List<Node> nodes = Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), TIMEOUT, TimeUnit.MILLISECONDS);
+                for (Node n : nodes) {
+                    Tasks.await(Wearable.getMessageClient(context).sendMessage(n.getId(), path, message.getBytes()), TIMEOUT, TimeUnit.MILLISECONDS);
                 }
-                broadcast(client, path, message);
-                client.disconnect();
+            } catch (ExecutionException e) {
+                Log.w(TAG, "Failed to call sendMessage", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Failed to call sendMessage", e);
+            } catch (TimeoutException e) {
+                Log.w(TAG, "Failed to call sendMessage", e);
             }
         });
-    }
-
-    /**
-     * Send a message to all connected devices
-     */
-    @WorkerThread
-    public static void broadcast(GoogleApiClient client, final String path, final String message) {
-        NodeApi.GetConnectedNodesResult result = Wearable.NodeApi.getConnectedNodes(client).await(TIMEOUT, TimeUnit.MILLISECONDS);
-        if (!result.getStatus().isSuccess()) {
-            Log.w(TAG, "Failed to call sendMessage: " + CommUtils.toString(result.getStatus()));
-            return;
-        }
-
-        List<Node> nodes = result.getNodes();
-        for (Node n : nodes) {
-            Status status = Wearable.MessageApi.sendMessage(client, n.getId(), path, message.getBytes()).await(TIMEOUT, TimeUnit.MILLISECONDS).getStatus();
-            if (!status.isSuccess()) {
-                Log.w(TAG, "Failed to call sendMessage: " + CommUtils.toString(status));
-                return;
-            }
-        }
     }
 
     /**
      * Send a message to a specific device
      */
     @AnyThread
-    public static void unicast(final Context context, final String id, final String path, final String message) {
-        final GoogleApiClient client = new GoogleApiClient.Builder(context.getApplicationContext()).addApi(Wearable.API).build();
-        sExecutorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                ConnectionResult result = client.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
-                if (!result.isSuccess()) {
-                    Log.w(TAG, "Failed to connect to GoogleApiClient: " + CommUtils.toString(result));
-                    return;
-                }
-                unicast(client, id, path, message);
-                client.disconnect();
+    public static void unicast(Context context, String id, String path, String message) {
+        sExecutorService.submit(() -> {
+            try {
+                Tasks.await(Wearable.getMessageClient(context).sendMessage(id, path, message.getBytes()), TIMEOUT, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                Log.w(TAG, "Failed to call sendMessage", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Failed to call sendMessage", e);
+            } catch (TimeoutException e) {
+                Log.w(TAG, "Failed to call sendMessage", e);
             }
         });
-    }
-
-    /**
-     * Send a message to a specific device
-     */
-    @WorkerThread
-    public static void unicast(GoogleApiClient client, final String id, final String path, final String message) {
-        Status status = Wearable.MessageApi.sendMessage(client, id, path, message.getBytes()).await(TIMEOUT, TimeUnit.MILLISECONDS).getStatus();
-        if (!status.isSuccess()) {
-            Log.w(TAG, "Failed to call sendMessage: " + CommUtils.toString(status));
-        }
     }
 
     /**
@@ -124,63 +101,37 @@ public class CommUtils {
      * Put a message that can be read on all devices
      */
     @AnyThread
-    private static void put(final Context context,
-                            final String key,
-                            final String value,
-                            final boolean runBugfixHelper) {
-        final GoogleApiClient client = new GoogleApiClient.Builder(context.getApplicationContext())
-                .addApi(Wearable.API)
-                .build();
+    private static void put(Context context, String key, String value, boolean runBugfixHelper) {
         final BugfixHelper bugfixHelper = runBugfixHelper ? new BugfixHelper(context) : null;
-        sExecutorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                ConnectionResult result = client.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
-                if (!result.isSuccess()) {
-                    Log.w(TAG, "Failed to connect to GoogleApiClient: " + CommUtils.toString(result));
-                    return;
-                }
+        sExecutorService.submit(() -> {
+            if (bugfixHelper != null) {
+                bugfixHelper.onConnected(key, value);
+            }
 
-                if (bugfixHelper != null) {
-                    bugfixHelper.onConnected(key, value);
-                }
+            PutDataRequest request = PutDataRequest.create("/" + key);
+            request.setData(value.getBytes());
 
-                put(client, key, value);
-
-                client.disconnect();
+            try {
+                Tasks.await(Wearable.getDataClient(context).putDataItem(request), TIMEOUT, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                Log.w(TAG, "Failed to call putDataItem", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Failed to call putDataItem", e);
+            } catch (TimeoutException e) {
+                Log.w(TAG, "Failed to call putDataItem", e);
             }
         });
-    }
-
-    /**
-     * Put a message that can be read on all devices
-     */
-    @WorkerThread
-    public static void put(GoogleApiClient client, final String key, final String value) {
-        PutDataRequest request = PutDataRequest.create("/" + key);
-        request.setData(value.getBytes());
-        Status status = Wearable.DataApi.putDataItem(client, request).await(TIMEOUT, TimeUnit.MILLISECONDS).getStatus();
-        if (!status.isSuccess()) {
-            Log.w(TAG, "Failed to call putDataItem: " + CommUtils.toString(status));
-        }
     }
 
     /**
      * Retrieve a message saved via put
      */
     @AnyThread
-    public static void get(final GoogleApiClient client, final String key, final Callback callback) {
-        sExecutorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                final String value = get(client, key);
-                sHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        callback.onCallback(value);
-                    }
-                });
-            }
+    public static void get(Context context, String key, Callback callback) {
+        sExecutorService.submit(() -> {
+            String value = get(context, key);
+            sHandler.post(() -> callback.onCallback(value));
         });
     }
 
@@ -189,39 +140,30 @@ public class CommUtils {
      */
     @WorkerThread
     @Nullable
-    public static String get(GoogleApiClient client, final String key) {
+    private static String get(Context context, String key) {
         // We want a node id. Remote is better, I guess.
-        NodeApi.GetConnectedNodesResult nodeResult = Wearable.NodeApi.getConnectedNodes(client).await(TIMEOUT, TimeUnit.MILLISECONDS);
-        if (!nodeResult.getStatus().isSuccess()) {
-            Log.w(TAG, "Failed to call getConnectedNodes: " + CommUtils.toString(nodeResult.getStatus()));
-            return null;
+        try {
+            List<Node> nodes = Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), TIMEOUT, TimeUnit.MILLISECONDS);
+
+            Node node = nodes.isEmpty() ?
+                    Tasks.await(Wearable.getNodeClient(context).getLocalNode(), TIMEOUT, TimeUnit.MILLISECONDS) : nodes.get(0);
+
+            // Figure out the uri...
+            Uri uri = new Uri.Builder().scheme(PutDataRequest.WEAR_URI_SCHEME).authority(node.getId()).path("/" + key).build();
+
+            // Open up the uri
+            DataItem dataItem = Tasks.await(Wearable.getDataClient(context).getDataItem(uri), TIMEOUT, TimeUnit.MILLISECONDS);
+            return CommUtils.toString(dataItem);
+        } catch (ExecutionException e) {
+            Log.w(TAG, "Failed to call putDataItem", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Log.w(TAG, "Failed to call putDataItem", e);
+        } catch (TimeoutException e) {
+            Log.w(TAG, "Failed to call putDataItem", e);
         }
 
-        List<Node> nodes = nodeResult.getNodes();
-        Node node;
-        if (nodes.isEmpty()) {
-            NodeApi.GetLocalNodeResult localNodeResult = Wearable.NodeApi.getLocalNode(client).await(TIMEOUT, TimeUnit.MILLISECONDS);
-            if (!localNodeResult.getStatus().isSuccess()) {
-                Log.w(TAG, "Failed to call getLocalNode: " + CommUtils.toString(localNodeResult.getStatus()));
-                return null;
-            }
-            node = localNodeResult.getNode();
-        } else {
-            node = nodes.get(0);
-        }
-        String nodeId = node.getId();
-
-        // Figure out the uri...
-        Uri uri = new Uri.Builder().scheme(PutDataRequest.WEAR_URI_SCHEME).authority(nodeId).path("/" + key).build();
-
-        // Open up the uri
-        DataApi.DataItemResult dataResult = Wearable.DataApi.getDataItem(client, uri).await(TIMEOUT, TimeUnit.MILLISECONDS);
-        if (!dataResult.getStatus().isSuccess()) {
-            Log.w(TAG, "Failed to call getDataItem: " + CommUtils.toString(dataResult.getStatus()));
-            return null;
-        }
-
-        return CommUtils.toString(dataResult.getDataItem());
+        return null;
     }
 
     /**
@@ -239,6 +181,7 @@ public class CommUtils {
     }
 
     public interface Callback {
+        @UiThread
         void onCallback(@Nullable String result);
     }
 
@@ -288,12 +231,11 @@ public class CommUtils {
         private static final long BUGFIX_DELAY = 350;
 
         private final Context mContext;
-        private final GoogleApiClient mClient;
 
         private final Handler mHandler = new Handler(Looper.getMainLooper());
 
         @Nullable
-        private DataApi.DataListener mListener;
+        private DataClient.OnDataChangedListener mListener;
 
         @Nullable
         private final Activity mActivity;
@@ -305,9 +247,6 @@ public class CommUtils {
         @AnyThread
         BugfixHelper(Context context) {
             mContext = context;
-            mClient = new GoogleApiClient.Builder(context.getApplicationContext())
-                    .addApi(Wearable.API)
-                    .build();
 
             if (context instanceof Activity) {
                 mActivity = (Activity) context;
@@ -331,14 +270,9 @@ public class CommUtils {
 
         @WorkerThread
         void onConnected(final String key, final String value) {
-            ConnectionResult result = mClient.blockingConnect(TIMEOUT, TimeUnit.MILLISECONDS);
-            if (!result.isSuccess()) {
-                Log.w(TAG, "Failed to connect to GoogleApiClient: " + CommUtils.toString(result));
-                return;
-            }
-            mListener = new DataApi.DataListener() {
+            mListener = new DataClient.OnDataChangedListener() {
                 @Override
-                public void onDataChanged(DataEventBuffer dataEventBuffer) {
+                public void onDataChanged(@NonNull DataEventBuffer dataEventBuffer) {
                     if (equals(value, get(dataEventBuffer, key))) {
                         Log.v(TAG, "Sync detected properly. Bugfix canceled.");
                         cleanup();
@@ -349,15 +283,12 @@ public class CommUtils {
                     return a == b || (a != null && a.equals(b));
                 }
             };
-            Wearable.DataApi.addListener(mClient, mListener);
-            mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    Log.v(TAG, "Failed to detect sync. Retrying.");
-                    CommUtils.put(mContext, key, EMPTY_VALUE, false /* runBugfixHelper */);
-                    CommUtils.put(mContext, key, value, false /* runBugfixHelper */);
-                    cleanup();
-                }
+            Wearable.getDataClient(mContext).addListener(mListener);
+            mHandler.postDelayed(() -> {
+                Log.v(TAG, "Failed to detect sync. Retrying.");
+                CommUtils.put(mContext, key, EMPTY_VALUE, false /* runBugfixHelper */);
+                CommUtils.put(mContext, key, value, false /* runBugfixHelper */);
+                cleanup();
             }, BUGFIX_DELAY);
         }
 
@@ -368,11 +299,9 @@ public class CommUtils {
                 mApplication.unregisterActivityLifecycleCallbacks(mActivityLifecycleCallbacks);
             }
 
-            if (mClient.isConnected()) {
-                if (mListener != null) {
-                    Wearable.DataApi.removeListener(mClient, mListener);
-                }
-                mClient.disconnect();
+            if (mListener != null) {
+                Wearable.getDataClient(mContext).removeListener(mListener);
+                mListener = null;
             }
         }
     }
@@ -387,19 +316,5 @@ public class CommUtils {
             }
         }
         return null;
-    }
-
-    private static String toString(ConnectionResult result) {
-        String errorMessage = result.getErrorMessage() == null
-                ? WearableStatusCodes.getStatusCodeString(result.getErrorCode())
-                : result.getErrorMessage();
-        return "[" + result.getErrorCode() + "]" + errorMessage;
-    }
-
-    private static String toString(Status status) {
-        String errorMessage = status.getStatusMessage() == null
-                ? WearableStatusCodes.getStatusCodeString(status.getStatusCode())
-                : status.getStatusMessage();
-        return "[" + status.getStatusCode() + "]" + errorMessage;
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.content.res.TypedArray;
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -28,6 +29,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
         super(context, attrs, defStyle);
     }
 
+    @NonNull
     @Override
     public Iterator<View> iterator() {
         return new Iterator<View>() {
@@ -239,84 +241,84 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
 
         public LayoutParams(Context context, AttributeSet attrs) {
             super(0, 0);
-            TypedArray arr = context.obtainStyledAttributes(attrs, R.styleable.PercentBasedLayout_LayoutParams);
+            TypedArray arr = context.obtainStyledAttributes(attrs, R.styleable.PercentBasedLayout_Layout);
 
             // Grab width
-            if (!arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_width)) {
+            if (!arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_width)) {
                 throw new RuntimeException("You must supply a layout_width attribute.");
-            } else if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_width)) {
-                width = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_width, 0);
-            } else if (TypedValue.TYPE_FLOAT == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_width)) {
-                widthPercent = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_width, 0);
+            } else if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_width)) {
+                width = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_width, 0);
+            } else if (TypedValue.TYPE_FLOAT == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_width)) {
+                widthPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_width, 0);
             } else {
-                width = arr.getInt(R.styleable.PercentBasedLayout_LayoutParams_layout_width, MATCH_PARENT);
+                width = arr.getInt(R.styleable.PercentBasedLayout_Layout_layout_width, MATCH_PARENT);
             }
 
             // Grab height
-            if (!arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_height)) {
+            if (!arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_height)) {
                 throw new RuntimeException("You must supply a layout_height attribute.");
-            } else if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_height)) {
-                height = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_height, 0);
-            } else if (TypedValue.TYPE_FLOAT == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_height)) {
-                heightPercent = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_height, 0);
+            } else if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_height)) {
+                height = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_height, 0);
+            } else if (TypedValue.TYPE_FLOAT == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_height)) {
+                heightPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_height, 0);
             } else {
-                height = arr.getInt(R.styleable.PercentBasedLayout_LayoutParams_layout_height, MATCH_PARENT);
+                height = arr.getInt(R.styleable.PercentBasedLayout_Layout_layout_height, MATCH_PARENT);
             }
 
             // Grab margin
-            if (arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_margin)) {
-                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_margin)) {
+            if (arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_margin)) {
+                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_margin)) {
                     leftMargin
                             = topMargin
                             = rightMargin
                             = bottomMargin
-                            = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_margin, 0);
+                            = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_margin, 0);
                 } else {
                     leftMarginPercent
                             = topMarginPercent
                             = rightMarginPercent
                             = bottomMarginPercent
-                            = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_margin, 0);
+                            = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_margin, 0);
                 }
             }
 
             // Grab margin left
-            if (arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_marginLeft)) {
-                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_marginLeft)) {
-                    leftMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_marginLeft, leftMargin);
+            if (arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_marginLeft)) {
+                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_marginLeft)) {
+                    leftMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_marginLeft, leftMargin);
                 } else {
-                    leftMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_marginLeft, leftMarginPercent);
+                    leftMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_marginLeft, leftMarginPercent);
                 }
             }
 
             // Grab margin top
-            if (arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_marginTop)) {
-                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_marginTop)) {
-                    topMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_marginTop, topMargin);
+            if (arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_marginTop)) {
+                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_marginTop)) {
+                    topMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_marginTop, topMargin);
                 } else {
-                    topMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_marginTop, topMarginPercent);
+                    topMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_marginTop, topMarginPercent);
                 }
             }
 
             // Grab margin right
-            if (arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_marginRight)) {
-                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_marginRight)) {
-                    rightMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_marginRight, rightMargin);
+            if (arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_marginRight)) {
+                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_marginRight)) {
+                    rightMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_marginRight, rightMargin);
                 } else {
-                    rightMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_marginRight, rightMarginPercent);
+                    rightMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_marginRight, rightMarginPercent);
                 }
             }
 
             // Grab margin bottom
-            if (arr.hasValue(R.styleable.PercentBasedLayout_LayoutParams_layout_marginBottom)) {
-                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_LayoutParams_layout_marginBottom)) {
-                    bottomMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_LayoutParams_layout_marginBottom, bottomMargin);
+            if (arr.hasValue(R.styleable.PercentBasedLayout_Layout_layout_marginBottom)) {
+                if (TypedValue.TYPE_DIMENSION == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_marginBottom)) {
+                    bottomMargin = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_marginBottom, bottomMargin);
                 } else {
-                    bottomMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_LayoutParams_layout_marginBottom, bottomMarginPercent);
+                    bottomMarginPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_marginBottom, bottomMarginPercent);
                 }
             }
 
-            gravity = arr.getInt(R.styleable.PercentBasedLayout_LayoutParams_layout_gravity, DEFAULT_CHILD_GRAVITY);
+            gravity = arr.getInt(R.styleable.PercentBasedLayout_Layout_layout_gravity, DEFAULT_CHILD_GRAVITY);
 
             arr.recycle();
         }

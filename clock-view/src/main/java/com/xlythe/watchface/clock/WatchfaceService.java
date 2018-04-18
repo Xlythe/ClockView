@@ -19,12 +19,7 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
 
     private Engine mEngine;
 
-    private final ClockView.OnTimeTickListener mOnTimeTickListener = new ClockView.OnTimeTickListener() {
-        @Override
-        public void onTimeTick() {
-            invalidate();
-        }
-    };
+    private final ClockView.OnTimeTickListener mOnTimeTickListener = this::invalidate;
 
     public abstract ClockView onCreateClockView(Context context);
 

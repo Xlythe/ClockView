@@ -135,10 +135,10 @@ public class ClockView extends FrameLayout {
 
     @Override
     protected void onFinishInflate() {
-        mTimeView = (TextView) findViewById(R.id.clock_time);
-        mSeconds = (ImageView) findViewById(R.id.clock_seconds);
-        mMinutes = (ImageView) findViewById(R.id.clock_minutes);
-        mHours = (ImageView) findViewById(R.id.clock_hours);
+        mTimeView = findViewById(R.id.clock_time);
+        mSeconds = findViewById(R.id.clock_seconds);
+        mMinutes = findViewById(R.id.clock_minutes);
+        mHours = findViewById(R.id.clock_hours);
 
         if (!supportsDigital() && !supportsAnalog()) {
             throw new IllegalStateException("Before inflating this View, you must include at least one child with the id @id/clock_time [TextView]" +
@@ -146,6 +146,8 @@ public class ClockView extends FrameLayout {
         }
 
         mDigitalEnabled = !supportsAnalog();
+
+        super.onFinishInflate();
     }
 
     public boolean supportsDigital() {
