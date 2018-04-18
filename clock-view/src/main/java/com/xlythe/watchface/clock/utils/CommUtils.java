@@ -155,12 +155,12 @@ public class CommUtils {
             DataItem dataItem = Tasks.await(Wearable.getDataClient(context).getDataItem(uri), TIMEOUT, TimeUnit.MILLISECONDS);
             return CommUtils.toString(dataItem);
         } catch (ExecutionException e) {
-            Log.w(TAG, "Failed to call putDataItem", e);
+            Log.w(TAG, "Failed to call getDataItem", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            Log.w(TAG, "Failed to call putDataItem", e);
+            Log.w(TAG, "Failed to call getDataItem", e);
         } catch (TimeoutException e) {
-            Log.w(TAG, "Failed to call putDataItem", e);
+            Log.w(TAG, "Failed to call getDataItem", e);
         }
 
         return null;
