@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.content.res.TypedArray;
 import android.os.Build;
-import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -13,6 +12,8 @@ import android.view.ViewGroup;
 
 import java.lang.reflect.Field;
 import java.util.Iterator;
+
+import androidx.annotation.NonNull;
 
 public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
     private static final int DEFAULT_CHILD_GRAVITY = Gravity.TOP | Gravity.START;
@@ -48,6 +49,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
             @Override
             public void remove() {
                 removeViewAt(i);
+                i--;
             }
         };
     }

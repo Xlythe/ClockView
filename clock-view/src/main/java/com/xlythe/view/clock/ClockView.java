@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
-import android.support.annotation.Nullable;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
 import android.view.View;
@@ -15,6 +14,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.Calendar;
+
+import androidx.annotation.Nullable;
 
 /**
  * An adjustable clock view

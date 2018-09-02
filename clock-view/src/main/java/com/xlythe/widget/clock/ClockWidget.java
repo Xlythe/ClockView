@@ -13,7 +13,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
@@ -22,6 +21,8 @@ import com.xlythe.view.clock.ClockView;
 import com.xlythe.view.clock.R;
 import com.xlythe.view.clock.utils.BitmapUtils;
 import com.xlythe.view.clock.utils.MathUtils;
+
+import androidx.annotation.Nullable;
 
 public abstract class ClockWidget extends AppWidgetProvider {
     public static final String ACTION_CLOCK_WIDGET_UPDATE = "com.xlythe.widget.clock.CLOCK_WIDGET_UPDATE";

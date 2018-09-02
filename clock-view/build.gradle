@@ -1,12 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 27
-    buildToolsVersion '27.0.3'
+    compileSdkVersion 28
+    buildToolsVersion '28.0.2'
 
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 27
+        targetSdkVersion 28
         versionCode 1
         versionName project.property("bintray.libraryVersion")
     }
@@ -20,11 +20,12 @@ android {
 }
 
 dependencies {
+    def withoutSupportLib = { exclude group: 'com.android.support' }
     api fileTree(include: ['*.jar'], dir: 'libs')
-    api 'com.android.support:support-v4:27.+'
-    api 'com.google.android.gms:play-services-wearable:+'
-    api 'com.google.android.support:wearable:+'
-    api 'com.google.android.wearable:wearable:+'
+    api 'androidx.legacy:legacy-support-v4:+'
+    api 'com.google.android.gms:play-services-wearable:+', withoutSupportLib
+    api 'com.google.android.support:wearable:+', withoutSupportLib
+    api 'com.google.android.wearable:wearable:+', withoutSupportLib
 }
 
 apply from: 'https://raw.githubusercontent.com/bourdakos1/jCenter-Upload/master/upload.gradle'
