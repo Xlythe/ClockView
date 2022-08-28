@@ -99,7 +99,9 @@ public abstract class ClockWidget extends AppWidgetProvider {
             configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
             configIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             configIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            remoteViews.setOnClickPendingIntent(R.id.content, PendingIntent.getActivity(context, appWidgetId, configIntent, 0));
+
+            int flags = (Build.VERSION.SDK_INT >= 23) ? PendingIntent.FLAG_IMMUTABLE : 0;
+            remoteViews.setOnClickPendingIntent(R.id.content, PendingIntent.getActivity(context, appWidgetId, configIntent, flags));
         }
 
         if (DEBUG) {
@@ -115,7 +117,8 @@ public abstract class ClockWidget extends AppWidgetProvider {
     private PendingIntent createClockTickIntent(Context context) {
         Intent intent = new Intent(ACTION_CLOCK_WIDGET_UPDATE);
         intent.setPackage(context.getPackageName());
-        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        int flags = (Build.VERSION.SDK_INT >= 23) ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT;
+        return PendingIntent.getBroadcast(context, 0, intent, flags);
     }
 
     @Override

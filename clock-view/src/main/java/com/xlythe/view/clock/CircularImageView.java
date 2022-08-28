@@ -115,7 +115,7 @@ public class CircularImageView extends ImageView implements Animator.OnInvalidat
 
         // Update mShader if canvas size has changed
         int oldCanvasSize = mCanvasSize;
-        mCanvasSize = getWidth() < getHeight() ? getWidth() : getHeight();
+        mCanvasSize = Math.min(getWidth(), getHeight());
         if (oldCanvasSize != mCanvasSize) {
             updateBitmapShader();
         }
@@ -125,9 +125,9 @@ public class CircularImageView extends ImageView implements Animator.OnInvalidat
 
         // Draw the circular image itself
         canvas.save();
-        canvas.translate(-mCanvasSize / 2, -mCanvasSize / 2);
-        canvas.translate(getWidth() / 2, getHeight() / 2);
-        canvas.drawCircle(mCanvasSize / 2, mCanvasSize / 2, mCanvasSize / 2, mPaint);
+        canvas.translate(-mCanvasSize / 2f, -mCanvasSize / 2f);
+        canvas.translate(getWidth() / 2f, getHeight() / 2f);
+        canvas.drawCircle(mCanvasSize / 2f, mCanvasSize / 2f, mCanvasSize / 2f, mPaint);
         canvas.restore();
     }
 

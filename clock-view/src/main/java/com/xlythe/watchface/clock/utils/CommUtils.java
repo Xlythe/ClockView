@@ -301,7 +301,7 @@ public class CommUtils {
 
     @Nullable
     private static String toString(@Nullable DataItem dataItem) {
-        if (dataItem != null && dataItem.getData() != null) {
+        if (dataItem != null) {
             // Parse the bytes into something useful
             String value = new String(dataItem.getData());
             if (!EMPTY_VALUE.equals(value)) {

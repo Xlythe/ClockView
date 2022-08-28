@@ -100,9 +100,6 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
             }
 
             switch (verticalGravity) {
-                case Gravity.TOP:
-                    childTop = parentTop + getChildMarginTop(lp);
-                    break;
                 case Gravity.CENTER_VERTICAL:
                     childTop = parentTop + (parentBottom - parentTop - height) / 2 +
                             getChildMarginTop(lp) - getChildMarginBottom(lp);
@@ -343,7 +340,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
 
                 final int[] mData = (int[]) mDataField.get(array);
                 index *= STYLE_NUM_ENTRIES;
-                return mData[index + STYLE_TYPE];
+                return mData != null ? mData[index + STYLE_TYPE] : 0;
             } catch (Exception e) {
                 e.printStackTrace();
             }

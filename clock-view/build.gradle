@@ -1,31 +1,96 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+Properties projectProperties = new Properties()
+projectProperties.load(rootProject.file('gradle.properties').newDataInputStream())
+
+Properties localProperties = new Properties()
+localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 33
 
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 32
-        versionCode 1
-        versionName project.property("bintray.libraryVersion")
-    }
-    lintOptions {
-        abortOnError false
+        targetSdkVersion 33
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    lint {
+        abortOnError false
+    }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = group = projectProperties.getProperty("bintray.groupId")
+                artifactId = projectProperties.getProperty("bintray.artifact")
+                version = projectProperties.getProperty("bintray.libraryVersion")
+
+                pom {
+                    name = projectProperties.getProperty("bintray.libraryName")
+                    description = projectProperties.getProperty("bintray.libraryDescription")
+                    url = projectProperties.getProperty("bintray.siteUrl")
+                    licenses {
+                        license {
+                            name = projectProperties.getProperty("bintray.licenseName")
+                            url = projectProperties.getProperty("bintray.licenseUrl")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = projectProperties.getProperty("bintray.developerId")
+                            name = projectProperties.getProperty("bintray.developerName")
+                            email = projectProperties.getProperty("bintray.developerEmail")
+                        }
+                    }
+                    scm {
+                        connection = projectProperties.getProperty("bintray.gitUrl")
+                        developerConnection = projectProperties.getProperty("bintray.gitUrl")
+                        url = projectProperties.getProperty("bintray.siteUrl")
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = "MavenCentral"
+                url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                credentials {
+                    username = localProperties.getProperty("bintray.username")
+                    password = localProperties.getProperty("bintray.password")
+                }
+            }
+        }
+    }
+}
+
+signing {
+    useInMemoryPgpKeys(
+            localProperties.getProperty("signing.keyId"),
+            localProperties.getProperty("signing.key"),
+            localProperties.getProperty("signing.password"),
+    )
+    sign publishing.publications
 }
 
 dependencies {
     def withoutSupportLib = { exclude group: 'com.android.support' }
     api fileTree(include: ['*.jar'], dir: 'libs')
-    api 'androidx.legacy:legacy-support-v4:+'
+    api 'androidx.legacy:legacy-support-v4:[1.0.0,)'
     api 'com.google.android.gms:play-services-wearable:+', withoutSupportLib
     api 'com.google.android.support:wearable:+', withoutSupportLib
     api 'com.google.android.wearable:wearable:+', withoutSupportLib
 }
-
-// jCenter has been shut down. This script no longer compiles and needs to be updated to point to MavenCentral.
-// apply from: 'https://raw.githubusercontent.com/bourdakos1/jCenter-Upload/master/upload.gradle'

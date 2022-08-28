@@ -11,9 +11,7 @@ public class MathUtils {
         else {
             int[] newInts = new int[ints.length - 1];
             newInts[0] = Math.min(ints[0], ints[1]);
-            for (int i = 2; i < ints.length; i++) {
-                newInts[i - 1] = ints[i];
-            }
+            System.arraycopy(ints, 2, newInts, 1, ints.length - 2);
             return min(newInts);
         }
     }
@@ -25,9 +23,7 @@ public class MathUtils {
         else {
             int[] newInts = new int[ints.length - 1];
             newInts[0] = Math.max(ints[0], ints[1]);
-            for (int i = 2; i < ints.length; i++) {
-                newInts[i - 1] = ints[i];
-            }
+            System.arraycopy(ints, 2, newInts, 1, ints.length - 2);
             return max(newInts);
         }
     }

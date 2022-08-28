@@ -246,9 +246,9 @@ public class ClockView extends FrameLayout {
         final int hour = calendar.get(Calendar.HOUR);
         final int second = calendar.get(Calendar.SECOND);
         final int minute = calendar.get(Calendar.MINUTE);
-        float degrees = hour * 30 + minute / 2;
+        float degrees = hour * 30 + minute / 2f;
         if (mPartialRotationEnabled) {
-            degrees += second / 120;
+            degrees += second / 120f;
         }
         if (mHours != null) {
             mHours.setRotation(degrees);
@@ -256,7 +256,7 @@ public class ClockView extends FrameLayout {
         }
         degrees = minute * 6;
         if (mPartialRotationEnabled) {
-            degrees += second / 10;
+            degrees += second / 10f;
         }
         if (mMinutes != null) {
             mMinutes.setRotation(degrees);
