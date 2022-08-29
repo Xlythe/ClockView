@@ -8,7 +8,7 @@ Where to Download
 -----------------
 ```groovy
 dependencies {
-  implementation 'com.xlythe:clock-view:1.0.18'
+  implementation 'com.xlythe:clock-view:1.1'
 }
 ```
 
@@ -18,6 +18,7 @@ The following permissions are required in your AndroidManfiest.xml
 ```xml
 <uses-permission android:name="android.permission.WAKE_LOCK" />
 <uses-permission android:name="com.google.android.permission.PROVIDE_BACKGROUND" />
+<uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA" />
 <uses-feature android:name="android.hardware.type.watch" android:required="false" />
 ```
 
