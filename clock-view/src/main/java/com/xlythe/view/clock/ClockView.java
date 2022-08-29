@@ -2,6 +2,7 @@ package com.xlythe.view.clock;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,9 +14,12 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 /**
  * An adjustable clock view
@@ -56,6 +60,8 @@ public class ClockView extends FrameLayout {
     @Nullable
     private OnTimeTickListener mOnTimeTickListener;
 
+    @Nullable
+    private ZonedDateTime mDateTime;
     private long mFakeTime = -1;
 
     private final Runnable mTicker = new Runnable() {
@@ -91,6 +97,11 @@ public class ClockView extends FrameLayout {
         }
     }
 
+    @RequiresApi(26)
+    public void setTime(ZonedDateTime dateTime) {
+        mDateTime = dateTime;
+    }
+
     public long getFakeTime() {
         return mFakeTime;
     }
@@ -102,6 +113,12 @@ public class ClockView extends FrameLayout {
     public void setFakeTime(int hour, int minute) {
         setFakeHour(hour);
         setFakeMinute(minute);
+    }
+
+    public void setFakeTime(int hour, int minute, int seconds) {
+        setFakeHour(hour);
+        setFakeMinute(minute);
+        setFakeSecond(seconds);
     }
 
     public void setFakeHour(int hour) {
@@ -119,6 +136,15 @@ public class ClockView extends FrameLayout {
             calendar.setTimeInMillis(mFakeTime);
         }
         calendar.set(Calendar.MINUTE, minute);
+        setFakeTime(calendar.getTimeInMillis());
+    }
+
+    public void setFakeSecond(int second) {
+        Calendar calendar = Calendar.getInstance();
+        if (mFakeTime >= 0) {
+            calendar.setTimeInMillis(mFakeTime);
+        }
+        calendar.set(Calendar.SECOND, second);
         setFakeTime(calendar.getTimeInMillis());
     }
 
@@ -196,11 +222,11 @@ public class ClockView extends FrameLayout {
         mLowBitAmbient = lowBitAmbient;
     }
 
-    public boolean isBurnInProtection() {
+    public boolean hasBurnInProtection() {
         return mBurnInProtection;
     }
 
-    public void setBurnInProtection(boolean burnInProtection) {
+    public void setHasBurnInProtection(boolean burnInProtection) {
         mBurnInProtection = burnInProtection;
     }
 
@@ -230,22 +256,38 @@ public class ClockView extends FrameLayout {
         mAmbientModeEnabled = bundle.getBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
         mPartialRotationEnabled = bundle.getBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
         mLowBitAmbient = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
-        mBurnInProtection = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mBurnInProtection);
+        mBurnInProtection = bundle.getBoolean(EXTRA_BURN_IN_PROTECTION, mBurnInProtection);
     }
 
     public void onTimeTick() {
-        long timeInMillis = mFakeTime >= 0 ? mFakeTime : System.currentTimeMillis();
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(timeInMillis);
+        final int hour;
+        final int minute;
+        final int second;
+        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+            hour = mDateTime.getHour();
+            minute = mDateTime.getMinute();
+            second = mDateTime.getSecond();
+        } else {
+            long timeInMillis = mFakeTime >= 0 ? mFakeTime : System.currentTimeMillis();
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(timeInMillis);
+            hour = calendar.get(Calendar.HOUR);
+            minute = calendar.get(Calendar.MINUTE);
+            second = calendar.get(Calendar.SECOND);
+        }
 
         if (mTimeView != null) {
-            mTimeView.setText(DateFormat.format(getDateFormat(), timeInMillis));
+            final String formattedDate;
+            if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+                formattedDate = mDateTime.format(DateTimeFormatter.ofPattern(getDateFormat()));
+            } else {
+                long timeInMillis = mFakeTime >= 0 ? mFakeTime : System.currentTimeMillis();
+                formattedDate = DateFormat.format(getDateFormat(), timeInMillis).toString();
+            }
+            mTimeView.setText(formattedDate);
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
         }
 
-        final int hour = calendar.get(Calendar.HOUR);
-        final int second = calendar.get(Calendar.SECOND);
-        final int minute = calendar.get(Calendar.MINUTE);
         float degrees = hour * 30 + minute / 2f;
         if (mPartialRotationEnabled) {
             degrees += second / 120f;

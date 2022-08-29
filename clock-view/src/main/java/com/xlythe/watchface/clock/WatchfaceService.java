@@ -6,105 +6,84 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Build;
-import android.os.Bundle;
-import android.support.wearable.watchface.CanvasWatchFaceService;
-import android.support.wearable.watchface.WatchFaceStyle;
 import android.view.SurfaceHolder;
-import android.view.WindowInsets;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.wear.watchface.CanvasType;
+import androidx.wear.watchface.ComplicationSlot;
+import androidx.wear.watchface.ComplicationSlotsManager;
+import androidx.wear.watchface.Renderer;
+import androidx.wear.watchface.WatchFace;
+import androidx.wear.watchface.WatchFaceService;
+import androidx.wear.watchface.WatchFaceType;
+import androidx.wear.watchface.WatchState;
+import androidx.wear.watchface.style.CurrentUserStyleRepository;
 
 import com.xlythe.view.clock.ClockView;
 import com.xlythe.view.clock.utils.BitmapUtils;
 
-public abstract class WatchfaceService extends CanvasWatchFaceService {
+import java.time.ZonedDateTime;
 
-    private Engine mEngine;
+import kotlin.coroutines.Continuation;
 
+public abstract class WatchfaceService extends WatchFaceService {
+
+    private WatchfaceRenderer mRenderer;
     private final ClockView.OnTimeTickListener mOnTimeTickListener = this::invalidate;
 
     public abstract ClockView onCreateClockView(Context context);
 
+    @Nullable
     @Override
-    public Engine onCreateEngine() {
-        mEngine = new Engine();
-        return mEngine;
+    protected WatchFace createWatchFace(
+            @NonNull SurfaceHolder surfaceHolder,
+            @NonNull WatchState watchState,
+            @NonNull ComplicationSlotsManager complicationSlotsManager,
+            @NonNull CurrentUserStyleRepository currentUserStyleRepository,
+            @NonNull Continuation<? super WatchFace> continuation) {
+        mRenderer = new WatchfaceRenderer(this, surfaceHolder, watchState, complicationSlotsManager, currentUserStyleRepository);
+        return new WatchFace(mRenderer.mWatchface.isDigitalEnabled() ? WatchFaceType.DIGITAL : WatchFaceType.ANALOG, mRenderer);
     }
 
     public void invalidate() {
-        if (mEngine != null) {
-            mEngine.invalidate();
+        if (mRenderer != null) {
+            mRenderer.invalidate();
         }
     }
 
-    protected WatchFaceStyle getWatchFaceStyle() {
-        return new WatchFaceStyle.Builder(WatchfaceService.this)
-                .setCardPeekMode(WatchFaceStyle.PEEK_MODE_SHORT)
-                .setBackgroundVisibility(WatchFaceStyle
-                        .BACKGROUND_VISIBILITY_INTERRUPTIVE)
-                .setShowSystemUiTime(false)
-                .build();
-    }
+    private class WatchfaceRenderer extends Renderer.CanvasRenderer {
+        // Default for how long each frame is displayed at expected frame rate.
+        private static final long FRAME_PERIOD_MS_DEFAULT = 16L;
 
-    private class Engine extends CanvasWatchFaceService.Engine {
+        private final ComplicationSlotsManager mComplicationsSlotsManager;
+        private final ClockView mWatchface;
 
-        private ClockView mWatchface;
-
-        @Override
-        public void onCreate(SurfaceHolder holder) {
-            super.onCreate(holder);
-            setWatchFaceStyle(getWatchFaceStyle());
-            mWatchface = onCreateClockView(WatchfaceService.this);
+        WatchfaceRenderer(
+                Context context,
+                SurfaceHolder surfaceHolder,
+                WatchState watchState,
+                ComplicationSlotsManager complicationsSlotsManager,
+                CurrentUserStyleRepository currentUserStyleRepository) {
+            super(surfaceHolder, currentUserStyleRepository, watchState, CanvasType.HARDWARE, FRAME_PERIOD_MS_DEFAULT);
+            mComplicationsSlotsManager = complicationsSlotsManager;
+            mWatchface = onCreateClockView(context);
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
+
+            mWatchface.setHasBurnInProtection(watchState.hasBurnInProtection());
+            watchState.isAmbient().addObserver(ambient -> {
+                mWatchface.setAmbientModeEnabled(ambient);
+                if (mWatchface.isSecondHandEnabled()) {
+                    mWatchface.start();
+                } else {
+                    mWatchface.stop();
+                }
+                invalidate();
+            });
         }
 
         @Override
-        public void onTimeTick() {
-            super.onTimeTick();
-            invalidate();
-        }
-
-        @Override
-        public void onVisibilityChanged(boolean visible) {
-            super.onVisibilityChanged(visible);
-
-            // Start a timer for the seconds hand while we're visible, assuming we support seconds
-            mWatchface.setSecondHandEnabled(visible);
-            if (mWatchface.isSecondHandEnabled()) {
-                mWatchface.start();
-            } else {
-                mWatchface.stop();
-            }
-            invalidate();
-        }
-
-        @Override
-        public void onAmbientModeChanged(boolean inAmbientMode) {
-            super.onAmbientModeChanged(inAmbientMode);
-            mWatchface.setAmbientModeEnabled(inAmbientMode);
-            if (mWatchface.isSecondHandEnabled()) {
-                mWatchface.start();
-            } else {
-                mWatchface.stop();
-            }
-            invalidate();
-        }
-
-        @Override
-        public void onApplyWindowInsets(WindowInsets insets) {
-            super.onApplyWindowInsets(insets);
-            if (Build.VERSION.SDK_INT >= 20) {
-                mWatchface.onApplyWindowInsets(insets);
-            }
-        }
-
-        @Override
-        public void onPropertiesChanged(Bundle properties) {
-            super.onPropertiesChanged(properties);
-            mWatchface.setLowBitAmbient(properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false));
-            mWatchface.setBurnInProtection(properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false));
-        }
-
-        @Override
-        public void onDraw(Canvas canvas, Rect bounds) {
+        public void render(@NonNull Canvas canvas, @NonNull Rect bounds, @NonNull ZonedDateTime zonedDateTime) {
             // Some watches are not perfectly square, because of a small bump at the bottom
             // We still want to draw as if they are square, to avoid squishing the watchface
             if (bounds.width() != bounds.height()) {
@@ -120,11 +99,37 @@ public abstract class WatchfaceService extends CanvasWatchFaceService {
 
             // Invalidate the time. Temporarily remove the OnTimeTickListener so that we don't cause an infinite loop
             mWatchface.setOnTimeTickListener(null);
+            if (Build.VERSION.SDK_INT >= 26) {
+                mWatchface.setTime(zonedDateTime);
+            }
             mWatchface.onTimeTick();
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
 
+            switch (getRenderParameters().getDrawMode()) {
+                case INTERACTIVE:
+                case LOW_BATTERY_INTERACTIVE:
+                    mWatchface.setAmbientModeEnabled(false);
+                case AMBIENT:
+                case MUTE:
+                default:
+                    mWatchface.setAmbientModeEnabled(true);
+            }
+
             // Draw the view
             BitmapUtils.draw(mWatchface, canvas, bounds);
+        }
+
+        @Override
+        public void renderHighlightLayer(@NonNull Canvas canvas, @NonNull Rect rect, @NonNull ZonedDateTime zonedDateTime) {
+            if (getRenderParameters().getHighlightLayer() != null) {
+                canvas.drawColor(getRenderParameters().getHighlightLayer().getBackgroundTint());
+            }
+
+            for (ComplicationSlot complication : mComplicationsSlotsManager.getComplicationSlots().values()) {
+                if (complication.isEnabled()) {
+                    complication.renderHighlightLayer(canvas, zonedDateTime, getRenderParameters());
+                }
+            }
         }
     }
 }

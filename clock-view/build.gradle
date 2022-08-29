@@ -90,7 +90,7 @@ dependencies {
     def withoutSupportLib = { exclude group: 'com.android.support' }
     api fileTree(include: ['*.jar'], dir: 'libs')
     api 'androidx.legacy:legacy-support-v4:[1.0.0,)'
-    api 'com.google.android.gms:play-services-wearable:+', withoutSupportLib
-    api 'com.google.android.support:wearable:+', withoutSupportLib
-    api 'com.google.android.wearable:wearable:+', withoutSupportLib
+    api 'androidx.wear:wear:[1.2.0,)'
+    api 'androidx.wear:wear-watchface:[1.0.0-alpha22,)'
+    api 'com.google.android.gms:play-services-wearable:[17.1.0,)', withoutSupportLib
 }
