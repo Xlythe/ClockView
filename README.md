@@ -8,7 +8,7 @@ Where to Download
 -----------------
 ```groovy
 dependencies {
-  implementation 'com.xlythe:clock-view:1.1'
+  implementation 'com.xlythe:clock-view:1.1.1'
 }
 ```
 
@@ -117,8 +117,6 @@ Watchface
         <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
     </intent-filter>
 </service>
-
-<meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
 ```
 ```xml
 <wallpaper />
