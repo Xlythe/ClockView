@@ -54,7 +54,7 @@ public abstract class WatchfaceService extends WatchFaceService {
 
     private class WatchfaceRenderer extends Renderer.CanvasRenderer {
         // Default for how long each frame is displayed at expected frame rate.
-        private static final long FRAME_PERIOD_MS_DEFAULT = 16L;
+        private static final long FRAME_PERIOD_MS_DEFAULT = 1000L;
 
         private final ComplicationSlotsManager mComplicationsSlotsManager;
         private final ClockView mWatchface;
@@ -73,11 +73,6 @@ public abstract class WatchfaceService extends WatchFaceService {
             mWatchface.setHasBurnInProtection(watchState.hasBurnInProtection());
             watchState.isAmbient().addObserver(ambient -> {
                 mWatchface.setAmbientModeEnabled(ambient);
-                if (mWatchface.isSecondHandEnabled()) {
-                    mWatchface.start();
-                } else {
-                    mWatchface.stop();
-                }
                 invalidate();
             });
         }
@@ -105,14 +100,17 @@ public abstract class WatchfaceService extends WatchFaceService {
             mWatchface.onTimeTick();
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
 
+            // Override the ambient mode setting to use whatever the render wants us to use.
             switch (getRenderParameters().getDrawMode()) {
                 case INTERACTIVE:
                 case LOW_BATTERY_INTERACTIVE:
                     mWatchface.setAmbientModeEnabled(false);
+                    break;
                 case AMBIENT:
                 case MUTE:
                 default:
                     mWatchface.setAmbientModeEnabled(true);
+                    break;
             }
 
             // Draw the view
