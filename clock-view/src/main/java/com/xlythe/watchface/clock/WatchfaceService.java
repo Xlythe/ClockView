@@ -6,10 +6,12 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Build;
+import android.view.ContextThemeWrapper;
 import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiContext;
 import androidx.wear.watchface.CanvasType;
 import androidx.wear.watchface.ComplicationSlot;
 import androidx.wear.watchface.ComplicationSlotsManager;
@@ -32,7 +34,12 @@ public abstract class WatchfaceService extends WatchFaceService {
     private WatchfaceRenderer mRenderer;
     private final ClockView.OnTimeTickListener mOnTimeTickListener = this::invalidate;
 
-    public abstract ClockView onCreateClockView(Context context);
+    public abstract ClockView onCreateClockView(@UiContext Context context);
+
+    @UiContext
+    protected Context getThemedContext() {
+        return new ContextThemeWrapper(this, androidx.appcompat.R.style.Theme_AppCompat);
+    }
 
     @Nullable
     @Override
@@ -42,7 +49,7 @@ public abstract class WatchfaceService extends WatchFaceService {
             @NonNull ComplicationSlotsManager complicationSlotsManager,
             @NonNull CurrentUserStyleRepository currentUserStyleRepository,
             @NonNull Continuation<? super WatchFace> continuation) {
-        mRenderer = new WatchfaceRenderer(this, surfaceHolder, watchState, complicationSlotsManager, currentUserStyleRepository);
+        mRenderer = new WatchfaceRenderer(surfaceHolder, watchState, complicationSlotsManager, currentUserStyleRepository);
         return new WatchFace(mRenderer.mWatchface.isDigitalEnabled() ? WatchFaceType.DIGITAL : WatchFaceType.ANALOG, mRenderer);
     }
 
@@ -60,14 +67,13 @@ public abstract class WatchfaceService extends WatchFaceService {
         private final ClockView mWatchface;
 
         WatchfaceRenderer(
-                Context context,
                 SurfaceHolder surfaceHolder,
                 WatchState watchState,
                 ComplicationSlotsManager complicationsSlotsManager,
                 CurrentUserStyleRepository currentUserStyleRepository) {
             super(surfaceHolder, currentUserStyleRepository, watchState, CanvasType.HARDWARE, FRAME_PERIOD_MS_DEFAULT);
             mComplicationsSlotsManager = complicationsSlotsManager;
-            mWatchface = onCreateClockView(context);
+            mWatchface = onCreateClockView(getThemedContext());
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
 
             mWatchface.setHasBurnInProtection(watchState.hasBurnInProtection());
