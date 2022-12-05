@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    package="com.xlythe.view.clock"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:tools="http://schemas.android.com/tools">
     <uses-sdk tools:overrideLibrary="androidx.wear.watchface, androidx.wear.watchface.style, android.support.wearable.watchface, androidx.wear.complications"/>
 </manifest>

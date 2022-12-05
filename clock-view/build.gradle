@@ -28,6 +28,7 @@ android {
             withJavadocJar()
         }
     }
+    namespace 'com.xlythe.view.clock'
 }
 
 afterEvaluate {

@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <declare-styleable name="ClockView">
+        <attr name="clockStyle" format="enum">
+            <enum name="analog" value="0"/>
+            <enum name="digital" value="1"/>
+        </attr>
+        <attr name="showSecondHand" format="boolean" />
+        <attr name="partialRotation" format="boolean" />
+        <attr name="lowBitAmbient" format="boolean" />
+        <attr name="hasBurnInProtection" format="boolean" />
+        <attr name="ambientModeEnabled" format="boolean" />
+    </declare-styleable>
+
     <!-- Standard gravity constant that a child supplies to its parent.
          Defines how the child view should be positioned, on both the X and Y axes, within its enclosing layout. -->
     <attr name="layout_gravity">

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.xlythe.view.clock.ClockView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:clock="http://schemas.android.com/apk/res-auto"
     android:id="@+id/clockView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#ffe3e3e3">
+    android:background="#ff030303"
+    clock:clockStyle="digital">
 
     <TextView
         android:id="@id/clock_time"

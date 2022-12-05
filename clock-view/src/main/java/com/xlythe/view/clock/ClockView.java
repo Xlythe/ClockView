@@ -2,6 +2,7 @@ package com.xlythe.view.clock;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -74,19 +75,39 @@ public class ClockView extends FrameLayout {
 
     public ClockView(Context context) {
         super(context);
+        init(context, /*attrs=*/ null);
     }
 
-    public ClockView(Context context, AttributeSet set) {
-        super(context, set);
+    public ClockView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init(context, attrs);
     }
 
-    public ClockView(Context context, AttributeSet set, int typeDef) {
-        super(context, set, typeDef);
+    public ClockView(Context context, AttributeSet attrs, int typeDef) {
+        super(context, attrs, typeDef);
+        init(context, attrs);
     }
 
     @TargetApi(21)
     public ClockView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+        init(context, attrs);
+    }
+
+    private void init(Context context, @Nullable AttributeSet attrs) {
+        if (attrs != null) {
+            TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ClockView);
+            android.util.Log.d("TEST", "ClockStyle value: " + a.getInteger(R.styleable.ClockView_clockStyle, 500));
+            android.util.Log.d("TEST", "mDigitalEnabled value: " + mDigitalEnabled);
+            setDigitalEnabled(a.getInteger(R.styleable.ClockView_clockStyle, mDigitalEnabled ? 1 : 0) == 1);
+            android.util.Log.d("TEST", "mDigitalEnabled value: " + isDigitalEnabled());
+            setSecondHandEnabled(a.getBoolean(R.styleable.ClockView_showSecondHand, mSecondsEnabled));
+            setPartialRotationEnabled(a.getBoolean(R.styleable.ClockView_partialRotation, mPartialRotationEnabled));
+            setLowBitAmbient(a.getBoolean(R.styleable.ClockView_lowBitAmbient, mLowBitAmbient));
+            setHasBurnInProtection(a.getBoolean(R.styleable.ClockView_hasBurnInProtection, mBurnInProtection));
+            setAmbientModeEnabled(a.getBoolean(R.styleable.ClockView_ambientModeEnabled, mAmbientModeEnabled));
+            a.recycle();
+        }
     }
 
     @Override
@@ -172,7 +193,7 @@ public class ClockView extends FrameLayout {
                     "or @id/clock_seconds [ImageView], @id/clock_minutes [ImageView], @id/clock_hours [ImageView]");
         }
 
-        mDigitalEnabled = !supportsAnalog();
+        mDigitalEnabled = mDigitalEnabled || !supportsAnalog();
 
         super.onFinishInflate();
     }
