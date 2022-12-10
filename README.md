@@ -8,7 +8,7 @@ Where to Download
 -----------------
 ```groovy
 dependencies {
-  implementation 'com.xlythe:clock-view:1.1.1'
+  implementation 'com.xlythe:clock-view:1.1.2'
 }
 ```
 
@@ -44,21 +44,21 @@ ClockView
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <ImageView
+    <com.xlythe.view.clock.ClockHandView
         android:id="@id/clock_hours"
         android:src="@drawable/hour_hand"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center_horizontal" />
 
-    <ImageView
+    <com.xlythe.view.clock.ClockHandView
         android:id="@id/clock_minutes"
         android:src="@drawable/minute_hand"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center_horizontal" />
 
-    <ImageView
+    <com.xlythe.view.clock.ClockHandView
         android:id="@id/clock_seconds"
         android:src="@drawable/second_hand"
         android:layout_width="wrap_content"
