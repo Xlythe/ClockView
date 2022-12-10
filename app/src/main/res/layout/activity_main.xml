@@ -8,6 +8,7 @@
     <include
         layout="@layout/clock_view"
         android:layout_width="@dimen/default_clock_size"
-        android:layout_height="@dimen/default_clock_size" />
+        android:layout_height="@dimen/default_clock_size"
+        android:layout_gravity="center"/>
 
 </FrameLayout>

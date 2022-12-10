@@ -18,7 +18,7 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.widget.ImageView;
+import androidx.appcompat.widget.AppCompatImageView;
 
 import androidx.annotation.Nullable;
 
@@ -26,7 +26,7 @@ import androidx.annotation.Nullable;
  * Custom ImageView for circular images in Android while maintaining the
  * best draw performance and supporting custom borders & selectors.
  */
-public class CircularImageView extends ImageView implements Animator.OnInvalidateListener {
+public class CircularImageView extends AppCompatImageView implements Animator.OnInvalidateListener {
     private static final String STATE_SUPER = "super";
     private static final String STATE_ENABLED = "circular_enabled";
 
@@ -60,7 +60,7 @@ public class CircularImageView extends ImageView implements Animator.OnInvalidat
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public CircularImageView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
+        super(context, attrs, defStyleAttr);
         init();
     }
 

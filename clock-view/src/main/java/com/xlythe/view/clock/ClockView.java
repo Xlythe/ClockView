@@ -97,10 +97,7 @@ public class ClockView extends FrameLayout {
     private void init(Context context, @Nullable AttributeSet attrs) {
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ClockView);
-            android.util.Log.d("TEST", "ClockStyle value: " + a.getInteger(R.styleable.ClockView_clockStyle, 500));
-            android.util.Log.d("TEST", "mDigitalEnabled value: " + mDigitalEnabled);
             setDigitalEnabled(a.getInteger(R.styleable.ClockView_clockStyle, mDigitalEnabled ? 1 : 0) == 1);
-            android.util.Log.d("TEST", "mDigitalEnabled value: " + isDigitalEnabled());
             setSecondHandEnabled(a.getBoolean(R.styleable.ClockView_showSecondHand, mSecondsEnabled));
             setPartialRotationEnabled(a.getBoolean(R.styleable.ClockView_partialRotation, mPartialRotationEnabled));
             setLowBitAmbient(a.getBoolean(R.styleable.ClockView_lowBitAmbient, mLowBitAmbient));
@@ -108,6 +105,7 @@ public class ClockView extends FrameLayout {
             setAmbientModeEnabled(a.getBoolean(R.styleable.ClockView_ambientModeEnabled, mAmbientModeEnabled));
             a.recycle();
         }
+        setClipChildren(false);
     }
 
     @Override
@@ -177,6 +175,10 @@ public class ClockView extends FrameLayout {
         mHandler.post(mTicker);
     }
 
+    private boolean isStarted() {
+        return mHandler.hasCallbacks(mTicker);
+    }
+
     public void stop() {
         mHandler.removeCallbacks(mTicker);
     }
@@ -213,6 +215,10 @@ public class ClockView extends FrameLayout {
     public void setDigitalEnabled(boolean digitalEnabled) {
         mDigitalEnabled = digitalEnabled;
         onTimeTick();
+        if (isStarted()) {
+            stop();
+            start();
+        }
     }
 
     public boolean isSecondHandEnabled() {
@@ -221,6 +227,11 @@ public class ClockView extends FrameLayout {
 
     public void setSecondHandEnabled(boolean enabled) {
         mSecondsEnabled = enabled;
+        onTimeTick();
+        if (isStarted()) {
+            stop();
+            start();
+        }
     }
 
     public boolean isPartialRotationEnabled() {
@@ -346,6 +357,11 @@ public class ClockView extends FrameLayout {
 
     public void setAmbientModeEnabled(boolean enabled) {
         mAmbientModeEnabled = enabled;
+        onTimeTick();
+        if (isStarted()) {
+            stop();
+            start();
+        }
     }
 
     public OnTimeTickListener getOnTimeTickListener() {

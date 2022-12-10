@@ -8,6 +8,8 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PaintFlagsDrawFilter;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.view.View;
 
 import java.util.Calendar;
@@ -16,60 +18,45 @@ public class BitmapUtils {
     public static Bitmap getHourAsBitmap(Context context, int res) {
         final int hour = Calendar.getInstance().get(Calendar.HOUR);
         final Bitmap defaultDial = BitmapFactory.decodeResource(context.getResources(), res);
-        final Matrix matrix = new Matrix();
         final float degrees = (hour) * 30;
-
-        // Rotate the image
-        matrix.postRotate(degrees);
-        Bitmap b = Bitmap.createBitmap(defaultDial, 0, 0, defaultDial.getWidth(), defaultDial.getHeight(), matrix, false);
-
-        // Rotating a square makes it longer, so crop of those corners
-        int x = (b.getWidth() - defaultDial.getWidth()) / 2;
-        int y = (b.getHeight() - defaultDial.getHeight()) / 2;
-        Bitmap croppedBmp;
-        if (x > 0 && y > 0)
-            croppedBmp = Bitmap.createBitmap(b, x, y, defaultDial.getWidth(), defaultDial.getHeight());
-        else croppedBmp = b;
-        return croppedBmp;
+        return rotate(defaultDial, degrees);
     }
 
     public static Bitmap getMinuteAsBitmap(Context context, int res) {
         final int minute = Calendar.getInstance().get(Calendar.MINUTE);
         final Bitmap defaultDial = BitmapFactory.decodeResource(context.getResources(), res);
-        final Matrix matrix = new Matrix();
         final float degrees = (minute) * 6;
-
-        // Rotate the image
-        matrix.postRotate(degrees);
-        Bitmap b = Bitmap.createBitmap(defaultDial, 0, 0, defaultDial.getWidth(), defaultDial.getHeight(), matrix, false);
-
-        // Rotating a square makes it longer, so crop of those corners
-        int x = (b.getWidth() - defaultDial.getWidth()) / 2;
-        int y = (b.getHeight() - defaultDial.getHeight()) / 2;
-        Bitmap croppedBmp;
-        if (x > 0 && y > 0)
-            croppedBmp = Bitmap.createBitmap(b, x, y, defaultDial.getWidth(), defaultDial.getHeight());
-        else croppedBmp = b;
-        return croppedBmp;
+        return rotate(defaultDial, degrees);
     }
 
     public static Bitmap getSecondAsBitmap(Context context, int res) {
         final int second = Calendar.getInstance().get(Calendar.SECOND);
         final Bitmap defaultDial = BitmapFactory.decodeResource(context.getResources(), res);
-        final Matrix matrix = new Matrix();
         final float degrees = (second) * 6;
+        return rotate(defaultDial, degrees);
+    }
+
+    public static Bitmap rotate(Bitmap bitmap, float degrees) {
+        if (degrees == 0f) {
+            return bitmap;
+        }
+
+        final Matrix matrix = new Matrix();
 
         // Rotate the image
-        matrix.postRotate(degrees);
-        Bitmap b = Bitmap.createBitmap(defaultDial, 0, 0, defaultDial.getWidth(), defaultDial.getHeight(), matrix, false);
+        matrix.postRotate(degrees, bitmap.getWidth() / 2f, bitmap.getHeight() / 2f);
+        Bitmap b = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
 
-        // Rotating a square makes it longer, so crop of those corners
-        int x = (b.getWidth() - defaultDial.getWidth()) / 2;
-        int y = (b.getHeight() - defaultDial.getHeight()) / 2;
+        // Rotating a square makes it longer, so crop off those corners
+        int x = (b.getWidth() - bitmap.getWidth()) / 2;
+        int y = (b.getHeight() - bitmap.getHeight()) / 2;
         Bitmap croppedBmp;
-        if (x > 0 && y > 0)
-            croppedBmp = Bitmap.createBitmap(b, x, y, defaultDial.getWidth(), defaultDial.getHeight());
-        else croppedBmp = b;
+        if (x > 0 && y > 0) {
+            croppedBmp = Bitmap.createBitmap(b, x, y, bitmap.getWidth(), bitmap.getHeight());
+        }
+        else {
+            croppedBmp = b;
+        }
         return croppedBmp;
     }
 
@@ -83,6 +70,39 @@ public class BitmapUtils {
             }
         }
         return container;
+    }
+
+    public static Bitmap asBitmap(Drawable drawable) {
+        if (drawable instanceof BitmapDrawable) {
+            Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+            if (bitmap != null && !bitmap.isRecycled()) {
+                return bitmap;
+            }
+        }
+
+        int width = Math.max(1, drawable.getIntrinsicWidth());
+        int height = Math.max(1, drawable.getIntrinsicHeight());
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+        return bitmap;
+    }
+
+    public static Bitmap resize(Bitmap bitmap, int width, int height, boolean keepAspectRatio) {
+        if (!keepAspectRatio) {
+            return Bitmap.createScaledBitmap(bitmap, width, height, false);
+        }
+
+        float aspectRatio = bitmap.getWidth() / (float) bitmap.getHeight();
+        if (height * aspectRatio < width) {
+            width = Math.round(height * aspectRatio);
+        } else {
+            height = Math.round(width / aspectRatio);
+        }
+
+        return Bitmap.createScaledBitmap(bitmap, width, height, false);
     }
 
     public static void measure(View view, Rect bounds) {
@@ -117,7 +137,6 @@ public class BitmapUtils {
         }
 
         // Draw the view
-        canvas.setDrawFilter(new PaintFlagsDrawFilter(Paint.ANTI_ALIAS_FLAG, Paint.DITHER_FLAG));
         view.draw(canvas);
     }
 }

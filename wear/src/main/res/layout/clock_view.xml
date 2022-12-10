@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#ff030303"
-    clock:clockStyle="digital">
+    clock:clockStyle="analog">
 
     <TextView
         android:id="@id/clock_time"
@@ -20,21 +20,21 @@
         android:layout_height="match_parent"
         android:src="@drawable/tick_roman" />
 
-    <ImageView
+    <com.xlythe.view.clock.ClockHandView
         android:id="@id/clock_hours"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center_horizontal"
         android:src="@drawable/hour_hand" />
 
-    <ImageView
+    <com.xlythe.view.clock.ClockHandView
         android:id="@id/clock_minutes"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center_horizontal"
         android:src="@drawable/minute_hand" />
 
-    <ImageView
+    <com.xlythe.view.clock.ClockHandView
         android:id="@id/clock_seconds"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
