@@ -73,6 +73,8 @@ public class ClockView extends FrameLayout {
         }
     };
 
+    private boolean isStarted = false;
+
     public ClockView(Context context) {
         super(context);
         init(context, /*attrs=*/ null);
@@ -97,12 +99,12 @@ public class ClockView extends FrameLayout {
     private void init(Context context, @Nullable AttributeSet attrs) {
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ClockView);
-            setDigitalEnabled(a.getInteger(R.styleable.ClockView_clockStyle, mDigitalEnabled ? 1 : 0) == 1);
-            setSecondHandEnabled(a.getBoolean(R.styleable.ClockView_showSecondHand, mSecondsEnabled));
-            setPartialRotationEnabled(a.getBoolean(R.styleable.ClockView_partialRotation, mPartialRotationEnabled));
-            setLowBitAmbient(a.getBoolean(R.styleable.ClockView_lowBitAmbient, mLowBitAmbient));
-            setHasBurnInProtection(a.getBoolean(R.styleable.ClockView_hasBurnInProtection, mBurnInProtection));
-            setAmbientModeEnabled(a.getBoolean(R.styleable.ClockView_ambientModeEnabled, mAmbientModeEnabled));
+            mDigitalEnabled = a.getInteger(R.styleable.ClockView_clockStyle, mDigitalEnabled ? 1 : 0) == 1;
+            mSecondsEnabled = a.getBoolean(R.styleable.ClockView_showSecondHand, mSecondsEnabled);
+            mPartialRotationEnabled = a.getBoolean(R.styleable.ClockView_partialRotation, mPartialRotationEnabled);
+            mLowBitAmbient = a.getBoolean(R.styleable.ClockView_lowBitAmbient, mLowBitAmbient);
+            mBurnInProtection = a.getBoolean(R.styleable.ClockView_hasBurnInProtection, mBurnInProtection);
+            mAmbientModeEnabled = a.getBoolean(R.styleable.ClockView_ambientModeEnabled, mAmbientModeEnabled);
             a.recycle();
         }
         setClipChildren(false);
@@ -173,14 +175,16 @@ public class ClockView extends FrameLayout {
     public void start() {
         mHandler.removeCallbacks(mTicker);
         mHandler.post(mTicker);
+        isStarted = true;
     }
 
     private boolean isStarted() {
-        return mHandler.hasCallbacks(mTicker);
+        return isStarted;
     }
 
     public void stop() {
         mHandler.removeCallbacks(mTicker);
+        isStarted = false;
     }
 
     @Override
