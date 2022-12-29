@@ -9,10 +9,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
-import android.os.SystemClock;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -70,7 +68,7 @@ public class ClockView extends FrameLayout {
 
     @Nullable
     private ZonedDateTime mDateTime;
-    private long mFakeTime = -1;
+    private long mTimeMillis = -1;
 
     private final Runnable mTicker = new Runnable() {
         @Override
@@ -238,52 +236,96 @@ public class ClockView extends FrameLayout {
     @RequiresApi(26)
     public void setTime(ZonedDateTime dateTime) {
         mDateTime = dateTime;
+        mTimeMillis = -1;
     }
 
-    public long getFakeTime() {
-        return mFakeTime;
+    public void setTime(long timeInMillis) {
+        mTimeMillis = timeInMillis;
+        mDateTime = null;
     }
 
-    public void setFakeTime(long timeInMillis) {
-        mFakeTime = timeInMillis;
+    public void setTime(int hour, int minute) {
+        setHour(hour);
+        setMinute(minute);
     }
 
-    public void setFakeTime(int hour, int minute) {
-        setFakeHour(hour);
-        setFakeMinute(minute);
+    public void setTime(int hour, int minute, int seconds) {
+        setHour(hour);
+        setMinute(minute);
+        setSecond(seconds);
     }
 
-    public void setFakeTime(int hour, int minute, int seconds) {
-        setFakeHour(hour);
-        setFakeMinute(minute);
-        setFakeSecond(seconds);
+    public long getTimeMillis() {
+        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+            return mDateTime.toInstant().toEpochMilli();
+        } else {
+            return mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
+        }
     }
 
-    public void setFakeHour(int hour) {
+    public void resetTime() {
+        mTimeMillis = -1;
+        mDateTime = null;
+    }
+
+    public void setHour(int hour) {
         Calendar calendar = Calendar.getInstance();
-        if (mFakeTime >= 0) {
-            calendar.setTimeInMillis(mFakeTime);
+        if (mTimeMillis >= 0) {
+            calendar.setTimeInMillis(mTimeMillis);
         }
         calendar.set(Calendar.HOUR_OF_DAY, hour);
-        setFakeTime(calendar.getTimeInMillis());
+        setTime(calendar.getTimeInMillis());
     }
 
-    public void setFakeMinute(int minute) {
+    public int getHour() {
+        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+            return mDateTime.getHour();
+        } else {
+            long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(timeInMillis);
+            return calendar.get(Calendar.HOUR);
+        }
+    }
+
+    public void setMinute(int minute) {
         Calendar calendar = Calendar.getInstance();
-        if (mFakeTime >= 0) {
-            calendar.setTimeInMillis(mFakeTime);
+        if (mTimeMillis >= 0) {
+            calendar.setTimeInMillis(mTimeMillis);
         }
         calendar.set(Calendar.MINUTE, minute);
-        setFakeTime(calendar.getTimeInMillis());
+        setTime(calendar.getTimeInMillis());
     }
 
-    public void setFakeSecond(int second) {
+    public int getMinute() {
+        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+            return mDateTime.getMinute();
+        } else {
+            long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(timeInMillis);
+            return calendar.get(Calendar.MINUTE);
+        }
+    }
+
+    public void setSecond(int second) {
         Calendar calendar = Calendar.getInstance();
-        if (mFakeTime >= 0) {
-            calendar.setTimeInMillis(mFakeTime);
+        if (mTimeMillis >= 0) {
+            calendar.setTimeInMillis(mTimeMillis);
         }
         calendar.set(Calendar.SECOND, second);
-        setFakeTime(calendar.getTimeInMillis());
+        setTime(calendar.getTimeInMillis());
+    }
+
+    public int getSecond() {
+        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+            return mDateTime.getSecond();
+        } else {
+            long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(timeInMillis);
+            return calendar.get(Calendar.SECOND);
+        }
     }
 
     /**
@@ -421,29 +463,16 @@ public class ClockView extends FrameLayout {
     }
 
     public void onTimeTick() {
-        final int hour;
-        final int minute;
-        final int second;
-        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
-            hour = mDateTime.getHour();
-            minute = mDateTime.getMinute();
-            second = mDateTime.getSecond();
-        } else {
-            long timeInMillis = mFakeTime >= 0 ? mFakeTime : System.currentTimeMillis();
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(timeInMillis);
-            hour = calendar.get(Calendar.HOUR);
-            minute = calendar.get(Calendar.MINUTE);
-            second = calendar.get(Calendar.SECOND);
-        }
+        final int hour = getHour();
+        final int minute = getMinute();
+        final int second = getSecond();
 
         if (mTimeView != null) {
             final String formattedDate;
             if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
                 formattedDate = mDateTime.format(DateTimeFormatter.ofPattern(getDateFormat()));
             } else {
-                long timeInMillis = mFakeTime >= 0 ? mFakeTime : System.currentTimeMillis();
-                formattedDate = DateFormat.format(getDateFormat(), timeInMillis).toString();
+                formattedDate = DateFormat.format(getDateFormat(), getTimeMillis()).toString();
             }
             mTimeView.setText(formattedDate);
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
