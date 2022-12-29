@@ -3,13 +3,16 @@ package com.xlythe.view.clock;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
+import android.os.SystemClock;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -19,6 +22,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
@@ -26,7 +30,7 @@ import androidx.annotation.RequiresApi;
  * An adjustable clock view
  */
 public class ClockView extends FrameLayout {
-    protected static final String TAG = ClockView.class.getSimpleName();
+    public static final String TAG = ClockView.class.getSimpleName();
     private static final boolean DEBUG = false;
 
     private static final long ONE_SECOND = 1000;
@@ -60,6 +64,9 @@ public class ClockView extends FrameLayout {
 
     @Nullable
     private OnTimeTickListener mOnTimeTickListener;
+
+    @Nullable
+    private OnInvalidateListener mOnInvalidateListener;
 
     @Nullable
     private ZonedDateTime mDateTime;
@@ -115,6 +122,116 @@ public class ClockView extends FrameLayout {
         super.onLayout(changed, left, top, right, bottom);
         if (changed) {
             onTimeTick();
+        }
+    }
+
+    /**
+     * Several events (such as invalidation) only trigger if
+     * a view is attached to a window. To support watchfaces,
+     * we'll intercept these events and propagate them to the
+     * watchface service.
+     */
+    private boolean isManualInvalidationEnabled() {
+        return mOnInvalidateListener != null;
+    }
+
+    /**
+     * Overriding this allows injected touch events to trigger
+     * #performClick on a view that's not attached to an activity
+     * (eg. a watchface)
+     */
+    @Override
+    public Handler getHandler() {
+        if (!isManualInvalidationEnabled()) {
+            return super.getHandler();
+        }
+
+        return mHandler;
+    }
+
+    /**
+     * Overriding this allows injected touch events to trigger
+     * #performClick on a view that's not attached to an activity
+     * (eg. a watchface)
+     */
+    @Override
+    public boolean post(Runnable action) {
+        if (!isManualInvalidationEnabled()) {
+            return super.post(action);
+        }
+
+        return getHandler().post(action);
+    }
+
+    @Override
+    public boolean postDelayed(Runnable action, long delayMillis) {
+        if (!isManualInvalidationEnabled()) {
+            return super.postDelayed(action, delayMillis);
+        }
+
+        return getHandler().postDelayed(action, delayMillis);
+    }
+
+    @Override
+    public void postInvalidateDelayed(long delayMilliseconds) {
+        if (!isManualInvalidationEnabled()) {
+            super.postInvalidateDelayed(delayMilliseconds);
+            return;
+        }
+
+        postDelayed(this::invalidate, delayMilliseconds);
+    }
+
+    @Override
+    public void invalidateDrawable(@NonNull Drawable drawable) {
+        if (!isManualInvalidationEnabled()) {
+            super.invalidateDrawable(drawable);
+            return;
+        }
+
+        invalidate();
+    }
+
+    @Override
+    public void scheduleDrawable(@NonNull Drawable who, @NonNull Runnable what, long when) {
+        if (!isManualInvalidationEnabled()) {
+            super.scheduleDrawable(who, what, when);
+            return;
+        }
+
+        if (verifyDrawable(who)) {
+            getHandler().postAtTime(what, who, when);
+        }
+    }
+
+    @Override
+    public void unscheduleDrawable(Drawable who) {
+        if (!isManualInvalidationEnabled()) {
+            super.unscheduleDrawable(who);
+            return;
+        }
+
+        getHandler().removeCallbacksAndMessages(who);
+    }
+
+    @Override
+    public void unscheduleDrawable(@NonNull Drawable who, @NonNull Runnable what) {
+        if (!isManualInvalidationEnabled()) {
+            super.unscheduleDrawable(who, what);
+            return;
+        }
+
+        if (verifyDrawable(who)) {
+            getHandler().removeCallbacks(what, who);
+        }
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+
+        if (mOnInvalidateListener != null) {
+            mOnInvalidateListener.onInvalidate();
         }
     }
 
@@ -217,6 +334,10 @@ public class ClockView extends FrameLayout {
     }
 
     public void setDigitalEnabled(boolean digitalEnabled) {
+        if (mDigitalEnabled == digitalEnabled) {
+            return;
+        }
+
         mDigitalEnabled = digitalEnabled;
         onTimeTick();
         if (isStarted()) {
@@ -230,6 +351,10 @@ public class ClockView extends FrameLayout {
     }
 
     public void setSecondHandEnabled(boolean enabled) {
+        if (mSecondsEnabled == enabled) {
+            return;
+        }
+
         mSecondsEnabled = enabled;
         onTimeTick();
         if (isStarted()) {
@@ -360,6 +485,10 @@ public class ClockView extends FrameLayout {
     }
 
     public void setAmbientModeEnabled(boolean enabled) {
+        if (mAmbientModeEnabled == enabled) {
+            return;
+        }
+
         mAmbientModeEnabled = enabled;
         onTimeTick();
         if (isStarted()) {
@@ -378,5 +507,18 @@ public class ClockView extends FrameLayout {
 
     public interface OnTimeTickListener {
         void onTimeTick();
+    }
+
+    public OnInvalidateListener getOnInvalidateListener() {
+        return mOnInvalidateListener;
+    }
+
+    public void setOnInvalidateListener(OnInvalidateListener l) {
+        mOnInvalidateListener = l;
+    }
+
+
+    public interface OnInvalidateListener {
+        void onInvalidate();
     }
 }

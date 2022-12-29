@@ -9,6 +9,10 @@ import com.xlythe.watchface.clock.WatchfaceService;
 public class MyWatchfaceService extends WatchfaceService {
     @Override
     public ClockView onCreateClockView(Context context) {
-        return (ClockView) View.inflate(context, R.layout.clock_view, null);
+        ClockView clockView = (ClockView) View.inflate(context, R.layout.clock_view, null);
+        clockView.setOnClickListener(v -> {
+            clockView.setDigitalEnabled(!clockView.isDigitalEnabled());
+        });
+        return clockView;
     }
 }

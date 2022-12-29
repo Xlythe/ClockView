@@ -4,7 +4,7 @@
     android:id="@+id/clockView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#ff030303"
+    android:background="@drawable/clock_bg"
     clock:clockStyle="analog">
 
     <TextView

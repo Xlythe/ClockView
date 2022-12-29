@@ -6,7 +6,11 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.os.Build;
+import android.os.SystemClock;
+import android.util.Log;
 import android.view.ContextThemeWrapper;
+import android.view.InputDevice;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
@@ -16,6 +20,8 @@ import androidx.wear.watchface.CanvasType;
 import androidx.wear.watchface.ComplicationSlot;
 import androidx.wear.watchface.ComplicationSlotsManager;
 import androidx.wear.watchface.Renderer;
+import androidx.wear.watchface.TapEvent;
+import androidx.wear.watchface.TapType;
 import androidx.wear.watchface.WatchFace;
 import androidx.wear.watchface.WatchFaceService;
 import androidx.wear.watchface.WatchFaceType;
@@ -25,6 +31,8 @@ import androidx.wear.watchface.style.CurrentUserStyleRepository;
 import com.xlythe.view.clock.ClockView;
 import com.xlythe.view.clock.utils.BitmapUtils;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 
 import kotlin.coroutines.Continuation;
@@ -50,7 +58,43 @@ public abstract class WatchfaceService extends WatchFaceService {
             @NonNull CurrentUserStyleRepository currentUserStyleRepository,
             @NonNull Continuation<? super WatchFace> continuation) {
         mRenderer = new WatchfaceRenderer(surfaceHolder, watchState, complicationSlotsManager, currentUserStyleRepository);
-        return new WatchFace(mRenderer.mWatchface.isDigitalEnabled() ? WatchFaceType.DIGITAL : WatchFaceType.ANALOG, mRenderer);
+        WatchFace watchFace = new WatchFace(mRenderer.mWatchface.isDigitalEnabled() ? WatchFaceType.DIGITAL : WatchFaceType.ANALOG, mRenderer);
+        watchFace.setTapListener((tapType, tapEvent) -> {
+            int action;
+            switch (tapType) {
+                case TapType.DOWN:
+                    action = MotionEvent.ACTION_DOWN;
+                    break;
+                case TapType.UP:
+                    action = MotionEvent.ACTION_UP;
+                    break;
+                case TapType.CANCEL:
+                    action = MotionEvent.ACTION_CANCEL;
+                    break;
+                default:
+                    Log.w(ClockView.TAG, "Unknown tap type: " + tapType);
+                    return;
+            }
+            MotionEvent motionEvent = MotionEvent.obtain(
+                    SystemClock.uptimeMillis(),
+                    toUptimeMillis(tapEvent.getTapTime()),
+                    action,
+                    tapEvent.getXPos(),
+                    tapEvent.getYPos(),
+                    0);
+            motionEvent.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+            mRenderer.mWatchface.dispatchTouchEvent(motionEvent);
+            motionEvent.recycle();
+        });
+        return watchFace;
+    }
+
+    private long toUptimeMillis(Instant instant) {
+        long timeSinceInstant = 0;
+        if (Build.VERSION.SDK_INT >= 26) {
+            timeSinceInstant = Duration.between(instant, Instant.now()).toMillis();
+        }
+        return SystemClock.uptimeMillis() - timeSinceInstant;
     }
 
     public void invalidate() {
@@ -74,6 +118,7 @@ public abstract class WatchfaceService extends WatchFaceService {
             super(surfaceHolder, currentUserStyleRepository, watchState, CanvasType.HARDWARE, FRAME_PERIOD_MS_DEFAULT);
             mComplicationsSlotsManager = complicationsSlotsManager;
             mWatchface = onCreateClockView(getThemedContext());
+            mWatchface.setOnInvalidateListener(this::invalidate);
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
 
             mWatchface.setHasBurnInProtection(watchState.hasBurnInProtection());

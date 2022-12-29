@@ -1,5 +1,6 @@
 package com.xlythe.view.clock.utils;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -10,8 +11,19 @@ import android.graphics.PaintFlagsDrawFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.DrawableContainer;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.os.Build;
+import android.util.Log;
 import android.view.View;
 
+import androidx.annotation.Nullable;
+
+import com.xlythe.view.clock.ClockView;
+
+import java.lang.reflect.Method;
 import java.util.Calendar;
 
 public class BitmapUtils {
@@ -136,7 +148,58 @@ public class BitmapUtils {
             measure(view, bounds);
         }
 
+        // Prepare the view for drawing
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            setForceSoftware(view.getForeground());
+        }
+        setForceSoftware(view.getBackground());
+
         // Draw the view
         view.draw(canvas);
+    }
+
+    /**
+     * RippleDrawables, by default, can only be drawn when attached to a window.
+     * However, by calling the hidden method RippleDrawable#setForceSoftware, it's possible
+     * to draw them anyways.
+     */
+    private static void setForceSoftware(@Nullable Drawable drawable) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            return;
+        }
+
+        if (drawable == null) {
+            return;
+        }
+
+        if (drawable instanceof LayerDrawable) {
+            LayerDrawable layerDrawable = (LayerDrawable) drawable;
+            for (int i = 0; i < layerDrawable.getNumberOfLayers(); i++) {
+                setForceSoftware(layerDrawable.getDrawable(i));
+            }
+        }
+
+        if (drawable instanceof StateListDrawable && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            StateListDrawable stateListDrawable = (StateListDrawable) drawable;
+            for (int i = 0; i < stateListDrawable.getStateCount(); i++) {
+                setForceSoftware(stateListDrawable.getStateDrawable(i));
+            }
+        }
+
+        Drawable current = drawable.getCurrent();
+        if (current != drawable) {
+            setForceSoftware(current);
+        }
+
+        if (!(drawable instanceof RippleDrawable)) {
+            return;
+        }
+
+        try {
+            @SuppressLint("PrivateApi") Method method = RippleDrawable.class.getDeclaredMethod("setForceSoftware", Boolean.TYPE);
+            method.invoke(drawable, true);
+        } catch (Exception e) {
+            Log.e(ClockView.TAG, "Failed to call RippleDrawable#setForceSoftware", e);
+        }
     }
 }
