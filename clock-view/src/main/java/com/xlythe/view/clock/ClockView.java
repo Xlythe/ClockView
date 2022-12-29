@@ -267,7 +267,7 @@ public class ClockView extends FrameLayout {
     }
 
     protected String getDateFormat() {
-        return DateFormat.is24HourFormat(getContext()) ? "kk:mm" : "hh:mm";
+        return DateFormat.is24HourFormat(getContext()) ? "HH:mm" : "hh:mm";
     }
 
     @Override
