@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
@@ -12,6 +13,8 @@ import android.view.ContextThemeWrapper;
 import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -109,6 +112,7 @@ public abstract class WatchfaceService extends WatchFaceService {
 
         private final ComplicationSlotsManager mComplicationsSlotsManager;
         private final ClockView mWatchface;
+        private final Drawable.Callback mDrawableCallback;
 
         WatchfaceRenderer(
                 SurfaceHolder surfaceHolder,
@@ -126,6 +130,50 @@ public abstract class WatchfaceService extends WatchFaceService {
                 mWatchface.setAmbientModeEnabled(ambient);
                 invalidate();
             });
+
+            mDrawableCallback = new Drawable.Callback() {
+                @Override
+                public void invalidateDrawable(@NonNull Drawable who) {
+                    mWatchface.invalidateDrawable(who);
+                }
+
+                @Override
+                public void scheduleDrawable(@NonNull Drawable who, @NonNull Runnable what, long when) {
+                    mWatchface.scheduleDrawable(who, what, when);
+                }
+
+                @Override
+                public void unscheduleDrawable(@NonNull Drawable who, @NonNull Runnable what) {
+                    mWatchface.unscheduleDrawable(who, what);
+                }
+            };
+        }
+
+        private void interceptDrawableCallbacks(View view) {
+            if (view instanceof ViewGroup) {
+                ViewGroup viewGroup = (ViewGroup) view;
+                for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                    interceptDrawableCallbacks(viewGroup.getChildAt(i));
+                }
+            }
+
+            if (view == mWatchface) {
+                // Ignore
+                return;
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                interceptDrawableCallbacks(view.getForeground());
+            }
+            interceptDrawableCallbacks(view.getBackground());
+        }
+
+        private void interceptDrawableCallbacks(@Nullable Drawable drawable) {
+            if (drawable == null) {
+                return;
+            }
+
+            drawable.setCallback(mDrawableCallback);
         }
 
         @Override
@@ -139,6 +187,7 @@ public abstract class WatchfaceService extends WatchFaceService {
                     bounds.bottom = bounds.top + bounds.width();
                 }
             }
+            interceptDrawableCallbacks(mWatchface);
 
             // Invalidate the old canvas
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);

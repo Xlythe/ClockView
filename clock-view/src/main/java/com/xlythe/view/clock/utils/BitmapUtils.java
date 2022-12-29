@@ -18,6 +18,7 @@ import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
 
@@ -149,13 +150,24 @@ public class BitmapUtils {
         }
 
         // Prepare the view for drawing
+        setForceSoftware(view);
+
+        // Draw the view
+        view.draw(canvas);
+    }
+
+    private static void setForceSoftware(View view) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             setForceSoftware(view.getForeground());
         }
         setForceSoftware(view.getBackground());
 
-        // Draw the view
-        view.draw(canvas);
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                setForceSoftware(viewGroup.getChildAt(i));
+            }
+        }
     }
 
     /**
