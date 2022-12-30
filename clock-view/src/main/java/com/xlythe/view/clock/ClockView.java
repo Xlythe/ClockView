@@ -3,6 +3,7 @@ package com.xlythe.view.clock;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -11,18 +12,21 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 
 /**
  * An adjustable clock view
@@ -79,6 +83,12 @@ public class ClockView extends FrameLayout {
     };
 
     private boolean isStarted = false;
+
+    // For overriding onTouch
+    @Nullable private OnTouchListener mOnTouchListener;
+    private final int mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
+    private long mInitialMotionEventMillis;
+    private View mTouchFocusView;
 
     public ClockView(Context context) {
         super(context);
@@ -231,6 +241,125 @@ public class ClockView extends FrameLayout {
         if (mOnInvalidateListener != null) {
             mOnInvalidateListener.onInvalidate();
         }
+    }
+
+    @Override
+    public void setOnTouchListener(OnTouchListener l) {
+        super.setOnTouchListener(l);
+
+        // There's no way to get the OnTouchListener unless we intercept it when its set.
+        // So we'll do just that. This is used in #onTouchEvent.
+        mOnTouchListener = l;
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (!isManualInvalidationEnabled()) {
+            return super.dispatchTouchEvent(event);
+        }
+
+        // By default, dispatching a touch event tries to identify which
+        // (child) view should get the event before falling back to this
+        // view. However, touch events are broken for all our children
+        // views unless they're attached to a window (and they're not
+        // attached to a window when used in a watchface), so we want to
+        // immediately intercept it.
+        return onTouchEvent(event);
+    }
+
+    /**
+     * We override this to provide touch events to our children views.
+     * This is optional for ClockView itself, because we properly intercept
+     * #getHandler, #post and #postDelayed and that's enough to get touch
+     * working, but we can't do the same for any of our children views.
+     */
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (!isManualInvalidationEnabled()) {
+            return super.onTouchEvent(event);
+        }
+
+        // If this view has a OnTouchListener, let the listener handle everything.
+        if (mOnTouchListener != null && mOnTouchListener.onTouch(this, event)) {
+            return true;
+        }
+
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                // In a down event, identify which child has a click/longClick
+                // listener registered and press it.
+                mInitialMotionEventMillis = event.getEventTime();
+                mTouchFocusView = getTouchFocusView(this, event);
+
+                if (mTouchFocusView != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        mTouchFocusView.drawableHotspotChanged(event.getX(), event.getY());
+                    }
+                    mTouchFocusView.setPressed(true);
+                    return true;
+                }
+                return false;
+            case MotionEvent.ACTION_UP:
+                // In an up event, decide if the button was held down long
+                // enough for a long click event or not.
+                if (mTouchFocusView != null) {
+                    mTouchFocusView.setPressed(false);
+
+                    if (event.getEventTime() - mInitialMotionEventMillis > mLongPressTimeout) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            mTouchFocusView.performLongClick(event.getX(), event.getY());
+                        } else {
+                            mTouchFocusView.performLongClick();
+                        }
+                    } else {
+                        mTouchFocusView.performClick();
+                    }
+                    mTouchFocusView = null;
+                    return true;
+                }
+                return false;
+            case MotionEvent.ACTION_CANCEL:
+                // In a cancel event, clean up modifications to the view.
+                if (mTouchFocusView != null) {
+                    mTouchFocusView.setPressed(false);
+                    mTouchFocusView = null;
+                    return true;
+                }
+                return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Loops through the view and all its children until it finds one
+     * with either an OnClickListener or OnLongClickListener set that
+     * overlaps with the MotionEvent.
+     */
+    @Nullable
+    private View getTouchFocusView(View view, MotionEvent event) {
+        if (view.isClickable() || view.isLongClickable()) {
+            return view;
+        }
+
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                View child = viewGroup.getChildAt(i);
+
+                Rect rect = new Rect(child.getLeft(), child.getTop(), child.getRight(), child.getBottom());
+                if (rect.contains((int) event.getX(), (int) event.getY())) {
+                    MotionEvent localizedEvent = MotionEvent.obtain(event);
+                    localizedEvent.offsetLocation(-child.getLeft(), -child.getTop());
+                    View possibleTouchFocusView = getTouchFocusView(child, localizedEvent);
+                    if (possibleTouchFocusView != null) {
+                        return possibleTouchFocusView;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     @RequiresApi(26)
