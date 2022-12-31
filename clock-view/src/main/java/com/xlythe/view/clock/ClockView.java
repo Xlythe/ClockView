@@ -1,8 +1,8 @@
 package com.xlythe.view.clock;
 
 import android.annotation.TargetApi;
-import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
@@ -21,10 +21,16 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.activity.ComponentActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.wear.watchface.complications.ComplicationDataSourceInfo;
+import androidx.wear.watchface.complications.data.EmptyComplicationData;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
+import androidx.wear.watchface.editor.EditorSession;
+
+import com.xlythe.watchface.clock.utils.KotlinUtils;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,12 +39,16 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
+import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
+
 /**
  * An adjustable clock view
  */
 public class ClockView extends FrameLayout {
     public static final String TAG = ClockView.class.getSimpleName();
     private static final boolean DEBUG = false;
+    private static final String ACTION_WATCH_FACE_EDITOR = "androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR";
 
     private static final long ONE_SECOND = 1000;
     private static final long ONE_MINUTE = 60 * 1000;
@@ -532,11 +542,42 @@ public class ClockView extends FrameLayout {
 
         mDigitalEnabled = mDigitalEnabled || !supportsAnalog();
 
-        for (ComplicationView view : getComplicationViews()) {
-            view.setComplicationData(new NoDataComplicationData());
+        if (isInWatchfaceEditor()) {
+            EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
+                @Override
+                public void onUpdate(EditorSession editorSession) {
+                    for (ComplicationView view : getComplicationViews()) {
+                        view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
+
+                        addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
+                            ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
+                            if (complicationDataSourceInfo == null) {
+                                view.setComplicationData(new EmptyComplicationData());
+                                return;
+                            }
+
+                            view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
+                        });
+                    }
+                }
+            });
+        } else {
+            for (ComplicationView view : getComplicationViews()) {
+                view.setComplicationData(new NoDataComplicationData());
+            }
         }
 
         super.onFinishInflate();
+    }
+
+    private boolean isInWatchfaceEditor() {
+        Context context = getContext();
+        if (!(context instanceof ComponentActivity)) {
+            return false;
+        }
+
+        Intent intent = ((ComponentActivity) context).getIntent();
+        return ACTION_WATCH_FACE_EDITOR.equals(intent.getAction());
     }
 
     public boolean supportsDigital() {
@@ -702,18 +743,6 @@ public class ClockView extends FrameLayout {
         if (isStarted()) {
             stop();
             start();
-        }
-    }
-
-    public void setWatchFaceComponentName(ComponentName watchFaceComponentName) {
-        for (ComplicationView complicationView : getComplicationViews()) {
-            complicationView.setWatchFaceComponentName(watchFaceComponentName);
-        }
-    }
-
-    public void setWatchFaceInstanceId(String watchFaceInstanceId) {
-        for (ComplicationView complicationView : getComplicationViews()) {
-            complicationView.setWatchFaceInstanceId(watchFaceInstanceId);
         }
     }
 

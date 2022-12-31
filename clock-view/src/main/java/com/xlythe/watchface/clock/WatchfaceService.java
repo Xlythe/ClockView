@@ -1,6 +1,5 @@
 package com.xlythe.watchface.clock;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -65,11 +64,6 @@ public abstract class WatchfaceService extends WatchFaceService {
 
     private void createClockView() {
         mWatchface = onCreateClockView(getThemedContext());
-
-        ComponentName watchFaceComponentName = new ComponentName(this, getClass());
-        for (ComplicationView view : mWatchface.getComplicationViews()) {
-            view.setWatchFaceComponentName(watchFaceComponentName);
-        }
     }
 
     @NonNull
@@ -130,11 +124,6 @@ public abstract class WatchfaceService extends WatchFaceService {
             mWatchface.dispatchTouchEvent(motionEvent);
             motionEvent.recycle();
         });
-
-        for (ComplicationView view : mWatchface.getComplicationViews()) {
-            view.setWatchFaceInstanceId(watchState.getWatchFaceInstanceId().getValue());
-            addObserver(watchState.getWatchFaceInstanceId(), view::setWatchFaceInstanceId);
-        }
 
         return watchFace;
     }
