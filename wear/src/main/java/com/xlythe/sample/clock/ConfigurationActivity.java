@@ -4,12 +4,15 @@ import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.wear.watchface.complications.ComplicationDataSourceInfo;
+import androidx.wear.watchface.complications.data.EmptyComplicationData;
 import androidx.wear.watchface.editor.EditorSession;
 
 import com.xlythe.view.clock.ClockView;
 import com.xlythe.view.clock.ComplicationView;
 import com.xlythe.watchface.clock.utils.KotlinUtils.Continuation;
 
+import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
 import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
 
 public class ConfigurationActivity extends AppCompatActivity {
@@ -27,16 +30,21 @@ public class ConfigurationActivity extends AppCompatActivity {
     mClockView.setWatchFaceComponentName(getIntent().getParcelableExtra(COMPONENT_NAME_KEY));
     mClockView.setWatchFaceInstanceId(getIntent().getStringExtra(INSTANCE_ID_KEY));
 
-    // TODO
-    // How do I load the current complications?
-    // How do I listen to changes to complications?
-
     EditorSession.createOnWatchEditorSession(this, new Continuation<EditorSession>() {
       @Override
       public void onUpdate(EditorSession editorSession) {
-        editorSession.getWatchFaceId();
         for (ComplicationView view : mClockView.getComplicationViews()) {
           view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
+
+          addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
+            ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
+            if (complicationDataSourceInfo == null) {
+              view.setComplicationData(new EmptyComplicationData());
+              return;
+            }
+
+            view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
+          });
         }
       }
     });

@@ -8,6 +8,7 @@ import java.lang.ref.WeakReference;
 import java.util.HashSet;
 import java.util.Set;
 
+import kotlin.Result;
 import kotlin.coroutines.CoroutineContext;
 import kotlin.jvm.functions.Function2;
 import kotlinx.coroutines.flow.StateFlow;
@@ -77,6 +78,10 @@ public class KotlinUtils {
     }, new Continuation<T>() {
       @Override
       public void onUpdate(T value) {
+        if (value instanceof Result.Failure) {
+          return;
+        }
+
         Observer<T> possibleObserver = weakObserver.get();
         if (possibleObserver == null) {
           return;

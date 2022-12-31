@@ -59,6 +59,8 @@ public class ComplicationView extends AppCompatButton {
   private ComponentName mWatchFaceComponentName;
   private String mWatchFaceInstanceId;
 
+  @Nullable private OnClickListener mOnClickListener;
+
   public ComplicationView(@NonNull Context context) {
     super(context);
     init(context, /*attrs=*/ null);
@@ -117,20 +119,43 @@ public class ComplicationView extends AppCompatButton {
     return complicationTypes;
   }
 
+  @Override
+  public void setOnClickListener(@Nullable OnClickListener l) {
+    super.setOnClickListener(l);
+    mOnClickListener = l;
+  }
+
+  @Override
+  public boolean performClick() {
+    if (mOnClickListener != null) {
+      mOnClickListener.onClick(this);
+      return true;
+    }
+
+    if (mComplicationData instanceof NoPermissionComplicationData) {
+      launchPermissionRequestActivity();
+      return true;
+    }
+
+    if (mComplicationData.getTapAction() != null) {
+      try {
+        mComplicationData.getTapAction().send();
+        return true;
+      } catch (PendingIntent.CanceledException e) {
+        Log.e(ClockView.TAG, "Failed to trigger complication OnClick event", e);
+      }
+    }
+
+    return super.performClick();
+  }
+
+  @Override
+  public boolean isClickable() {
+    return super.isClickable() || mComplicationData.getTapAction() != null || mComplicationData instanceof NoPermissionComplicationData;
+  }
+
   public void setComplicationData(ComplicationData complicationData) {
     mComplicationData = complicationData;
-
-    if (complicationData.getTapAction() != null) {
-      setOnClickListener(v -> {
-        try {
-          complicationData.getTapAction().send();
-        } catch (PendingIntent.CanceledException e) {
-          Log.e(ClockView.TAG, "Failed to trigger complication OnClick event", e);
-        }
-      });
-    } else {
-      setOnClickListener(null);
-    }
 
     switch (complicationData.getType()) {
       case NO_DATA:
@@ -185,7 +210,6 @@ public class ComplicationView extends AppCompatButton {
             null,
             asCharSequence(complicationData.getContentDescription()),
             null);
-    setOnClickListener(v -> launchComplicationChooserActivity());
   }
 
   private void setComplicationData(EmptyComplicationData complicationData) {
@@ -194,7 +218,6 @@ public class ComplicationView extends AppCompatButton {
             null,
             null,
             null);
-    setOnClickListener(v -> launchComplicationChooserActivity());
   }
 
   private void setComplicationData(NotConfiguredComplicationData complicationData) {
@@ -203,7 +226,6 @@ public class ComplicationView extends AppCompatButton {
             null,
             null,
             null);
-    setOnClickListener(v -> launchComplicationChooserActivity());
   }
 
   private void setComplicationData(ShortTextComplicationData complicationData) {
@@ -260,7 +282,6 @@ public class ComplicationView extends AppCompatButton {
             asCharSequence(complicationData.getText()),
             null,
             asDrawable(complicationData.getMonochromaticImage()));
-    setOnClickListener(v -> launchPermissionRequestActivity());
   }
 
   private void setComplicationData(ProtoLayoutComplicationData complicationData) {
