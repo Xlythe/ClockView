@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-sdk tools:overrideLibrary="androidx.wear.watchface, androidx.wear.watchface.style, android.support.wearable.watchface, androidx.wear.complications"/>
+
+    <application>
+
+        <activity
+            android:name="com.xlythe.watchface.clock.PermissionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+    </application>
 </manifest>

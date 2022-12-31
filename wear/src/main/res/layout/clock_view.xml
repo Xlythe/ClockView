@@ -7,6 +7,44 @@
     android:background="@drawable/clock_bg"
     clock:clockStyle="analog">
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.xlythe.view.clock.ComplicationView
+            android:id="@+id/button1"
+            clock:complicationId="1"
+            android:layout_gravity="top|start"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="32dp" />
+
+        <com.xlythe.view.clock.ComplicationView
+            android:id="@+id/button2"
+            clock:complicationId="2"
+            android:layout_gravity="top|end"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="32dp" />
+
+        <com.xlythe.view.clock.ComplicationView
+            android:id="@+id/button3"
+            clock:complicationId="3"
+            android:layout_gravity="bottom|start"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="32dp" />
+
+        <com.xlythe.view.clock.ComplicationView
+            android:id="@+id/button4"
+            clock:complicationId="4"
+            android:layout_gravity="bottom|end"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="32dp" />
+
+    </FrameLayout>
+
     <TextView
         android:id="@id/clock_time"
         android:layout_width="wrap_content"

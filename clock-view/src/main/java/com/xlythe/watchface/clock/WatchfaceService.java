@@ -1,10 +1,12 @@
 package com.xlythe.watchface.clock;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.SystemClock;
@@ -22,26 +24,35 @@ import androidx.annotation.UiContext;
 import androidx.wear.watchface.CanvasType;
 import androidx.wear.watchface.ComplicationSlot;
 import androidx.wear.watchface.ComplicationSlotsManager;
+import androidx.wear.watchface.RenderParameters;
 import androidx.wear.watchface.Renderer;
-import androidx.wear.watchface.TapEvent;
 import androidx.wear.watchface.TapType;
 import androidx.wear.watchface.WatchFace;
 import androidx.wear.watchface.WatchFaceService;
 import androidx.wear.watchface.WatchFaceType;
 import androidx.wear.watchface.WatchState;
+import androidx.wear.watchface.complications.ComplicationSlotBounds;
+import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy;
+import androidx.wear.watchface.complications.data.NoDataComplicationData;
 import androidx.wear.watchface.style.CurrentUserStyleRepository;
 
 import com.xlythe.view.clock.ClockView;
+import com.xlythe.view.clock.ComplicationView;
 import com.xlythe.view.clock.utils.BitmapUtils;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 
 import kotlin.coroutines.Continuation;
 
-public abstract class WatchfaceService extends WatchFaceService {
+import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
 
+public abstract class WatchfaceService extends WatchFaceService {
+    private ClockView mWatchface;
     private WatchfaceRenderer mRenderer;
     private final ClockView.OnTimeTickListener mOnTimeTickListener = this::invalidate;
 
@@ -50,6 +61,36 @@ public abstract class WatchfaceService extends WatchFaceService {
     @UiContext
     protected Context getThemedContext() {
         return new ContextThemeWrapper(this, androidx.appcompat.R.style.Theme_AppCompat);
+    }
+
+    private void createClockView() {
+        mWatchface = onCreateClockView(getThemedContext());
+
+        ComponentName watchFaceComponentName = new ComponentName(this, getClass());
+        for (ComplicationView view : mWatchface.getComplicationViews()) {
+            view.setWatchFaceComponentName(watchFaceComponentName);
+        }
+    }
+
+    @NonNull
+    @Override
+    protected ComplicationSlotsManager createComplicationSlotsManager(@NonNull CurrentUserStyleRepository currentUserStyleRepository) {
+        createClockView();
+
+        Collection<ComplicationSlot> complicationSlots = new ArrayList<>();
+        for (ComplicationView complicationView : mWatchface.getComplicationViews()) {
+            // Note: We'll be drawing the ComplicationSlots ourselves, so it doesn't matter
+            // what builder we want to use. However, BACKGROUND is limited to 1 so we'll avoid that.
+            complicationSlots.add(ComplicationSlot.createRoundRectComplicationSlotBuilder(
+                            complicationView.getComplicationId(),
+                            new DefaultCanvasComplicationFactory(complicationView),
+                            complicationView.getSupportedComplicationTypes(),
+                            new DefaultComplicationDataSourcePolicy(),
+                            // Note: Complications steal touch focus before our watchface is given it. It's important to hide them.
+                            new ComplicationSlotBounds(new RectF(0, 0, 0, 0)))
+                    .build());
+        }
+        return new ComplicationSlotsManager(complicationSlots, currentUserStyleRepository);
     }
 
     @Nullable
@@ -61,8 +102,8 @@ public abstract class WatchfaceService extends WatchFaceService {
             @NonNull CurrentUserStyleRepository currentUserStyleRepository,
             @NonNull Continuation<? super WatchFace> continuation) {
         mRenderer = new WatchfaceRenderer(surfaceHolder, watchState, complicationSlotsManager, currentUserStyleRepository);
-        WatchFace watchFace = new WatchFace(mRenderer.mWatchface.isDigitalEnabled() ? WatchFaceType.DIGITAL : WatchFaceType.ANALOG, mRenderer);
-        watchFace.setTapListener((tapType, tapEvent) -> {
+        WatchFace watchFace = new WatchFace(mWatchface.isDigitalEnabled() ? WatchFaceType.DIGITAL : WatchFaceType.ANALOG, mRenderer);
+        watchFace.setTapListener((tapType, tapEvent, complicationSlot) -> {
             int action;
             switch (tapType) {
                 case TapType.DOWN:
@@ -86,9 +127,15 @@ public abstract class WatchfaceService extends WatchFaceService {
                     tapEvent.getYPos(),
                     0);
             motionEvent.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-            mRenderer.mWatchface.dispatchTouchEvent(motionEvent);
+            mWatchface.dispatchTouchEvent(motionEvent);
             motionEvent.recycle();
         });
+
+        for (ComplicationView view : mWatchface.getComplicationViews()) {
+            view.setWatchFaceInstanceId(watchState.getWatchFaceInstanceId().getValue());
+            addObserver(watchState.getWatchFaceInstanceId(), view::setWatchFaceInstanceId);
+        }
+
         return watchFace;
     }
 
@@ -106,12 +153,10 @@ public abstract class WatchfaceService extends WatchFaceService {
         }
     }
 
-    private class WatchfaceRenderer extends Renderer.CanvasRenderer {
+    private class WatchfaceRenderer extends Renderer.CanvasRenderer2<Renderer.SharedAssets> {
         // Default for how long each frame is displayed at expected frame rate.
         private static final long FRAME_PERIOD_MS_DEFAULT = 1000L;
 
-        private final ComplicationSlotsManager mComplicationsSlotsManager;
-        private final ClockView mWatchface;
         private final Drawable.Callback mDrawableCallback;
 
         WatchfaceRenderer(
@@ -119,14 +164,13 @@ public abstract class WatchfaceService extends WatchFaceService {
                 WatchState watchState,
                 ComplicationSlotsManager complicationsSlotsManager,
                 CurrentUserStyleRepository currentUserStyleRepository) {
-            super(surfaceHolder, currentUserStyleRepository, watchState, CanvasType.HARDWARE, FRAME_PERIOD_MS_DEFAULT);
-            mComplicationsSlotsManager = complicationsSlotsManager;
-            mWatchface = onCreateClockView(getThemedContext());
+            super(surfaceHolder, currentUserStyleRepository, watchState, CanvasType.HARDWARE, FRAME_PERIOD_MS_DEFAULT, false);
             mWatchface.setOnInvalidateListener(this::invalidate);
             mWatchface.setOnTimeTickListener(mOnTimeTickListener);
 
             mWatchface.setHasBurnInProtection(watchState.hasBurnInProtection());
-            watchState.isAmbient().addObserver(ambient -> {
+            mWatchface.setLowBitAmbient(watchState.hasLowBitAmbient());
+            addObserver(watchState.isAmbient(), ambient -> {
                 mWatchface.setAmbientModeEnabled(ambient);
                 invalidate();
             });
@@ -147,6 +191,19 @@ public abstract class WatchfaceService extends WatchFaceService {
                     mWatchface.unscheduleDrawable(who, what);
                 }
             };
+
+            Map<Integer, ComplicationSlot> complicationSlots =  complicationsSlotsManager.getComplicationSlots();
+            for (ComplicationView view : mWatchface.getComplicationViews()) {
+                ComplicationSlot complicationSlot = complicationSlots.get(view.getComplicationId());
+                if (complicationSlot == null) {
+                    view.setComplicationData(new NoDataComplicationData());
+                    Log.d(ClockView.TAG, "Failed to find a valid complication slots. Returning dummy data.");
+                    continue;
+                }
+
+                view.setComplicationData(complicationSlot.getComplicationData().getValue());
+                addObserver(complicationSlot.getComplicationData(), view::setComplicationData);
+            }
         }
 
         private void interceptDrawableCallbacks(View view) {
@@ -177,7 +234,7 @@ public abstract class WatchfaceService extends WatchFaceService {
         }
 
         @Override
-        public void render(@NonNull Canvas canvas, @NonNull Rect bounds, @NonNull ZonedDateTime zonedDateTime) {
+        public void render(@NonNull Canvas canvas, @NonNull Rect bounds, @NonNull ZonedDateTime zonedDateTime, @NonNull SharedAssets sharedAssets) {
             // Some watches are not perfectly square, because of a small bump at the bottom
             // We still want to draw as if they are square, to avoid squishing the watchface
             if (bounds.width() != bounds.height()) {
@@ -218,16 +275,18 @@ public abstract class WatchfaceService extends WatchFaceService {
         }
 
         @Override
-        public void renderHighlightLayer(@NonNull Canvas canvas, @NonNull Rect rect, @NonNull ZonedDateTime zonedDateTime) {
-            if (getRenderParameters().getHighlightLayer() != null) {
-                canvas.drawColor(getRenderParameters().getHighlightLayer().getBackgroundTint());
+        public void renderHighlightLayer(@NonNull Canvas canvas, @NonNull Rect rect, @NonNull ZonedDateTime zonedDateTime, @NonNull SharedAssets sharedAssets) {
+            RenderParameters.HighlightLayer highlightLayer = getRenderParameters().getHighlightLayer();
+            if (highlightLayer != null) {
+                canvas.drawColor(highlightLayer.getBackgroundTint());
             }
+        }
 
-            for (ComplicationSlot complication : mComplicationsSlotsManager.getComplicationSlots().values()) {
-                if (complication.isEnabled()) {
-                    complication.renderHighlightLayer(canvas, zonedDateTime, getRenderParameters());
-                }
-            }
+        @SuppressWarnings("rawtypes")
+        @NonNull
+        @Override
+        protected SharedAssets createSharedAssets(@NonNull Continuation continuation) {
+            return () -> {};
         }
     }
 }

@@ -90,9 +90,11 @@ signing {
 dependencies {
     def withoutSupportLib = { exclude group: 'com.android.support' }
     api fileTree(include: ['*.jar'], dir: 'libs')
+    api 'androidx.wear.watchface:watchface:[1.1.1,)'
+    // Not sure why, but using [1.1.1,) for the editor and complications-rendering causes compilation to break
+    api 'androidx.wear.watchface:watchface-editor:1.1.1'
+    api 'androidx.wear.watchface:watchface-complications-rendering:1.1.1'
     api 'androidx.legacy:legacy-support-v4:[1.0.0,)'
-    api 'androidx.wear:wear:[1.2.0,)'
-    api 'androidx.wear:wear-watchface:[1.0.0-alpha22,)'
     api 'androidx.annotation:annotation:[1.5.0,)'
     api 'androidx.appcompat:appcompat:[1.5.1,)'
     api 'com.google.android.gms:play-services-wearable:[17.1.0,)', withoutSupportLib

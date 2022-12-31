@@ -12,6 +12,10 @@
         <attr name="ambientModeEnabled" format="boolean" />
     </declare-styleable>
 
+    <declare-styleable name="ComplicationView">
+        <attr name="complicationId" format="integer" />
+    </declare-styleable>
+
     <!-- Standard gravity constant that a child supplies to its parent.
          Defines how the child view should be positioned, on both the X and Y axes, within its enclosing layout. -->
     <attr name="layout_gravity">

@@ -1,6 +1,7 @@
 package com.xlythe.view.clock;
 
 import android.annotation.TargetApi;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Rect;
@@ -23,10 +24,14 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.wear.watchface.complications.data.NoDataComplicationData;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * An adjustable clock view
@@ -290,6 +295,9 @@ public class ClockView extends FrameLayout {
                 // listener registered and press it.
                 mInitialMotionEventMillis = event.getEventTime();
                 mTouchFocusView = getTouchFocusView(this, event);
+                if (mTouchFocusView != null) {
+                    event = getLocalizedMotionEvent(event);
+                }
 
                 if (mTouchFocusView != null) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -305,13 +313,16 @@ public class ClockView extends FrameLayout {
                 if (mTouchFocusView != null) {
                     mTouchFocusView.setPressed(false);
 
-                    if (event.getEventTime() - mInitialMotionEventMillis > mLongPressTimeout) {
+                    boolean touchHandled = false;
+                    if (event.getEventTime() - mInitialMotionEventMillis > mLongPressTimeout && mTouchFocusView.isLongClickable()) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            mTouchFocusView.performLongClick(event.getX(), event.getY());
+                            event = getLocalizedMotionEvent(event);
+                            touchHandled = mTouchFocusView.performLongClick(event.getX(), event.getY());
                         } else {
-                            mTouchFocusView.performLongClick();
+                            touchHandled = mTouchFocusView.performLongClick();
                         }
-                    } else {
+                    }
+                    if (!touchHandled && mTouchFocusView.isClickable()) {
                         mTouchFocusView.performClick();
                     }
                     mTouchFocusView = null;
@@ -355,6 +366,38 @@ public class ClockView extends FrameLayout {
                     if (possibleTouchFocusView != null) {
                         return possibleTouchFocusView;
                     }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private MotionEvent getLocalizedMotionEvent(MotionEvent event) {
+        return getLocalizedMotionEvent(this, event);
+    }
+
+    @Nullable
+    private MotionEvent getLocalizedMotionEvent(ViewGroup viewGroup, MotionEvent event) {
+        if (mTouchFocusView == null) {
+            return event;
+        }
+
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+            if (child == mTouchFocusView) {
+                MotionEvent localizedEvent = MotionEvent.obtain(event);
+                localizedEvent.offsetLocation(-child.getLeft(), -child.getTop());
+                return localizedEvent;
+            }
+
+            if (child instanceof ViewGroup) {
+                MotionEvent tempEvent = MotionEvent.obtain(event);
+                tempEvent.offsetLocation(-child.getLeft(), -child.getTop());
+                MotionEvent localizedEvent = getLocalizedMotionEvent((ViewGroup) child, tempEvent);
+                tempEvent.recycle();
+                if (localizedEvent != null) {
+                    return localizedEvent;
                 }
             }
         }
@@ -488,6 +531,10 @@ public class ClockView extends FrameLayout {
         }
 
         mDigitalEnabled = mDigitalEnabled || !supportsAnalog();
+
+        for (ComplicationView view : getComplicationViews()) {
+            view.setComplicationData(new NoDataComplicationData());
+        }
 
         super.onFinishInflate();
     }
@@ -648,11 +695,43 @@ public class ClockView extends FrameLayout {
         }
 
         mAmbientModeEnabled = enabled;
+        for (ComplicationView complicationView : getComplicationViews()) {
+            complicationView.setAmbientModeEnabled(enabled);
+        }
         onTimeTick();
         if (isStarted()) {
             stop();
             start();
         }
+    }
+
+    public void setWatchFaceComponentName(ComponentName watchFaceComponentName) {
+        for (ComplicationView complicationView : getComplicationViews()) {
+            complicationView.setWatchFaceComponentName(watchFaceComponentName);
+        }
+    }
+
+    public void setWatchFaceInstanceId(String watchFaceInstanceId) {
+        for (ComplicationView complicationView : getComplicationViews()) {
+            complicationView.setWatchFaceInstanceId(watchFaceInstanceId);
+        }
+    }
+
+    public Collection<ComplicationView> getComplicationViews() {
+        return getComplicationViews(this);
+    }
+
+    private Collection<ComplicationView> getComplicationViews(ViewGroup root) {
+        Set<ComplicationView> complicationViews = new HashSet<>();
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            if (child instanceof ComplicationView) {
+                complicationViews.add((ComplicationView) child);
+            } else if (child instanceof ViewGroup) {
+                complicationViews.addAll(getComplicationViews((ViewGroup) child));
+            }
+        }
+        return complicationViews;
     }
 
     public OnTimeTickListener getOnTimeTickListener() {
