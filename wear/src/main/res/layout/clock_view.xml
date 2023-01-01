@@ -12,36 +12,39 @@
         android:layout_height="match_parent">
 
         <com.xlythe.view.clock.ComplicationView
-            android:id="@+id/button1"
             clock:complicationId="1"
             android:layout_gravity="top|start"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="32dp" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="48dp" />
 
         <com.xlythe.view.clock.ComplicationView
-            android:id="@+id/button2"
             clock:complicationId="2"
             android:layout_gravity="top|end"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="32dp" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="48dp" />
 
         <com.xlythe.view.clock.ComplicationView
-            android:id="@+id/button3"
             clock:complicationId="3"
             android:layout_gravity="bottom|start"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="32dp" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="48dp" />
 
         <com.xlythe.view.clock.ComplicationView
-            android:id="@+id/button4"
             clock:complicationId="4"
             android:layout_gravity="bottom|end"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="32dp" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="48dp" />
+
+        <com.xlythe.view.clock.ComplicationView
+            clock:complicationId="5"
+            android:layout_gravity="bottom|center"
+            android:layout_width="76dp"
+            android:layout_height="24dp"
+            android:layout_margin="18dp" />
 
     </FrameLayout>
 

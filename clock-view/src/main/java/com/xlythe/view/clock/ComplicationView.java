@@ -5,29 +5,30 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.Icon;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 
+import androidx.activity.ComponentActivity;
+import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.appcompat.widget.AppCompatButton;
+import androidx.appcompat.widget.AppCompatImageView;
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationExperimental;
 import androidx.wear.watchface.complications.data.ComplicationText;
 import androidx.wear.watchface.complications.data.ComplicationType;
-import androidx.wear.watchface.complications.data.EmptyComplicationData;
-import androidx.wear.watchface.complications.data.ListComplicationData;
 import androidx.wear.watchface.complications.data.LongTextComplicationData;
 import androidx.wear.watchface.complications.data.MonochromaticImage;
 import androidx.wear.watchface.complications.data.MonochromaticImageComplicationData;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
 import androidx.wear.watchface.complications.data.NoPermissionComplicationData;
-import androidx.wear.watchface.complications.data.NotConfiguredComplicationData;
 import androidx.wear.watchface.complications.data.PhotoImageComplicationData;
-import androidx.wear.watchface.complications.data.ProtoLayoutComplicationData;
 import androidx.wear.watchface.complications.data.RangedValueComplicationData;
 import androidx.wear.watchface.complications.data.ShortTextComplicationData;
 import androidx.wear.watchface.complications.data.SmallImage;
@@ -41,10 +42,11 @@ import java.util.Collections;
 import java.util.List;
 
 @OptIn(markerClass = ComplicationExperimental.class)
-public class ComplicationView extends AppCompatButton {
+public class ComplicationView extends AppCompatImageView {
   private int mComplicationId;
-  private ComplicationData mComplicationData;
+  private ComplicationData mComplicationData = new NoDataComplicationData();
   private boolean mAmbientModeEnabled = false;
+  private ComplicationDrawable.Style mComplicationDrawableStyle = ComplicationDrawable.Style.DOT;
 
   @Nullable private OnClickListener mOnClickListener;
 
@@ -69,10 +71,20 @@ public class ComplicationView extends AppCompatButton {
   }
 
   private void init(Context context, @Nullable AttributeSet attrs) {
+    boolean hasForeground = false;
     if (attrs != null) {
       TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ComplicationView);
       setComplicationId(a.getInteger(R.styleable.ComplicationView_complicationId, 0));
+      setComplicationDrawableStyle(ComplicationDrawable.Style.values()[a.getInteger(R.styleable.ComplicationView_complicationStyle, mComplicationDrawableStyle.ordinal())]);
       a.recycle();
+
+      a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.foreground });
+      hasForeground = a.hasValue(0);
+      a.recycle();
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !hasForeground) {
+      setForeground(new RippleDrawable(getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()), null, new PlaceholderDrawable()));
     }
   }
 
@@ -99,9 +111,21 @@ public class ComplicationView extends AppCompatButton {
     mComplicationId = complicationId;
   }
 
+  public ComplicationDrawable.Style getComplicationDrawableStyle() {
+    return mComplicationDrawableStyle;
+  }
+
+  public void setComplicationDrawableStyle(ComplicationDrawable.Style style) {
+    mComplicationDrawableStyle = style;
+    setComplicationData(mComplicationData);
+  }
+
   public List<ComplicationType> getSupportedComplicationTypes() {
     List<ComplicationType> complicationTypes = new ArrayList<>();
     Collections.addAll(complicationTypes, ComplicationType.values());
+    complicationTypes.remove(ComplicationType.LIST);
+    complicationTypes.remove(ComplicationType.PROTO_LAYOUT);
+    complicationTypes.remove(ComplicationType.PHOTO_IMAGE);
     return complicationTypes;
   }
 
@@ -137,21 +161,34 @@ public class ComplicationView extends AppCompatButton {
 
   @Override
   public boolean isClickable() {
-    return super.isClickable() || mComplicationData.getTapAction() != null || mComplicationData instanceof NoPermissionComplicationData;
+    if (mComplicationData != null && mComplicationData.getTapAction() != null) {
+      return true;
+    }
+
+    if (mComplicationData instanceof NoPermissionComplicationData) {
+      return true;
+    }
+
+    return super.isClickable();
   }
 
+  private boolean isInWatchfaceEditor() {
+    Context context = getContext();
+    if (!(context instanceof ComponentActivity)) {
+      return false;
+    }
+
+    Intent intent = ((ComponentActivity) context).getIntent();
+    return ClockView.ACTION_WATCH_FACE_EDITOR.equals(intent.getAction());
+  }
+
+  @CallSuper
   public void setComplicationData(ComplicationData complicationData) {
     mComplicationData = complicationData;
 
     switch (complicationData.getType()) {
       case NO_DATA:
         setComplicationData((NoDataComplicationData) complicationData);
-        break;
-      case EMPTY:
-        setComplicationData((EmptyComplicationData) complicationData);
-        break;
-      case NOT_CONFIGURED:
-        setComplicationData((NotConfiguredComplicationData) complicationData);
         break;
       case SHORT_TEXT:
         setComplicationData((ShortTextComplicationData) complicationData);
@@ -175,128 +212,81 @@ public class ComplicationView extends AppCompatButton {
         setComplicationData((NoPermissionComplicationData) complicationData);
         break;
       case PROTO_LAYOUT:
-        setComplicationData((ProtoLayoutComplicationData) complicationData);
-        break;
       case LIST:
-        setComplicationData((ListComplicationData) complicationData);
-        break;
+      case EMPTY:
+      case NOT_CONFIGURED:
       default:
-        setComplicationData(
-                null,
-                null,
-                null,
-                null);
+        setContentDescription(null);
+        setImageDrawable(isInWatchfaceEditor() ? new PlaceholderDrawable() : null);
         break;
     }
   }
 
   private void setComplicationData(NoDataComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            asCharSequence(complicationData.getContentDescription()),
-            null);
-  }
-
-  private void setComplicationData(EmptyComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            null,
-            null);
-  }
-
-  private void setComplicationData(NotConfiguredComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            null,
-            null);
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    setImageDrawable(isInWatchfaceEditor() ? new PlaceholderDrawable() : null);
   }
 
   private void setComplicationData(ShortTextComplicationData complicationData) {
-    setComplicationData(
-            asCharSequence(complicationData.getTitle()),
-            asCharSequence(complicationData.getText()),
-            asCharSequence(complicationData.getContentDescription()),
-            asDrawable(complicationData.getMonochromaticImage()));
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    setImageDrawable(new ComplicationDrawable.Builder()
+            .title(asCharSequence(complicationData.getTitle()))
+            .text(asCharSequence(complicationData.getText()))
+            .icon(asDrawable(complicationData.getMonochromaticImage()))
+            .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
+            .build());
   }
 
   private void setComplicationData(LongTextComplicationData complicationData) {
-    setComplicationData(
-            asCharSequence(complicationData.getTitle()),
-            asCharSequence(complicationData.getText()),
-            asCharSequence(complicationData.getContentDescription()),
-            asDrawable(complicationData.getMonochromaticImage()));
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    Drawable smallIcon = asDrawable(complicationData.getSmallImage());
+    if (smallIcon != null) {
+      setImageDrawable(smallIcon);
+    } else {
+      setImageDrawable(new ComplicationDrawable.Builder()
+              .title(asCharSequence(complicationData.getTitle()))
+              .text(asCharSequence(complicationData.getText()))
+              .icon(asDrawable(complicationData.getMonochromaticImage()))
+              .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
+              .build());
+    }
   }
 
   private void setComplicationData(RangedValueComplicationData complicationData) {
-    setComplicationData(
-            asCharSequence(complicationData.getTitle()),
-            asCharSequence(complicationData.getText()),
-            asCharSequence(complicationData.getContentDescription()),
-            asDrawable(complicationData.getMonochromaticImage()));
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    setImageDrawable(new RangeDrawable.Builder()
+            .title(asCharSequence(complicationData.getTitle()))
+            .text(asCharSequence(complicationData.getText()))
+            .icon(asDrawable(complicationData.getMonochromaticImage()))
+            .range(complicationData.getMin(), complicationData.getMax())
+            .value(complicationData.getValue())
+            .showBackground(!isAmbientModeEnabled())
+            .build());
   }
 
   private void setComplicationData(MonochromaticImageComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            asCharSequence(complicationData.getContentDescription()),
-            asDrawable(complicationData.getMonochromaticImage()));
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    setImageDrawable(asDrawable(complicationData.getMonochromaticImage()));
   }
 
   private void setComplicationData(SmallImageComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            asCharSequence(complicationData.getContentDescription()),
-            asDrawable(complicationData.getSmallImage()));
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    setImageDrawable(asDrawable(complicationData.getSmallImage()));
   }
 
   private void setComplicationData(PhotoImageComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            asCharSequence(complicationData.getContentDescription()),
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? complicationData.getPhotoImage().loadDrawable(getContext()) : null);
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+    setImageDrawable(asDrawable(complicationData.getPhotoImage()));
   }
 
   private void setComplicationData(NoPermissionComplicationData complicationData) {
-    setComplicationData(
-            asCharSequence(complicationData.getTitle()),
-            asCharSequence(complicationData.getText()),
-            null,
-            asDrawable(complicationData.getMonochromaticImage()));
-  }
-
-  private void setComplicationData(ProtoLayoutComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            asCharSequence(complicationData.getContentDescription()),
-            null);
-  }
-
-  private void setComplicationData(ListComplicationData complicationData) {
-    setComplicationData(
-            null,
-            null,
-            asCharSequence(complicationData.getContentDescription()),
-            null);
-  }
-
-  private void setComplicationData(
-          @Nullable CharSequence title,
-          @Nullable CharSequence text,
-          @Nullable CharSequence contentDescription,
-          @Nullable Drawable icon) {
-    Log.d(ClockView.TAG, "setComplicationData[" + mComplicationData.getType().name() + "] title=" + title + ", text=" + text + ", contentDescription=" + contentDescription + ", icon=" + icon);
-    setText(text);
-    setContentDescription(contentDescription);
-    setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
-
-    // TODO: Consider using ComplicationDrawable
+    setContentDescription(null);
+    setImageDrawable(new ComplicationDrawable.Builder()
+            .title(asCharSequence(complicationData.getTitle()))
+            .text(asCharSequence(complicationData.getText()))
+            .icon(asDrawable(complicationData.getMonochromaticImage()))
+            .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
+            .build());
   }
 
   public ComplicationData getComplicationData() {
@@ -322,10 +312,6 @@ public class ComplicationView extends AppCompatButton {
 
   @Nullable
   private Drawable asDrawable(@Nullable MonochromaticImage image) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-      return null;
-    }
-
     if (image == null) {
       return null;
     }
@@ -336,19 +322,18 @@ public class ComplicationView extends AppCompatButton {
 
     if (isAmbientModeEnabled()) {
       if (image.getAmbientImage() != null) {
-        return image.getAmbientImage().loadDrawable(getContext());
+        Drawable drawable = asDrawable(image.getAmbientImage());
+        if (drawable != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+          drawable.setTint(Color.WHITE);
+        }
       }
     }
 
-    return image.getImage().loadDrawable(getContext());
+    return asDrawable(image.getImage());
   }
 
   @Nullable
   private Drawable asDrawable(@Nullable SmallImage image) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-      return null;
-    }
-
     if (image == null) {
       return null;
     }
@@ -359,11 +344,24 @@ public class ComplicationView extends AppCompatButton {
 
     if (isAmbientModeEnabled()) {
       if (image.getAmbientImage() != null) {
-        return image.getAmbientImage().loadDrawable(getContext());
+        return asDrawable(image.getAmbientImage());
       }
     }
 
-    return image.getImage().loadDrawable(getContext());
+    return asDrawable(image.getImage());
+  }
+
+  @Nullable
+  private Drawable asDrawable(@Nullable Icon icon) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      return null;
+    }
+
+    if (icon == null) {
+      return null;
+    }
+
+    return icon.loadDrawable(getContext());
   }
 
   public void launchPermissionRequestActivity() {

@@ -14,6 +14,12 @@
 
     <declare-styleable name="ComplicationView">
         <attr name="complicationId" format="integer" />
+        <attr name="complicationStyle" format="enum">
+            <enum name="fill" value="0"/>
+            <enum name="line" value="1"/>
+            <enum name="dot" value="2"/>
+            <enum name="empty" value="3"/>
+        </attr>
     </declare-styleable>
 
     <!-- Standard gravity constant that a child supplies to its parent.

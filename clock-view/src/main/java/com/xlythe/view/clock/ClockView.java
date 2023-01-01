@@ -47,8 +47,8 @@ import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
  */
 public class ClockView extends FrameLayout {
     public static final String TAG = ClockView.class.getSimpleName();
-    private static final boolean DEBUG = false;
-    private static final String ACTION_WATCH_FACE_EDITOR = "androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR";
+    public static final boolean DEBUG = false;
+    static final String ACTION_WATCH_FACE_EDITOR = "androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR";
 
     private static final long ONE_SECOND = 1000;
     private static final long ONE_MINUTE = 60 * 1000;
