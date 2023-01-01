@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
@@ -263,9 +264,9 @@ public class ComplicationView extends AppCompatImageView {
 
   private void setComplicationData(LongTextComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    Drawable smallIcon = asDrawable(complicationData.getSmallImage());
+    Drawable smallIcon = isAmbientModeEnabled() ? null : asDrawable(complicationData.getSmallImage());
     if (smallIcon != null) {
-      setImageDrawable(smallIcon);
+      setImageDrawable(new NonTintableDrawable(smallIcon));
     } else {
       setImageDrawable(new ComplicationDrawable.Builder(getContext())
               .title(asCharSequence(complicationData.getTitle()))
@@ -305,14 +306,14 @@ public class ComplicationView extends AppCompatImageView {
 
   private void setComplicationData(SmallImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(asDrawable(complicationData.getSmallImage()));
+    setImageDrawable(new NonTintableDrawable(asDrawable(complicationData.getSmallImage())));
 
     scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(PhotoImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(asDrawable(complicationData.getPhotoImage()));
+    setImageDrawable(new NonTintableDrawable(asDrawable(complicationData.getPhotoImage())));
 
     scheduleNextUpdate(complicationData.getContentDescription());
   }
