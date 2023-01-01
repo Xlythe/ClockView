@@ -1,5 +1,6 @@
 package com.xlythe.view.clock;
 
+import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -33,13 +34,14 @@ public class RangeDrawable extends ComplicationDrawable {
     private final Paint mForegroundProgressPaint = new Paint();
 
     RangeDrawable(
+            Context context,
             @Nullable Drawable icon,
             @Nullable CharSequence text,
             @Nullable CharSequence title,
             float min,
             float max,
             float value) {
-        super(icon, text, title);
+        super(context, icon, text, title);
         mMin = min;
         mMax = max;
         mValue = value;
@@ -47,12 +49,12 @@ public class RangeDrawable extends ComplicationDrawable {
         mBackgroundProgressPaint.setColor(DEFAULT_COLOR);
         mBackgroundProgressPaint.setAlpha(BACKGROUND_PROGRESS_ALPHA);
         mBackgroundProgressPaint.setStyle(Paint.Style.STROKE);
-        mBackgroundProgressPaint.setStrokeWidth(2);
+        mBackgroundProgressPaint.setStrokeWidth(getLineStrokeWidth());
         mBackgroundProgressPaint.setAntiAlias(true);
 
         mForegroundProgressPaint.setColor(DEFAULT_COLOR);
         mForegroundProgressPaint.setStyle(Paint.Style.STROKE);
-        mForegroundProgressPaint.setStrokeWidth(2);
+        mForegroundProgressPaint.setStrokeWidth(getLineStrokeWidth());
         mForegroundProgressPaint.setAntiAlias(true);
     }
 
@@ -115,6 +117,7 @@ public class RangeDrawable extends ComplicationDrawable {
     }
 
     public static class Builder extends ComplicationDrawable.Builder {
+        private final Context mContext;
         private boolean mShowBackground;
         private CharSequence mTitle;
         private CharSequence mText;
@@ -122,6 +125,11 @@ public class RangeDrawable extends ComplicationDrawable {
         private float mMin;
         private float mMax;
         private float mValue;
+
+        public Builder(Context context) {
+            super(context);
+            mContext = context;
+        }
 
         public Builder showBackground(boolean show) {
             mShowBackground = show;
@@ -159,6 +167,7 @@ public class RangeDrawable extends ComplicationDrawable {
 
         public RangeDrawable build() {
             RangeDrawable drawable = new RangeDrawable(
+                    mContext,
                     mIcon,
                     mText,
                     mTitle,

@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.Color;
-import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
@@ -44,7 +43,6 @@ import com.xlythe.watchface.clock.PermissionActivity;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -55,6 +53,7 @@ public class ComplicationView extends AppCompatImageView {
   private ComplicationData mComplicationData = new NoDataComplicationData();
   private boolean mAmbientModeEnabled = false;
   private ComplicationDrawable.Style mComplicationDrawableStyle = ComplicationDrawable.Style.DOT;
+  private PlaceholderDrawable mPlaceholderDrawable;
 
   @Nullable private OnClickListener mOnClickListener;
 
@@ -97,8 +96,13 @@ public class ComplicationView extends AppCompatImageView {
       a.recycle();
     }
 
+    mPlaceholderDrawable = new PlaceholderDrawable(getContext());
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !hasForeground) {
-      setForeground(new RippleDrawable(getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()), null, new PlaceholderDrawable()));
+      setForeground(new RippleDrawable(
+              getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
+              null,
+              mPlaceholderDrawable));
     }
   }
 
@@ -231,21 +235,21 @@ public class ComplicationView extends AppCompatImageView {
       case NOT_CONFIGURED:
       default:
         setContentDescription(null);
-        setImageDrawable(isInWatchfaceEditor() ? new PlaceholderDrawable() : null);
+        setImageDrawable(isInWatchfaceEditor() ? mPlaceholderDrawable : null);
         break;
     }
   }
 
   private void setComplicationData(NoDataComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(isInWatchfaceEditor() ? new PlaceholderDrawable() : null);
+    setImageDrawable(isInWatchfaceEditor() ? mPlaceholderDrawable : null);
 
     scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(ShortTextComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(new ComplicationDrawable.Builder()
+    setImageDrawable(new ComplicationDrawable.Builder(getContext())
             .title(asCharSequence(complicationData.getTitle()))
             .text(asCharSequence(complicationData.getText()))
             .icon(asDrawable(complicationData.getMonochromaticImage()))
@@ -263,7 +267,7 @@ public class ComplicationView extends AppCompatImageView {
     if (smallIcon != null) {
       setImageDrawable(smallIcon);
     } else {
-      setImageDrawable(new ComplicationDrawable.Builder()
+      setImageDrawable(new ComplicationDrawable.Builder(getContext())
               .title(asCharSequence(complicationData.getTitle()))
               .text(asCharSequence(complicationData.getText()))
               .icon(asDrawable(complicationData.getMonochromaticImage()))
@@ -278,7 +282,7 @@ public class ComplicationView extends AppCompatImageView {
 
   private void setComplicationData(RangedValueComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(new RangeDrawable.Builder()
+    setImageDrawable(new RangeDrawable.Builder(getContext())
             .title(asCharSequence(complicationData.getTitle()))
             .text(asCharSequence(complicationData.getText()))
             .icon(asDrawable(complicationData.getMonochromaticImage()))
@@ -315,7 +319,7 @@ public class ComplicationView extends AppCompatImageView {
 
   private void setComplicationData(NoPermissionComplicationData complicationData) {
     setContentDescription(null);
-    setImageDrawable(new ComplicationDrawable.Builder()
+    setImageDrawable(new ComplicationDrawable.Builder(getContext())
             .title(asCharSequence(complicationData.getTitle()))
             .text(asCharSequence(complicationData.getText()))
             .icon(asDrawable(complicationData.getMonochromaticImage()))
@@ -365,9 +369,7 @@ public class ComplicationView extends AppCompatImageView {
       return;
     }
 
-    mHandler.postDelayed(() -> {
-      setComplicationData(mComplicationData);
-    }, timeUntilNextUpdate);
+    mHandler.postDelayed(() -> setComplicationData(mComplicationData), timeUntilNextUpdate);
   }
 
   @Nullable

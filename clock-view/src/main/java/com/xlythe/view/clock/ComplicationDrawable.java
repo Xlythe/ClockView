@@ -1,5 +1,6 @@
 package com.xlythe.view.clock;
 
+import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -14,22 +15,27 @@ import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
-import android.util.Log;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.xlythe.watchface.clock.utils.ResourceUtils;
+
 public class ComplicationDrawable extends Drawable {
     private final static float ICON_RATIO_VERTICAL = 0.33f;
     private final static float ICON_RATIO_HORIZONTAL = 0.6f;
     private final static int MIN_TEXT_CHARACTERS = 7;
-    private final static float MIN_TEXT_SIZE = 11;
+    private final static int MIN_TEXT_SIZE_SP = 5;
+    private final static int MAX_TEXT_SIZE_SP = 30;
+    private final static int DOT_STROKE_WIDTH_DP = 1;
+    private final static int LINE_STROKE_WIDTH_DP = 1;
     @ColorInt final static int DEFAULT_COLOR = Color.WHITE;
     private final static int BACKGROUND_ALPHA = 76;
     private final static int TITLE_ALPHA = 180;
 
+    private final Context mContext;
     private final Paint mBackgroundPaint = new Paint();
     private final Paint mIconPaint = new Paint();
     private final TextPaint mTextPaint = new TextPaint();
@@ -50,14 +56,16 @@ public class ComplicationDrawable extends Drawable {
         FILL, LINE, DOT, EMPTY
     }
 
-    public ComplicationDrawable() {
+    public ComplicationDrawable(Context context) {
+        mContext = context;
         mIcon = null;
         mText = null;
         mTitle = null;
         init();
     }
 
-    ComplicationDrawable(@Nullable Drawable icon, @Nullable CharSequence text, @Nullable CharSequence title) {
+    ComplicationDrawable(Context context, @Nullable Drawable icon, @Nullable CharSequence text, @Nullable CharSequence title) {
+        mContext = context;
         mIcon = icon;
         mText = text;
         mTitle = title;
@@ -67,19 +75,18 @@ public class ComplicationDrawable extends Drawable {
     private void init() {
         mBackgroundPaint.setColor(DEFAULT_COLOR);
         mBackgroundPaint.setAlpha(BACKGROUND_ALPHA);
-        mBackgroundPaint.setStrokeWidth(3);
         mBackgroundPaint.setAntiAlias(true);
 
         mIconPaint.setColor(DEFAULT_COLOR);
         mIconPaint.setAntiAlias(true);
 
         mTextPaint.setColor(DEFAULT_COLOR);
-        mTextPaint.setTextSize(30);
+        mTextPaint.setTextSize(getMaxTextSize());
         mTextPaint.setAntiAlias(true);
 
         mTitlePaint.setColor(DEFAULT_COLOR);
         mTitlePaint.setAlpha(TITLE_ALPHA);
-        mTitlePaint.setTextSize(30);
+        mTitlePaint.setTextSize(getMaxTextSize());
         mTitlePaint.setAntiAlias(true);
 
         mDebugPaint.setColor(0xffff0000);
@@ -171,6 +178,8 @@ public class ComplicationDrawable extends Drawable {
     protected void onBoundsChange(@NonNull Rect bounds) {
         super.onBoundsChange(bounds);
 
+        mTextPaint.setTextSize(getMaxTextSize());
+        mTitlePaint.setTextSize(getMaxTextSize());
         if (isHorizontal()) {
             setHorizontalLayout();
         } else {
@@ -218,8 +227,8 @@ public class ComplicationDrawable extends Drawable {
             while ((mTextLayout.getHeight() > textBounds.height()
                     || (mTextLayout.getEllipsisStart(0) != 0 && mTextLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS)
                     || (mTextLayout.getEllipsisStart(1) != 0 && mTextLayout.getEllipsisStart(1) < MIN_TEXT_CHARACTERS))
-                    && mTextPaint.getTextSize() > MIN_TEXT_SIZE) {
-                mTextPaint.setTextSize(Math.max(mTextPaint.getTextSize() - 2f, MIN_TEXT_SIZE));
+                    && mTextPaint.getTextSize() > getMinTextSize()) {
+                mTextPaint.setTextSize(Math.max(mTextPaint.getTextSize() - 2f, getMinTextSize()));
                 mTextLayout = StaticLayout.Builder.obtain(mText, 0, mText.length(), mTextPaint, textBounds.width())
                         .setMaxLines(singleLine ? 1 : 2)
                         .setEllipsize(TextUtils.TruncateAt.END)
@@ -242,8 +251,8 @@ public class ComplicationDrawable extends Drawable {
             while ((mTitleLayout.getHeight() > titleBounds.height()
                     || (mTitleLayout.getEllipsisStart(0) != 0 && mTitleLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS)
                     || (mTitleLayout.getEllipsisStart(1) != 0 && mTitleLayout.getEllipsisStart(1) < MIN_TEXT_CHARACTERS))
-                    && mTitlePaint.getTextSize() > MIN_TEXT_SIZE) {
-                mTitlePaint.setTextSize(Math.max(mTitlePaint.getTextSize() - 2f, MIN_TEXT_SIZE));
+                    && mTitlePaint.getTextSize() > getMinTextSize()) {
+                mTitlePaint.setTextSize(Math.max(mTitlePaint.getTextSize() - 2f, getMinTextSize()));
                 mTitleLayout = StaticLayout.Builder.obtain(mTitle, 0, mTitle.length(), mTitlePaint, titleBounds.width())
                         .setMaxLines(singleLine ? 1 : 2)
                         .setEllipsize(TextUtils.TruncateAt.END)
@@ -316,8 +325,8 @@ public class ComplicationDrawable extends Drawable {
 
             while ((mTextLayout.getHeight() > textBounds.height()
                     || (mTextLayout.getEllipsisStart(0) != 0 && mTextLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS))
-                    && mTextPaint.getTextSize() > MIN_TEXT_SIZE) {
-                mTextPaint.setTextSize(Math.max(mTextPaint.getTextSize() - 2f, MIN_TEXT_SIZE));
+                    && mTextPaint.getTextSize() > getMinTextSize()) {
+                mTextPaint.setTextSize(Math.max(mTextPaint.getTextSize() - 2f, getMinTextSize()));
                 mTextLayout = StaticLayout.Builder.obtain(mText, 0, mText.length(), mTextPaint, textBounds.width())
                         .setMaxLines(1)
                         .setEllipsize(TextUtils.TruncateAt.END)
@@ -343,8 +352,8 @@ public class ComplicationDrawable extends Drawable {
 
             while ((mTitleLayout.getHeight() > titleBounds.height()
                     || (mTitleLayout.getEllipsisStart(0) != 0 && mTitleLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS))
-                    && mTitlePaint.getTextSize() > MIN_TEXT_SIZE) {
-                mTitlePaint.setTextSize(Math.max(mTitlePaint.getTextSize() - 2f, MIN_TEXT_SIZE));
+                    && mTitlePaint.getTextSize() > getMinTextSize()) {
+                mTitlePaint.setTextSize(Math.max(mTitlePaint.getTextSize() - 2f, getMinTextSize()));
                 mTitleLayout = StaticLayout.Builder.obtain(mTitle, 0, mTitle.length(), mTitlePaint, titleBounds.width())
                         .setMaxLines(1)
                         .setEllipsize(TextUtils.TruncateAt.END)
@@ -358,6 +367,22 @@ public class ComplicationDrawable extends Drawable {
             mTitleLayoutRect.top = mTitleLayoutRect.top + mTitleLayoutRect.height() / 2 - mTitleLayout.getHeight() / 2;
             mTitleLayoutRect.bottom = mTitleLayoutRect.top + mTitleLayout.getHeight();
         }
+    }
+
+    protected float getMinTextSize() {
+        return ResourceUtils.inScaleIndependentPixels(getContext(), MIN_TEXT_SIZE_SP);
+    }
+
+    protected float getMaxTextSize() {
+        return ResourceUtils.inScaleIndependentPixels(getContext(), MAX_TEXT_SIZE_SP);
+    }
+
+    protected float getDotStrokeWidth() {
+        return ResourceUtils.inDisplayIndependentPixels(getContext(), DOT_STROKE_WIDTH_DP);
+    }
+
+    protected float getLineStrokeWidth() {
+        return ResourceUtils.inDisplayIndependentPixels(getContext(), LINE_STROKE_WIDTH_DP);
     }
 
     @Override
@@ -399,11 +424,20 @@ public class ComplicationDrawable extends Drawable {
         return getBounds().height();
     }
 
+    protected Context getContext() {
+        return mContext;
+    }
+
     public static class Builder {
+        private final Context mContext;
         private Style mStyle = Style.FILL;
         private CharSequence mTitle;
         private CharSequence mText;
         private Drawable mIcon;
+
+        public Builder(Context context) {
+            mContext = context;
+        }
 
         public Builder style(Style style) {
             mStyle = style;
@@ -426,18 +460,18 @@ public class ComplicationDrawable extends Drawable {
         }
 
         public ComplicationDrawable build() {
-            ComplicationDrawable drawable = new ComplicationDrawable(mIcon, mText, mTitle);
+            ComplicationDrawable drawable = new ComplicationDrawable(mContext, mIcon, mText, mTitle);
             switch (mStyle) {
                 case FILL:
                     drawable.mShowBackground = true;
                     break;
                 case LINE:
                     drawable.mBackgroundPaint.setStyle(Paint.Style.STROKE);
-                    drawable.mBackgroundPaint.setStrokeWidth(3f);
+                    drawable.mBackgroundPaint.setStrokeWidth(drawable.getLineStrokeWidth());
                     break;
                 case DOT:
                     drawable.mBackgroundPaint.setStyle(Paint.Style.STROKE);
-                    drawable.mBackgroundPaint.setStrokeWidth(2f);
+                    drawable.mBackgroundPaint.setStrokeWidth(drawable.getDotStrokeWidth());
                     drawable.mBackgroundPaint.setPathEffect(new DashPathEffect(new float[] { 6f, 3f}, 0));
                     break;
                 case EMPTY:
