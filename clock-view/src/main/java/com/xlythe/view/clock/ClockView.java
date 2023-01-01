@@ -62,6 +62,11 @@ public class ClockView extends FrameLayout {
     private static final String EXTRA_LOW_BIT_AMBIENT = "low_bit_ambient";
     private static final String EXTRA_BURN_IN_PROTECTION = "burn_in_protection";
 
+    // Debug logic
+    private long mInvalidationCycle = -1;
+    private int mInvalidationCount = 0;
+    private static final int MAX_INVALIDATIONS_PER_SECOND = 500;
+
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     @Nullable
@@ -252,9 +257,8 @@ public class ClockView extends FrameLayout {
 
     @Override
     public void onDescendantInvalidated(View child, View target) {
-        super.onDescendantInvalidated(child, target);
-
         if (!isManualInvalidationEnabled()) {
+            super.onDescendantInvalidated(child, target);
             return;
         }
 
@@ -267,6 +271,19 @@ public class ClockView extends FrameLayout {
 
         if (mOnInvalidateListener != null) {
             mOnInvalidateListener.onInvalidate();
+        }
+
+        if (DEBUG) {
+            if (getSecond() != mInvalidationCycle) {
+                mInvalidationCycle = getSecond();
+                mInvalidationCount = 0;
+            } else {
+                mInvalidationCount++;
+
+                if (mInvalidationCount > MAX_INVALIDATIONS_PER_SECOND) {
+                    throw new RuntimeException("Expected fewer than " + MAX_INVALIDATIONS_PER_SECOND + " invalidations per second but exceeded that number");
+                }
+            }
         }
     }
 

@@ -102,6 +102,8 @@ public class RangeDrawable extends ComplicationDrawable {
         Path path = new Path();
         path.addRoundRect(rect, radius, radius, Path.Direction.CW);
         float length = new PathMeasure(path, false).getLength();
+        // Slightly extend the length. For circular rounded rects, the length we were given was too short.
+        length *= 1.04f;
 
         PathEffect effect = new DashPathEffect(new float[] { length, length }, length - length * getProgress());
 

@@ -225,8 +225,8 @@ public class ComplicationDrawable extends Drawable {
                     .build();
 
             while ((mTextLayout.getHeight() > textBounds.height()
-                    || (mTextLayout.getEllipsisStart(0) != 0 && mTextLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS)
-                    || (mTextLayout.getEllipsisStart(1) != 0 && mTextLayout.getEllipsisStart(1) < MIN_TEXT_CHARACTERS))
+                    || (mTextLayout.getEllipsisCount(0) > 0 && mTextLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS)
+                    || (mTextLayout.getEllipsisCount(1) > 0 && mTextLayout.getEllipsisStart(1) < MIN_TEXT_CHARACTERS))
                     && mTextPaint.getTextSize() > getMinTextSize()) {
                 mTextPaint.setTextSize(Math.max(mTextPaint.getTextSize() - 2f, getMinTextSize()));
                 mTextLayout = StaticLayout.Builder.obtain(mText, 0, mText.length(), mTextPaint, textBounds.width())
@@ -249,8 +249,8 @@ public class ComplicationDrawable extends Drawable {
                     .build();
 
             while ((mTitleLayout.getHeight() > titleBounds.height()
-                    || (mTitleLayout.getEllipsisStart(0) != 0 && mTitleLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS)
-                    || (mTitleLayout.getEllipsisStart(1) != 0 && mTitleLayout.getEllipsisStart(1) < MIN_TEXT_CHARACTERS))
+                    || (mTitleLayout.getEllipsisCount(0) > 0 && mTitleLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS)
+                    || (mTitleLayout.getEllipsisCount(1) > 0 && mTitleLayout.getEllipsisStart(1) < MIN_TEXT_CHARACTERS))
                     && mTitlePaint.getTextSize() > getMinTextSize()) {
                 mTitlePaint.setTextSize(Math.max(mTitlePaint.getTextSize() - 2f, getMinTextSize()));
                 mTitleLayout = StaticLayout.Builder.obtain(mTitle, 0, mTitle.length(), mTitlePaint, titleBounds.width())
@@ -324,7 +324,7 @@ public class ComplicationDrawable extends Drawable {
                     .build();
 
             while ((mTextLayout.getHeight() > textBounds.height()
-                    || (mTextLayout.getEllipsisStart(0) != 0 && mTextLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS))
+                    || (mTextLayout.getEllipsisCount(0) > 0 && mTextLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS))
                     && mTextPaint.getTextSize() > getMinTextSize()) {
                 mTextPaint.setTextSize(Math.max(mTextPaint.getTextSize() - 2f, getMinTextSize()));
                 mTextLayout = StaticLayout.Builder.obtain(mText, 0, mText.length(), mTextPaint, textBounds.width())
@@ -351,7 +351,7 @@ public class ComplicationDrawable extends Drawable {
                     .build();
 
             while ((mTitleLayout.getHeight() > titleBounds.height()
-                    || (mTitleLayout.getEllipsisStart(0) != 0 && mTitleLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS))
+                    || (mTitleLayout.getEllipsisCount(0) > 0 && mTitleLayout.getEllipsisStart(0) < MIN_TEXT_CHARACTERS))
                     && mTitlePaint.getTextSize() > getMinTextSize()) {
                 mTitlePaint.setTextSize(Math.max(mTitlePaint.getTextSize() - 2f, getMinTextSize()));
                 mTitleLayout = StaticLayout.Builder.obtain(mTitle, 0, mTitle.length(), mTitlePaint, titleBounds.width())

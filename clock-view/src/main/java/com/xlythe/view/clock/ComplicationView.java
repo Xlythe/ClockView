@@ -47,6 +47,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @OptIn(markerClass = ComplicationExperimental.class)
 public class ComplicationView extends AppCompatImageView {
@@ -365,11 +366,19 @@ public class ComplicationView extends AppCompatImageView {
       return;
     }
 
-    long timeUntilNextUpdate = Duration.between(getInstant(), text.getNextChangeTime(getInstant())).getSeconds() * 1000;
+    // Note: Directly calling Duration#toMillis crashes. We'll manually convert it to millis isntead.
+    Duration duration = Duration.between(getInstant(), text.getNextChangeTime(getInstant()));
+    long timeUntilNextUpdate = duration.getSeconds() * 1000;
+    timeUntilNextUpdate += TimeUnit.NANOSECONDS.toMillis(duration.getNano());
     if (timeUntilNextUpdate < 0) {
       return;
     }
 
+    if (isAmbientModeEnabled()) {
+      timeUntilNextUpdate = Math.max(1000, timeUntilNextUpdate);
+    }
+
+    Log.d(ClockView.TAG, "Scheduling complication update in " + timeUntilNextUpdate + " millis for complication " + asCharSequence(text));
     mHandler.postDelayed(() -> setComplicationData(mComplicationData), timeUntilNextUpdate);
   }
 
