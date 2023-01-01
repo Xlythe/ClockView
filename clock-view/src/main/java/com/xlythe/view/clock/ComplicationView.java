@@ -10,6 +10,8 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 
@@ -18,6 +20,7 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationExperimental;
@@ -36,7 +39,10 @@ import androidx.wear.watchface.complications.data.SmallImageComplicationData;
 
 import com.xlythe.watchface.clock.PermissionActivity;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,6 +55,12 @@ public class ComplicationView extends AppCompatImageView {
   private ComplicationDrawable.Style mComplicationDrawableStyle = ComplicationDrawable.Style.DOT;
 
   @Nullable private OnClickListener mOnClickListener;
+
+  private final Handler mHandler = new Handler(Looper.getMainLooper());
+
+  @Nullable
+  private ZonedDateTime mDateTime;
+  private long mTimeMillis = -1;
 
   public ComplicationView(@NonNull Context context) {
     super(context);
@@ -225,6 +237,8 @@ public class ComplicationView extends AppCompatImageView {
   private void setComplicationData(NoDataComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
     setImageDrawable(isInWatchfaceEditor() ? new PlaceholderDrawable() : null);
+
+    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(ShortTextComplicationData complicationData) {
@@ -235,6 +249,10 @@ public class ComplicationView extends AppCompatImageView {
             .icon(asDrawable(complicationData.getMonochromaticImage()))
             .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
             .build());
+
+    scheduleNextUpdate(complicationData.getContentDescription());
+    scheduleNextUpdate(complicationData.getTitle());
+    scheduleNextUpdate(complicationData.getText());
   }
 
   private void setComplicationData(LongTextComplicationData complicationData) {
@@ -250,6 +268,10 @@ public class ComplicationView extends AppCompatImageView {
               .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
               .build());
     }
+
+    scheduleNextUpdate(complicationData.getContentDescription());
+    scheduleNextUpdate(complicationData.getTitle());
+    scheduleNextUpdate(complicationData.getText());
   }
 
   private void setComplicationData(RangedValueComplicationData complicationData) {
@@ -262,21 +284,31 @@ public class ComplicationView extends AppCompatImageView {
             .value(complicationData.getValue())
             .showBackground(!isAmbientModeEnabled())
             .build());
+
+    scheduleNextUpdate(complicationData.getContentDescription());
+    scheduleNextUpdate(complicationData.getTitle());
+    scheduleNextUpdate(complicationData.getText());
   }
 
   private void setComplicationData(MonochromaticImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
     setImageDrawable(asDrawable(complicationData.getMonochromaticImage()));
+
+    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(SmallImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
     setImageDrawable(asDrawable(complicationData.getSmallImage()));
+
+    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(PhotoImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
     setImageDrawable(asDrawable(complicationData.getPhotoImage()));
+
+    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(NoPermissionComplicationData complicationData) {
@@ -287,6 +319,9 @@ public class ComplicationView extends AppCompatImageView {
             .icon(asDrawable(complicationData.getMonochromaticImage()))
             .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
             .build());
+
+    scheduleNextUpdate(complicationData.getTitle());
+    scheduleNextUpdate(complicationData.getText());
   }
 
   public ComplicationData getComplicationData() {
@@ -303,11 +338,34 @@ public class ComplicationView extends AppCompatImageView {
       return null;
     }
 
-    if (text == ComplicationText.PLACEHOLDER || text == ComplicationText.EMPTY) {
+    if (text.isPlaceholder() || text.isAlwaysEmpty()) {
       return null;
     }
 
-    return text.getTextAt(getResources(), Instant.now());
+    return text.getTextAt(getResources(), getInstant());
+  }
+
+  private void scheduleNextUpdate(@Nullable ComplicationText text) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      return;
+    }
+
+    if (text == null) {
+      return;
+    }
+
+    if (text.isPlaceholder() || text.isAlwaysEmpty()) {
+      return;
+    }
+
+    long timeUntilNextUpdate = Duration.between(getInstant(), text.getNextChangeTime(getInstant())).getSeconds() * 1000;
+    if (timeUntilNextUpdate < 0) {
+      return;
+    }
+
+    mHandler.postDelayed(() -> {
+      setComplicationData(mComplicationData);
+    }, timeUntilNextUpdate);
   }
 
   @Nullable
@@ -316,7 +374,7 @@ public class ComplicationView extends AppCompatImageView {
       return null;
     }
 
-    if (image == MonochromaticImage.PLACEHOLDER) {
+    if (image.isPlaceholder()) {
       return null;
     }
 
@@ -338,7 +396,7 @@ public class ComplicationView extends AppCompatImageView {
       return null;
     }
 
-    if (image == SmallImage.PLACEHOLDER) {
+    if (image.isPlaceholder()) {
       return null;
     }
 
@@ -370,5 +428,34 @@ public class ComplicationView extends AppCompatImageView {
       intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     }
     getContext().startActivity(intent);
+  }
+
+  @RequiresApi(26)
+  public void setTime(ZonedDateTime dateTime) {
+    mDateTime = dateTime;
+    mTimeMillis = -1;
+  }
+
+  public void setTime(long timeInMillis) {
+    mTimeMillis = timeInMillis;
+    mDateTime = null;
+  }
+
+  public long getTimeMillis() {
+    if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+      return mDateTime.toInstant().toEpochMilli();
+    } else {
+      return mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
+    }
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.O)
+  private Instant getInstant() {
+    return Instant.ofEpochMilli(getTimeMillis());
+  }
+
+  public void resetTime() {
+    mTimeMillis = -1;
+    mDateTime = null;
   }
 }

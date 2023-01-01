@@ -419,11 +419,19 @@ public class ClockView extends FrameLayout {
     public void setTime(ZonedDateTime dateTime) {
         mDateTime = dateTime;
         mTimeMillis = -1;
+
+        for (ComplicationView view : getComplicationViews()) {
+            view.setTime(mDateTime);
+        }
     }
 
     public void setTime(long timeInMillis) {
         mTimeMillis = timeInMillis;
         mDateTime = null;
+
+        for (ComplicationView view : getComplicationViews()) {
+            view.setTime(mTimeMillis);
+        }
     }
 
     public void setTime(int hour, int minute) {
