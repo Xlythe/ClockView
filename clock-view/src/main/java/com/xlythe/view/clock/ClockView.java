@@ -394,7 +394,8 @@ public class ClockView extends FrameLayout {
 
         if (view instanceof ViewGroup) {
             ViewGroup viewGroup = (ViewGroup) view;
-            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            // Loop backwards so that views on top get focus first
+            for (int i = viewGroup.getChildCount() - 1; i >= 0; i--) {
                 View child = viewGroup.getChildAt(i);
 
                 Rect rect = new Rect(child.getLeft(), child.getTop(), child.getRight(), child.getBottom());
