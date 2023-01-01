@@ -14,11 +14,15 @@
 
     <declare-styleable name="ComplicationView">
         <attr name="complicationId" format="integer" />
-        <attr name="complicationStyle" format="enum">
+        <attr name="complicationDrawableStyle" format="enum">
             <enum name="fill" value="0"/>
             <enum name="line" value="1"/>
             <enum name="dot" value="2"/>
             <enum name="empty" value="3"/>
+        </attr>
+        <attr name="complicationStyle" format="enum">
+            <enum name="chip" value="0"/>
+            <enum name="background" value="1"/>
         </attr>
     </declare-styleable>
 

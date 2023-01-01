@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
@@ -45,7 +44,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -55,15 +53,25 @@ public class ComplicationView extends AppCompatImageView {
   private ComplicationData mComplicationData = new NoDataComplicationData();
   private boolean mAmbientModeEnabled = false;
   private ComplicationDrawable.Style mComplicationDrawableStyle = ComplicationDrawable.Style.DOT;
+  private Style mComplicationStyle = Style.CHIP;
   private PlaceholderDrawable mPlaceholderDrawable;
 
   @Nullable private OnClickListener mOnClickListener;
 
   private final Handler mHandler = new Handler(Looper.getMainLooper());
 
+  // Unless the caller overrides the foreground, we'll set it ourselves.
+  private boolean mUseDynamicForeground = true;
+  private Drawable mDefaultForegroundDrawable;
+
   @Nullable
   private ZonedDateTime mDateTime;
   private long mTimeMillis = -1;
+
+  public enum Style {
+    // TODO: Add edge, list, and layout
+    CHIP, BACKGROUND
+  }
 
   public ComplicationView(@NonNull Context context) {
     super(context);
@@ -90,7 +98,8 @@ public class ComplicationView extends AppCompatImageView {
     if (attrs != null) {
       TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ComplicationView);
       setComplicationId(a.getInteger(R.styleable.ComplicationView_complicationId, 0));
-      setComplicationDrawableStyle(ComplicationDrawable.Style.values()[a.getInteger(R.styleable.ComplicationView_complicationStyle, mComplicationDrawableStyle.ordinal())]);
+      setComplicationDrawableStyle(ComplicationDrawable.Style.values()[a.getInteger(R.styleable.ComplicationView_complicationDrawableStyle, mComplicationDrawableStyle.ordinal())]);
+      setComplicationStyle(Style.values()[a.getInteger(R.styleable.ComplicationView_complicationStyle, mComplicationStyle.ordinal())]);
       a.recycle();
 
       a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.foreground });
@@ -101,10 +110,14 @@ public class ComplicationView extends AppCompatImageView {
     mPlaceholderDrawable = new PlaceholderDrawable(getContext());
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !hasForeground) {
-      setForeground(new RippleDrawable(
+      // Call super to avoid setting mUseDynamicForeground
+      mDefaultForegroundDrawable = new RippleDrawable(
               getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
               null,
-              mPlaceholderDrawable));
+              mPlaceholderDrawable);
+      super.setForeground(mDefaultForegroundDrawable);
+    } else {
+      mUseDynamicForeground = false;
     }
   }
 
@@ -140,12 +153,39 @@ public class ComplicationView extends AppCompatImageView {
     setComplicationData(mComplicationData);
   }
 
+  public Style getComplicationStyle() {
+    return mComplicationStyle;
+  }
+
+  public void setComplicationStyle(Style style) {
+    mComplicationStyle = style;
+    setComplicationData(mComplicationData);
+  }
+
   public List<ComplicationType> getSupportedComplicationTypes() {
     List<ComplicationType> complicationTypes = new ArrayList<>();
-    Collections.addAll(complicationTypes, ComplicationType.values());
-    complicationTypes.remove(ComplicationType.LIST);
-    complicationTypes.remove(ComplicationType.PROTO_LAYOUT);
-    complicationTypes.remove(ComplicationType.PHOTO_IMAGE);
+    switch (mComplicationStyle) {
+      case CHIP:
+        complicationTypes.add(ComplicationType.NO_DATA);
+        complicationTypes.add(ComplicationType.EMPTY);
+        complicationTypes.add(ComplicationType.NOT_CONFIGURED);
+        complicationTypes.add(ComplicationType.NO_PERMISSION);
+        complicationTypes.add(ComplicationType.SHORT_TEXT);
+        complicationTypes.add(ComplicationType.LONG_TEXT);
+        complicationTypes.add(ComplicationType.RANGED_VALUE);
+        complicationTypes.add(ComplicationType.MONOCHROMATIC_IMAGE);
+        complicationTypes.add(ComplicationType.SMALL_IMAGE);
+        break;
+      case BACKGROUND:
+        complicationTypes.add(ComplicationType.NO_DATA);
+        complicationTypes.add(ComplicationType.EMPTY);
+        complicationTypes.add(ComplicationType.NOT_CONFIGURED);
+        complicationTypes.add(ComplicationType.NO_PERMISSION);
+        complicationTypes.add(ComplicationType.PHOTO_IMAGE);
+        break;
+    }
+
+    // TODO: Support TYPE_PROTO_LAYOUT and TYPE_LIST
     return complicationTypes;
   }
 
@@ -192,6 +232,12 @@ public class ComplicationView extends AppCompatImageView {
     return super.isClickable();
   }
 
+  @Override
+  public void setForeground(Drawable foreground) {
+    super.setForeground(foreground);
+    mUseDynamicForeground = false;
+  }
+
   private boolean isInWatchfaceEditor() {
     Context context = getContext();
     if (!(context instanceof ComponentActivity)) {
@@ -206,6 +252,9 @@ public class ComplicationView extends AppCompatImageView {
   public void setComplicationData(ComplicationData complicationData) {
     mComplicationData = complicationData;
 
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {
+      super.setForeground(mDefaultForegroundDrawable);
+    }
     switch (complicationData.getType()) {
       case NO_DATA:
         setComplicationData((NoDataComplicationData) complicationData);
@@ -268,6 +317,12 @@ public class ComplicationView extends AppCompatImageView {
     Drawable smallIcon = isAmbientModeEnabled() ? null : asDrawable(complicationData.getSmallImage());
     if (smallIcon != null) {
       setImageDrawable(new NonTintableDrawable(smallIcon));
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {
+        super.setForeground(new RippleDrawable(
+                getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
+                null,
+                smallIcon));
+      }
     } else {
       setImageDrawable(new ComplicationDrawable.Builder(getContext())
               .title(asCharSequence(complicationData.getTitle()))
@@ -307,14 +362,38 @@ public class ComplicationView extends AppCompatImageView {
 
   private void setComplicationData(SmallImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(new NonTintableDrawable(asDrawable(complicationData.getSmallImage())));
+
+    Drawable smallIcon = asDrawable(complicationData.getSmallImage());
+    if (smallIcon != null) {
+      setImageDrawable(new NonTintableDrawable(smallIcon));
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {
+        super.setForeground(new RippleDrawable(
+                getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
+                null,
+                smallIcon));
+      }
+    } else {
+      setImageDrawable(null);
+    }
 
     scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(PhotoImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
-    setImageDrawable(new NonTintableDrawable(asDrawable(complicationData.getPhotoImage())));
+
+    Drawable image = asDrawable(complicationData.getPhotoImage());
+    if (image != null) {
+      setImageDrawable(new NonTintableDrawable(image));
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {
+        super.setForeground(new RippleDrawable(
+                getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
+                null,
+                image));
+      }
+    } else {
+      setImageDrawable(null);
+    }
 
     scheduleNextUpdate(complicationData.getContentDescription());
   }
