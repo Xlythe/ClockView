@@ -17,6 +17,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -247,6 +248,17 @@ public class ClockView extends FrameLayout {
         if (verifyDrawable(who)) {
             getHandler().removeCallbacks(what, who);
         }
+    }
+
+    @Override
+    public void onDescendantInvalidated(View child, View target) {
+        super.onDescendantInvalidated(child, target);
+
+        if (!isManualInvalidationEnabled()) {
+            return;
+        }
+
+        invalidate();
     }
 
     @Override

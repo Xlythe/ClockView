@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
@@ -14,6 +15,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.ViewParent;
 
 import androidx.activity.ComponentActivity;
 import androidx.annotation.CallSuper;
@@ -457,5 +459,19 @@ public class ComplicationView extends AppCompatImageView {
   public void resetTime() {
     mTimeMillis = -1;
     mDateTime = null;
+  }
+
+  @Override
+  public void invalidate() {
+    super.invalidate();
+
+    ViewParent parent = getParent();
+    if (parent == null) {
+      return;
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      parent.onDescendantInvalidated(this, this);
+    }
   }
 }
