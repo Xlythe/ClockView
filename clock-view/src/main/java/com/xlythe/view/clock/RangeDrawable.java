@@ -255,7 +255,7 @@ public class RangeDrawable extends ComplicationDrawable {
 
     public static class Builder {
         private final Context mContext;
-        private boolean mShowBackground;
+        private Style mStyle = Style.FILL;
         private CharSequence mTitle;
         private CharSequence mText;
         private Drawable mIcon;
@@ -269,12 +269,8 @@ public class RangeDrawable extends ComplicationDrawable {
             mContext = context;
         }
 
-        public Builder showBackground(boolean show) {
-            mShowBackground = show;
-            return this;
-        }
-
         public Builder style(Style style) {
+            mStyle = style;
             return this;
         }
 
@@ -329,7 +325,7 @@ public class RangeDrawable extends ComplicationDrawable {
                     mValue,
                     mColors,
                     mSmoothColors);
-            drawable.mShowBackground = mShowBackground;
+            drawable.setStyle(mStyle);
             return drawable;
         }
     }

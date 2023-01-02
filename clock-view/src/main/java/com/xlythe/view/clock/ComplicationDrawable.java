@@ -32,7 +32,7 @@ public class ComplicationDrawable extends Drawable {
     private final static int DOT_STROKE_WIDTH_DP = 1;
     private final static int LINE_STROKE_WIDTH_DP = 1;
     @ColorInt final static int DEFAULT_COLOR = Color.WHITE;
-    private final static int BACKGROUND_ALPHA = 76;
+    final static int BACKGROUND_ALPHA = 76;
     private final static int TITLE_ALPHA = 180;
 
     private final Context mContext;
@@ -41,7 +41,6 @@ public class ComplicationDrawable extends Drawable {
     private final TextPaint mTextPaint = new TextPaint();
     private final TextPaint mTitlePaint = new TextPaint();
     private final Paint mDebugPaint = new Paint();
-    boolean mShowBackground = true;
     @Nullable private final Drawable mIcon;
     @Nullable private final CharSequence mText;
     @Nullable private StaticLayout mTextLayout;
@@ -51,6 +50,9 @@ public class ComplicationDrawable extends Drawable {
     @Nullable private Rect mTitleLayoutRect;
 
     @Nullable private ColorStateList mTint;
+
+    private Style mStyle = Style.FILL;
+    private boolean mShowBackground = true;
 
     public enum Style {
         FILL, LINE, DOT, EMPTY
@@ -428,6 +430,36 @@ public class ComplicationDrawable extends Drawable {
         return mContext;
     }
 
+    protected void setStyle(Style style) {
+        mStyle = style;
+        switch (style) {
+            case FILL:
+                mShowBackground = true;
+                break;
+            case LINE:
+                mBackgroundPaint.setStyle(Paint.Style.STROKE);
+                mBackgroundPaint.setStrokeWidth(getLineStrokeWidth());
+                break;
+            case DOT:
+                mBackgroundPaint.setStyle(Paint.Style.STROKE);
+                mBackgroundPaint.setStrokeWidth(getDotStrokeWidth());
+                mBackgroundPaint.setPathEffect(new DashPathEffect(new float[] { 6f, 3f}, 0));
+                break;
+            case EMPTY:
+                mShowBackground = false;
+                break;
+        }
+    }
+
+    protected Style getStyle() {
+        return mStyle;
+    }
+
+    @Nullable
+    protected Drawable getIcon() {
+        return mIcon;
+    }
+
     public static class Builder {
         private final Context mContext;
         private Style mStyle = Style.FILL;
@@ -461,23 +493,7 @@ public class ComplicationDrawable extends Drawable {
 
         public ComplicationDrawable build() {
             ComplicationDrawable drawable = new ComplicationDrawable(mContext, mIcon, mText, mTitle);
-            switch (mStyle) {
-                case FILL:
-                    drawable.mShowBackground = true;
-                    break;
-                case LINE:
-                    drawable.mBackgroundPaint.setStyle(Paint.Style.STROKE);
-                    drawable.mBackgroundPaint.setStrokeWidth(drawable.getLineStrokeWidth());
-                    break;
-                case DOT:
-                    drawable.mBackgroundPaint.setStyle(Paint.Style.STROKE);
-                    drawable.mBackgroundPaint.setStrokeWidth(drawable.getDotStrokeWidth());
-                    drawable.mBackgroundPaint.setPathEffect(new DashPathEffect(new float[] { 6f, 3f}, 0));
-                    break;
-                case EMPTY:
-                    drawable.mShowBackground = false;
-                    break;
-            }
+            drawable.setStyle(mStyle);
             return drawable;
         }
     }

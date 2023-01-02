@@ -18,6 +18,7 @@ import android.view.ViewParent;
 
 import androidx.activity.ComponentActivity;
 import androidx.annotation.CallSuper;
+import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
@@ -25,6 +26,8 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.wear.watchface.complications.data.ColorRamp;
 import androidx.wear.watchface.complications.data.ComplicationData;
+import androidx.wear.watchface.complications.data.ComplicationDisplayPolicies;
+import androidx.wear.watchface.complications.data.ComplicationDisplayPolicy;
 import androidx.wear.watchface.complications.data.ComplicationExperimental;
 import androidx.wear.watchface.complications.data.ComplicationText;
 import androidx.wear.watchface.complications.data.ComplicationType;
@@ -39,6 +42,7 @@ import androidx.wear.watchface.complications.data.RangedValueComplicationData;
 import androidx.wear.watchface.complications.data.ShortTextComplicationData;
 import androidx.wear.watchface.complications.data.SmallImage;
 import androidx.wear.watchface.complications.data.SmallImageComplicationData;
+import androidx.wear.watchface.complications.data.WeightedElementsComplicationData;
 
 import com.xlythe.watchface.clock.PermissionActivity;
 
@@ -176,6 +180,7 @@ public class ComplicationView extends AppCompatImageView {
         complicationTypes.add(ComplicationType.LONG_TEXT);
         complicationTypes.add(ComplicationType.RANGED_VALUE);
         complicationTypes.add(ComplicationType.GOAL_PROGRESS);
+        complicationTypes.add(ComplicationType.WEIGHTED_ELEMENTS);
         complicationTypes.add(ComplicationType.MONOCHROMATIC_IMAGE);
         complicationTypes.add(ComplicationType.SMALL_IMAGE);
         break;
@@ -188,7 +193,6 @@ public class ComplicationView extends AppCompatImageView {
         break;
     }
 
-    // TODO: Support TYPE_PROTO_LAYOUT and TYPE_LIST
     return complicationTypes;
   }
 
@@ -258,6 +262,12 @@ public class ComplicationView extends AppCompatImageView {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {
       super.setForeground(mDefaultForegroundDrawable);
     }
+
+    if (isAmbientModeEnabled()
+            && complicationData.getDisplayPolicy() == ComplicationDisplayPolicies.DO_NOT_SHOW_WHEN_DEVICE_LOCKED) {
+      complicationData = new NoDataComplicationData();
+    }
+
     switch (complicationData.getType()) {
       case NO_DATA:
         setComplicationData((NoDataComplicationData) complicationData);
@@ -273,6 +283,9 @@ public class ComplicationView extends AppCompatImageView {
         break;
       case GOAL_PROGRESS:
         setComplicationData((GoalProgressComplicationData) complicationData);
+        break;
+      case WEIGHTED_ELEMENTS:
+        setComplicationData((WeightedElementsComplicationData) complicationData);
         break;
       case MONOCHROMATIC_IMAGE:
         setComplicationData((MonochromaticImageComplicationData) complicationData);
@@ -351,7 +364,7 @@ public class ComplicationView extends AppCompatImageView {
             .range(complicationData.getMin(), complicationData.getMax())
             .value(complicationData.getValue())
             .colors(colors, interpolateColors)
-            .showBackground(!isAmbientModeEnabled() && mComplicationDrawableStyle != ComplicationDrawable.Style.EMPTY)
+            .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
             .build());
   }
 
@@ -378,8 +391,37 @@ public class ComplicationView extends AppCompatImageView {
             .range(0, complicationData.getTargetValue())
             .value(complicationData.getValue())
             .colors(colors, interpolateColors)
-            .showBackground(!isAmbientModeEnabled() && mComplicationDrawableStyle != ComplicationDrawable.Style.EMPTY)
+            .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
             .build());
+  }
+
+  private void setComplicationData(WeightedElementsComplicationData complicationData) {
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+
+    Drawable icon = isAmbientModeEnabled() ? null : new NonTintableDrawable(asDrawable(complicationData.getSmallImage()));
+    if (icon == null) {
+      icon = asDrawable(complicationData.getMonochromaticImage());
+    }
+
+    @ColorInt int backgroundColor = complicationData.getElementBackgroundColor();
+    if (isAmbientModeEnabled() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      backgroundColor = getImageTintList() == null ? Color.WHITE : getImageTintList().getDefaultColor();
+    }
+
+    ChartDrawable.Builder chartDrawable = new ChartDrawable.Builder(getContext())
+            .title(asCharSequence(complicationData.getTitle()))
+            .text(asCharSequence(complicationData.getText()))
+            .icon(icon)
+            .backgroundColor(backgroundColor)
+            .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle);
+    for (WeightedElementsComplicationData.Element element : complicationData.getElements()) {
+      @ColorInt int color = element.getColor();
+      if (isAmbientModeEnabled()) {
+        color = Color.BLACK;
+      }
+      chartDrawable.addElement(element.getWeight(), color);
+    }
+    setImageDrawable(chartDrawable.build());
   }
 
   private void setComplicationData(MonochromaticImageComplicationData complicationData) {
