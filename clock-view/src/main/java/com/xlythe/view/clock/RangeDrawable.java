@@ -253,7 +253,7 @@ public class RangeDrawable extends ComplicationDrawable {
         return mValue / (mMax - mMin);
     }
 
-    public static class Builder extends ComplicationDrawable.Builder {
+    public static class Builder {
         private final Context mContext;
         private boolean mShowBackground;
         private CharSequence mTitle;
@@ -266,7 +266,6 @@ public class RangeDrawable extends ComplicationDrawable {
         private boolean mSmoothColors;
 
         public Builder(Context context) {
-            super(context);
             mContext = context;
         }
 
