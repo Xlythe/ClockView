@@ -99,6 +99,10 @@ public class ComplicationView extends AppCompatImageView {
   }
 
   private void init(Context context, @Nullable AttributeSet attrs) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      mComplicationData = new NoDataComplicationData();
+    }
+
     boolean hasForeground = false;
     if (attrs != null) {
       TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ComplicationView);
@@ -110,10 +114,6 @@ public class ComplicationView extends AppCompatImageView {
       a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.foreground });
       hasForeground = a.hasValue(0);
       a.recycle();
-    }
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      mComplicationData = new NoDataComplicationData();
     }
 
     mPlaceholderDrawable = new PlaceholderDrawable(getContext());
