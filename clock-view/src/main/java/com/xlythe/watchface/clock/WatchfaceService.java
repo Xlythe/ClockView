@@ -261,6 +261,9 @@ public abstract class WatchfaceService extends WatchFaceService {
 
             // Draw the view
             BitmapUtils.draw(mWatchface, canvas, bounds);
+
+            // Reset time so that complications can update themselves even if the timer hasn't ticked yet.
+            mWatchface.resetTime();
         }
 
         @Override
