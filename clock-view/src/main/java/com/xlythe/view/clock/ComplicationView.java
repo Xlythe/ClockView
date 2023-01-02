@@ -175,6 +175,7 @@ public class ComplicationView extends AppCompatImageView {
         complicationTypes.add(ComplicationType.SHORT_TEXT);
         complicationTypes.add(ComplicationType.LONG_TEXT);
         complicationTypes.add(ComplicationType.RANGED_VALUE);
+        complicationTypes.add(ComplicationType.GOAL_PROGRESS);
         complicationTypes.add(ComplicationType.MONOCHROMATIC_IMAGE);
         complicationTypes.add(ComplicationType.SMALL_IMAGE);
         break;
