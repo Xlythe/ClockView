@@ -13,6 +13,7 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -581,24 +582,31 @@ public class ClockView extends FrameLayout {
         mDigitalEnabled = mDigitalEnabled || !supportsAnalog();
 
         if (isInWatchfaceEditor()) {
-            EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
-                @Override
-                public void onUpdate(EditorSession editorSession) {
-                    for (ComplicationView view : getComplicationViews()) {
-                        view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
+            try {
+                EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
+                    @Override
+                    public void onUpdate(EditorSession editorSession) {
+                        for (ComplicationView view : getComplicationViews()) {
+                            view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
 
-                        addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
-                            ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
-                            if (complicationDataSourceInfo == null) {
-                                view.setComplicationData(new EmptyComplicationData());
-                                return;
-                            }
+                            addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
+                                ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
+                                if (complicationDataSourceInfo == null) {
+                                    view.setComplicationData(new EmptyComplicationData());
+                                    return;
+                                }
 
-                            view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
-                        });
+                                view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
+                            });
+                        }
                     }
+                });
+            } catch (IllegalStateException e) {
+                Log.w(TAG, "Failed to load WearOS EditorSession. If you are using ComplicationView, please create ClockView in onCreate()", e);
+                for (ComplicationView view : getComplicationViews()) {
+                    view.setComplicationData(new NoDataComplicationData());
                 }
-            });
+            }
         } else {
             for (ComplicationView view : getComplicationViews()) {
                 view.setComplicationData(new NoDataComplicationData());
