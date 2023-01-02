@@ -2,19 +2,22 @@ Clock View
 ====================
 
 A View that displays a clock.
+Supports WearOS watchfaces and widgets.
+
+![Example app](sample.png)
 
 
 Where to Download
 -----------------
 ```groovy
 dependencies {
-  implementation 'com.xlythe:clock-view:1.1.3'
+  implementation 'com.xlythe:clock-view:2.0'
 }
 ```
 
 Permissions
 -----------------
-The following permissions are required in your AndroidManfiest.xml
+WearOS apps require following permissions in AndroidManfiest.xml
 ```xml
 <uses-permission android:name="android.permission.WAKE_LOCK" />
 <uses-permission android:name="com.google.android.permission.PROVIDE_BACKGROUND" />
@@ -26,6 +29,7 @@ ClockView
 -----------------
 ```xml
 <com.xlythe.view.clock.ClockView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:clock="http://schemas.android.com/apk/res-auto"
     android:id="@+id/clockView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -64,6 +68,38 @@ ClockView
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center_horizontal" />
+
+</com.xlythe.view.clock.ClockView>
+```
+
+Additionally, on WearOS you can add ComplicationViews.
+While in a watchface editor, the user can tap on these views to attach information to the watchface.
+
+```xml
+<com.xlythe.view.clock.ClockView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:clock="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/clockView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffe3e3e3">
+
+    <com.xlythe.view.clock.ComplicationView
+        clock:complicationId="1"
+        clock:complicationStyle="chip"
+        clock:complicationDrawableStyle="line"
+        android:tint="#0C93D0"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="64dp"
+        android:layout_gravity="center_vertical" />
+
+    <TextView
+        android:id="@id/clock_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textSize="40sp"
+        android:textColor="#ffffffff"/>
 
 </com.xlythe.view.clock.ClockView>
 ```
