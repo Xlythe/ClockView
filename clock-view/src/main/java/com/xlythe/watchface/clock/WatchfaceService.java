@@ -1,5 +1,6 @@
 package com.xlythe.watchface.clock;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -19,6 +20,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.UiContext;
 import androidx.wear.watchface.CanvasType;
 import androidx.wear.watchface.ComplicationSlot;
@@ -50,6 +52,8 @@ import kotlin.coroutines.Continuation;
 
 import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
 
+@TargetApi(Build.VERSION_CODES.O)
+@RequiresApi(Build.VERSION_CODES.O)
 public abstract class WatchfaceService extends WatchFaceService {
     private ClockView mWatchface;
     private WatchfaceRenderer mRenderer;
@@ -72,17 +76,19 @@ public abstract class WatchfaceService extends WatchFaceService {
         createClockView();
 
         Collection<ComplicationSlot> complicationSlots = new ArrayList<>();
-        for (ComplicationView complicationView : mWatchface.getComplicationViews()) {
-            // Note: We'll be drawing the ComplicationSlots ourselves, so it doesn't matter
-            // what builder we want to use. However, BACKGROUND is limited to 1 so we'll avoid that.
-            complicationSlots.add(ComplicationSlot.createRoundRectComplicationSlotBuilder(
-                            complicationView.getComplicationId(),
-                            new DefaultCanvasComplicationFactory(complicationView),
-                            complicationView.getSupportedComplicationTypes(),
-                            new DefaultComplicationDataSourcePolicy(),
-                            // Note: Complications steal touch focus before our watchface is given it. It's important to hide them.
-                            new ComplicationSlotBounds(new RectF(0, 0, 0, 0)))
-                    .build());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            for (ComplicationView complicationView : mWatchface.getComplicationViews()) {
+                // Note: We'll be drawing the ComplicationSlots ourselves, so it doesn't matter
+                // what builder we want to use. However, BACKGROUND is limited to 1 so we'll avoid that.
+                complicationSlots.add(ComplicationSlot.createRoundRectComplicationSlotBuilder(
+                                complicationView.getComplicationId(),
+                                new DefaultCanvasComplicationFactory(complicationView),
+                                complicationView.getSupportedComplicationTypes(),
+                                new DefaultComplicationDataSourcePolicy(),
+                                // Note: Complications steal touch focus before our watchface is given it. It's important to hide them.
+                                new ComplicationSlotBounds(new RectF(0, 0, 0, 0)))
+                        .build());
+            }
         }
         return new ComplicationSlotsManager(complicationSlots, currentUserStyleRepository);
     }
@@ -130,7 +136,7 @@ public abstract class WatchfaceService extends WatchFaceService {
 
     private long toUptimeMillis(Instant instant) {
         long timeSinceInstant = 0;
-        if (Build.VERSION.SDK_INT >= 26) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             timeSinceInstant = Duration.between(instant, Instant.now()).toMillis();
         }
         return SystemClock.uptimeMillis() - timeSinceInstant;
@@ -181,17 +187,19 @@ public abstract class WatchfaceService extends WatchFaceService {
                 }
             };
 
-            Map<Integer, ComplicationSlot> complicationSlots =  complicationsSlotsManager.getComplicationSlots();
-            for (ComplicationView view : mWatchface.getComplicationViews()) {
-                ComplicationSlot complicationSlot = complicationSlots.get(view.getComplicationId());
-                if (complicationSlot == null) {
-                    view.setComplicationData(new NoDataComplicationData());
-                    Log.d(ClockView.TAG, "Failed to find a valid complication slots. Returning dummy data.");
-                    continue;
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Map<Integer, ComplicationSlot> complicationSlots = complicationsSlotsManager.getComplicationSlots();
+                for (ComplicationView view : mWatchface.getComplicationViews()) {
+                    ComplicationSlot complicationSlot = complicationSlots.get(view.getComplicationId());
+                    if (complicationSlot == null) {
+                        view.setComplicationData(new NoDataComplicationData());
+                        Log.d(ClockView.TAG, "Failed to find a valid complication slots. Returning dummy data.");
+                        continue;
+                    }
 
-                view.setComplicationData(complicationSlot.getComplicationData().getValue());
-                addObserver(complicationSlot.getComplicationData(), view::setComplicationData);
+                    view.setComplicationData(complicationSlot.getComplicationData().getValue());
+                    addObserver(complicationSlot.getComplicationData(), view::setComplicationData);
+                }
             }
         }
 
