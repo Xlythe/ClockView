@@ -96,6 +96,11 @@ public class KotlinUtils {
         }
       }
     });
+
+    T currentValue = stateFlow.getValue();
+    if (currentValue != null) {
+      observer.onChanged(currentValue);
+    }
   }
 
   public static <T> void removeObserver(Observer<T> observer) {

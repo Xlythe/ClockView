@@ -262,7 +262,6 @@ public abstract class WatchfaceService extends WatchFaceService {
                         continue;
                     }
 
-                    view.setComplicationData(complicationSlot.getComplicationData().getValue());
                     registerComplicationDataObserver(complicationSlot, view);
                 }
             }
