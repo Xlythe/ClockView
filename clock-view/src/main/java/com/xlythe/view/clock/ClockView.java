@@ -2,6 +2,7 @@ package com.xlythe.view.clock;
 
 import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
 import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
+import static com.xlythe.watchface.clock.utils.KotlinUtils.removeObserver;
 
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -29,6 +30,7 @@ import androidx.activity.ComponentActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.lifecycle.Observer;
 import androidx.wear.watchface.complications.ComplicationDataSourceInfo;
 import androidx.wear.watchface.complications.data.EmptyComplicationData;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
@@ -38,9 +40,12 @@ import com.xlythe.watchface.clock.utils.KotlinUtils;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -110,6 +115,8 @@ public class ClockView extends FrameLayout {
     private final int mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
     private long mInitialMotionEventMillis;
     private View mTouchFocusView;
+
+    private final List<Observer<Map<Integer, ComplicationDataSourceInfo>>> mComplicationDataObservers = new ArrayList<>();
 
     public ClockView(Context context) {
         super(context);
@@ -566,6 +573,35 @@ public class ClockView extends FrameLayout {
         isStarted = false;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void registerEditableComplicationObserver(EditorSession editorSession, ComplicationView view) {
+        Observer<Map<Integer, ComplicationDataSourceInfo>> observer = idsToDataSourceInfo -> {
+            ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
+            if (complicationDataSourceInfo == null) {
+                view.setComplicationData(new EmptyComplicationData());
+                return;
+            }
+
+            view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
+        };
+        mComplicationDataObservers.add(observer);
+        addObserver(editorSession.getComplicationsDataSourceInfo(), observer);
+    }
+
+    private void unregisterAllEditableComplicationObservers() {
+        for (Observer<Map<Integer, ComplicationDataSourceInfo>> observer : mComplicationDataObservers) {
+            removeObserver(observer);
+        }
+    }
+
+    @Override
+    public void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        unregisterAllEditableComplicationObservers();
+    }
+
+
+
     @Override
     protected void onFinishInflate() {
         mTimeView = findViewById(R.id.clock_time);
@@ -588,16 +624,7 @@ public class ClockView extends FrameLayout {
                         public void onUpdate(EditorSession editorSession) {
                             for (ComplicationView view : getComplicationViews()) {
                                 view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
-
-                                addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
-                                    ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
-                                    if (complicationDataSourceInfo == null) {
-                                        view.setComplicationData(new EmptyComplicationData());
-                                        return;
-                                    }
-
-                                    view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
-                                });
+                                registerEditableComplicationObserver(editorSession, view);
                             }
                         }
                     });

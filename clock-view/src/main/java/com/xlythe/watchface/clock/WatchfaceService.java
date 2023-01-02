@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.UiContext;
+import androidx.lifecycle.Observer;
 import androidx.wear.watchface.CanvasType;
 import androidx.wear.watchface.ComplicationSlot;
 import androidx.wear.watchface.ComplicationSlotsManager;
@@ -34,8 +35,10 @@ import androidx.wear.watchface.WatchFaceType;
 import androidx.wear.watchface.WatchState;
 import androidx.wear.watchface.complications.ComplicationSlotBounds;
 import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy;
+import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
 import androidx.wear.watchface.style.CurrentUserStyleRepository;
+import androidx.wear.watchface.style.UserStyle;
 
 import com.xlythe.view.clock.ClockView;
 import com.xlythe.view.clock.ComplicationView;
@@ -46,11 +49,13 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import kotlin.coroutines.Continuation;
 
 import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
+import static com.xlythe.watchface.clock.utils.KotlinUtils.removeObserver;
 
 @TargetApi(Build.VERSION_CODES.O)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -58,6 +63,10 @@ public abstract class WatchfaceService extends WatchFaceService {
     private ClockView mWatchface;
     private WatchfaceRenderer mRenderer;
     private final ClockView.OnTimeTickListener mOnTimeTickListener = this::invalidate;
+
+    private Observer<UserStyle> mUserStyleObserver;
+    private Observer<Boolean> mAmbientModeObserver;
+    private final List<Observer<ComplicationData>> mComplicationDataObservers = new ArrayList<>();
 
     public abstract ClockView onCreateClockView(@UiContext Context context);
 
@@ -74,6 +83,7 @@ public abstract class WatchfaceService extends WatchFaceService {
     @Override
     protected ComplicationSlotsManager createComplicationSlotsManager(@NonNull CurrentUserStyleRepository currentUserStyleRepository) {
         createClockView();
+        registerUserStyleObserver(currentUserStyleRepository);
 
         Collection<ComplicationSlot> complicationSlots = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -91,6 +101,52 @@ public abstract class WatchfaceService extends WatchFaceService {
             }
         }
         return new ComplicationSlotsManager(complicationSlots, currentUserStyleRepository);
+    }
+
+    private void registerUserStyleObserver(CurrentUserStyleRepository currentUserStyleRepository) {
+        unregisterUserStyleObserver();
+        mUserStyleObserver = this::onUserStyleChanged;
+        addObserver(currentUserStyleRepository.getUserStyle(), mUserStyleObserver);
+    }
+
+    private void unregisterUserStyleObserver() {
+        if (mUserStyleObserver != null) {
+            removeObserver(mUserStyleObserver);
+            mUserStyleObserver = null;
+        }
+    }
+
+    protected void onUserStyleChanged(UserStyle userStyle) {
+
+    }
+
+    private void registerAmbientModeObserver(WatchState watchState) {
+        unregisterAmbientModeObserver();
+        mAmbientModeObserver = ambient -> {
+            mWatchface.setAmbientModeEnabled(ambient);
+            invalidate();
+        };
+        addObserver(watchState.isAmbient(), mAmbientModeObserver);
+    }
+
+    private void unregisterAmbientModeObserver() {
+        if (mAmbientModeObserver != null) {
+            removeObserver(mAmbientModeObserver);
+            mAmbientModeObserver = null;
+        }
+    }
+
+    private void registerComplicationDataObserver(ComplicationSlot complicationSlot, ComplicationView view) {
+        Observer<ComplicationData> complicationDataObserver = view::setComplicationData;
+        mComplicationDataObservers.add(complicationDataObserver);
+        addObserver(complicationSlot.getComplicationData(), complicationDataObserver);
+    }
+
+    private void unregisterComplicationDataObservers() {
+        for (Observer<ComplicationData> observer : mComplicationDataObservers) {
+            removeObserver(observer);
+        }
+        mComplicationDataObservers.clear();
     }
 
     @Nullable
@@ -134,6 +190,18 @@ public abstract class WatchfaceService extends WatchFaceService {
         return watchFace;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterUserStyleObserver();
+        unregisterAmbientModeObserver();
+        unregisterComplicationDataObservers();
+
+        if (mWatchface != null) {
+            mWatchface.onDetachedFromWindow();
+        }
+    }
+
     private long toUptimeMillis(Instant instant) {
         long timeSinceInstant = 0;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -165,10 +233,7 @@ public abstract class WatchfaceService extends WatchFaceService {
 
             mWatchface.setHasBurnInProtection(watchState.hasBurnInProtection());
             mWatchface.setLowBitAmbient(watchState.hasLowBitAmbient());
-            addObserver(watchState.isAmbient(), ambient -> {
-                mWatchface.setAmbientModeEnabled(ambient);
-                invalidate();
-            });
+            registerAmbientModeObserver(watchState);
 
             mDrawableCallback = new Drawable.Callback() {
                 @Override
@@ -198,7 +263,7 @@ public abstract class WatchfaceService extends WatchFaceService {
                     }
 
                     view.setComplicationData(complicationSlot.getComplicationData().getValue());
-                    addObserver(complicationSlot.getComplicationData(), view::setComplicationData);
+                    registerComplicationDataObserver(complicationSlot, view);
                 }
             }
         }

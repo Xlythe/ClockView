@@ -58,6 +58,10 @@ public class KotlinUtils {
     return sCoroutineContext;
   }
 
+  /**
+   * Listens to changes in the StateFlow value.
+   * Observers must be unregistered with {@link #removeObserver} or they may leak memory.
+   */
   public static <T> void addObserver(StateFlow<T> stateFlow, Observer<T> observer) {
     // Hold on to the observer w/ a strong reference.
     sObservers.add(observer);
