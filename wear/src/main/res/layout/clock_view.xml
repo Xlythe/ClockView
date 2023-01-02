@@ -12,7 +12,14 @@
         android:layout_height="match_parent">
 
         <com.xlythe.view.clock.ComplicationView
+            clock:complicationId="6"
+            clock:complicationStyle="background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.xlythe.view.clock.ComplicationView
             clock:complicationId="1"
+            android:tint="#0C93D0"
             android:layout_gravity="top|start"
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -20,6 +27,8 @@
 
         <com.xlythe.view.clock.ComplicationView
             clock:complicationId="2"
+            android:tint="#0C93D0"
+            clock:complicationDrawableStyle="line"
             android:layout_gravity="top|end"
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -27,6 +36,7 @@
 
         <com.xlythe.view.clock.ComplicationView
             clock:complicationId="3"
+            android:tint="#0C93D0"
             android:layout_gravity="bottom|start"
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -34,6 +44,7 @@
 
         <com.xlythe.view.clock.ComplicationView
             clock:complicationId="4"
+            android:tint="#0C93D0"
             android:layout_gravity="bottom|end"
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -41,6 +52,7 @@
 
         <com.xlythe.view.clock.ComplicationView
             clock:complicationId="5"
+            android:tint="#0C93D0"
             android:layout_gravity="bottom|center"
             android:layout_width="76dp"
             android:layout_height="24dp"
