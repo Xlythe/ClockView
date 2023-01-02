@@ -23,10 +23,12 @@ import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.AppCompatImageView;
+import androidx.wear.watchface.complications.data.ColorRamp;
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationExperimental;
 import androidx.wear.watchface.complications.data.ComplicationText;
 import androidx.wear.watchface.complications.data.ComplicationType;
+import androidx.wear.watchface.complications.data.GoalProgressComplicationData;
 import androidx.wear.watchface.complications.data.LongTextComplicationData;
 import androidx.wear.watchface.complications.data.MonochromaticImage;
 import androidx.wear.watchface.complications.data.MonochromaticImageComplicationData;
@@ -268,6 +270,9 @@ public class ComplicationView extends AppCompatImageView {
       case RANGED_VALUE:
         setComplicationData((RangedValueComplicationData) complicationData);
         break;
+      case GOAL_PROGRESS:
+        setComplicationData((GoalProgressComplicationData) complicationData);
+        break;
       case MONOCHROMATIC_IMAGE:
         setComplicationData((MonochromaticImageComplicationData) complicationData);
         break;
@@ -280,8 +285,6 @@ public class ComplicationView extends AppCompatImageView {
       case NO_PERMISSION:
         setComplicationData((NoPermissionComplicationData) complicationData);
         break;
-      case PROTO_LAYOUT:
-      case LIST:
       case EMPTY:
       case NOT_CONFIGURED:
       default:
@@ -289,13 +292,13 @@ public class ComplicationView extends AppCompatImageView {
         setImageDrawable(isInWatchfaceEditor() ? mPlaceholderDrawable : null);
         break;
     }
+
+    scheduleNextUpdate(complicationData);
   }
 
   private void setComplicationData(NoDataComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
     setImageDrawable(isInWatchfaceEditor() ? mPlaceholderDrawable : null);
-
-    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(ShortTextComplicationData complicationData) {
@@ -306,10 +309,6 @@ public class ComplicationView extends AppCompatImageView {
             .icon(asDrawable(complicationData.getMonochromaticImage()))
             .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
             .build());
-
-    scheduleNextUpdate(complicationData.getContentDescription());
-    scheduleNextUpdate(complicationData.getTitle());
-    scheduleNextUpdate(complicationData.getText());
   }
 
   private void setComplicationData(LongTextComplicationData complicationData) {
@@ -331,33 +330,60 @@ public class ComplicationView extends AppCompatImageView {
               .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
               .build());
     }
-
-    scheduleNextUpdate(complicationData.getContentDescription());
-    scheduleNextUpdate(complicationData.getTitle());
-    scheduleNextUpdate(complicationData.getText());
   }
 
   private void setComplicationData(RangedValueComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
+
+    ColorRamp colorRamp = complicationData.getColorRamp();
+    int[] colors = new int[0];
+    boolean interpolateColors = false;
+    if (colorRamp != null && !isAmbientModeEnabled()) {
+      colors = colorRamp.getColors();
+      interpolateColors = colorRamp.isInterpolated();
+    }
+
     setImageDrawable(new RangeDrawable.Builder(getContext())
             .title(asCharSequence(complicationData.getTitle()))
             .text(asCharSequence(complicationData.getText()))
             .icon(asDrawable(complicationData.getMonochromaticImage()))
             .range(complicationData.getMin(), complicationData.getMax())
             .value(complicationData.getValue())
-            .showBackground(!isAmbientModeEnabled())
+            .colors(colors, interpolateColors)
+            .showBackground(!isAmbientModeEnabled() && mComplicationDrawableStyle != ComplicationDrawable.Style.EMPTY)
             .build());
+  }
 
-    scheduleNextUpdate(complicationData.getContentDescription());
-    scheduleNextUpdate(complicationData.getTitle());
-    scheduleNextUpdate(complicationData.getText());
+  private void setComplicationData(GoalProgressComplicationData complicationData) {
+    setContentDescription(asCharSequence(complicationData.getContentDescription()));
+
+    Drawable icon = isAmbientModeEnabled() ? null : new NonTintableDrawable(asDrawable(complicationData.getSmallImage()));
+    if (icon == null) {
+      icon = asDrawable(complicationData.getMonochromaticImage());
+    }
+
+    ColorRamp colorRamp = complicationData.getColorRamp();
+    int[] colors = new int[0];
+    boolean interpolateColors = false;
+    if (colorRamp != null && !isAmbientModeEnabled()) {
+      colors = colorRamp.getColors();
+      interpolateColors = colorRamp.isInterpolated();
+    }
+
+    setImageDrawable(new RangeDrawable.Builder(getContext())
+            .title(asCharSequence(complicationData.getTitle()))
+            .text(asCharSequence(complicationData.getText()))
+            .icon(icon)
+            .range(0, complicationData.getTargetValue())
+            .value(complicationData.getValue())
+            .colors(colors, interpolateColors)
+            .showBackground(!isAmbientModeEnabled() && mComplicationDrawableStyle != ComplicationDrawable.Style.EMPTY)
+            .build());
   }
 
   private void setComplicationData(MonochromaticImageComplicationData complicationData) {
     setContentDescription(asCharSequence(complicationData.getContentDescription()));
     setImageDrawable(asDrawable(complicationData.getMonochromaticImage()));
-
-    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(SmallImageComplicationData complicationData) {
@@ -375,8 +401,6 @@ public class ComplicationView extends AppCompatImageView {
     } else {
       setImageDrawable(null);
     }
-
-    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(PhotoImageComplicationData complicationData) {
@@ -394,8 +418,6 @@ public class ComplicationView extends AppCompatImageView {
     } else {
       setImageDrawable(null);
     }
-
-    scheduleNextUpdate(complicationData.getContentDescription());
   }
 
   private void setComplicationData(NoPermissionComplicationData complicationData) {
@@ -406,9 +428,6 @@ public class ComplicationView extends AppCompatImageView {
             .icon(asDrawable(complicationData.getMonochromaticImage()))
             .style(isAmbientModeEnabled() ? ComplicationDrawable.Style.EMPTY : mComplicationDrawableStyle)
             .build());
-
-    scheduleNextUpdate(complicationData.getTitle());
-    scheduleNextUpdate(complicationData.getText());
   }
 
   public ComplicationData getComplicationData() {
@@ -432,21 +451,17 @@ public class ComplicationView extends AppCompatImageView {
     return text.getTextAt(getResources(), getInstant());
   }
 
-  private void scheduleNextUpdate(@Nullable ComplicationText text) {
+  private void scheduleNextUpdate(@Nullable ComplicationData complicationData) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
       return;
     }
 
-    if (text == null) {
+    if (complicationData == null) {
       return;
     }
 
-    if (text.isPlaceholder() || text.isAlwaysEmpty()) {
-      return;
-    }
-
-    // Note: Directly calling Duration#toMillis crashes. We'll manually convert it to millis isntead.
-    Duration duration = Duration.between(getInstant(), text.getNextChangeTime(getInstant()));
+    // Note: Directly calling Duration#toMillis crashes. We'll manually convert it to millis instead.
+    Duration duration = Duration.between(getInstant(), complicationData.getNextChangeInstant(getInstant()));
     long timeUntilNextUpdate = duration.getSeconds() * 1000;
     timeUntilNextUpdate += TimeUnit.NANOSECONDS.toMillis(duration.getNano());
     if (timeUntilNextUpdate < 0) {
@@ -457,7 +472,7 @@ public class ComplicationView extends AppCompatImageView {
       timeUntilNextUpdate = Math.max(1000, timeUntilNextUpdate);
     }
 
-    Log.d(ClockView.TAG, "Scheduling complication update in " + timeUntilNextUpdate + " millis for complication " + asCharSequence(text));
+    Log.d(ClockView.TAG, "Scheduling complication update in " + timeUntilNextUpdate + " millis for complication " + complicationData.getDataSource());
     mHandler.postDelayed(() -> setComplicationData(mComplicationData), timeUntilNextUpdate);
   }
 
