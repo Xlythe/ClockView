@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-sdk tools:overrideLibrary="androidx.wear.watchface, androidx.wear.watchface.style, android.support.wearable.watchface, androidx.wear.complications, androidx.wear.watchface.complications.rendering, androidx.wear.watchface.editor, androidx.wear.watchface.client, androidx.wear.watchface.complications.data" />
+    <uses-sdk tools:overrideLibrary="androidx.wear.watchface, androidx.wear.watchface.style, android.support.wearable.watchface, androidx.wear.complications, androidx.wear.watchface.complications.rendering, androidx.wear.watchface.editor, androidx.wear.watchface.client, androidx.wear.watchface.data, androidx.wear.watchface.complications.data" />
 
     <application>
 
