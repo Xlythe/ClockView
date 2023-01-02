@@ -27,7 +27,6 @@ import androidx.appcompat.widget.AppCompatImageView;
 import androidx.wear.watchface.complications.data.ColorRamp;
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationDisplayPolicies;
-import androidx.wear.watchface.complications.data.ComplicationDisplayPolicy;
 import androidx.wear.watchface.complications.data.ComplicationExperimental;
 import androidx.wear.watchface.complications.data.ComplicationText;
 import androidx.wear.watchface.complications.data.ComplicationType;
@@ -113,7 +112,7 @@ public class ComplicationView extends AppCompatImageView {
       a.recycle();
     }
 
-    if (Build.VERSION.SDK_INT >= 26) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       mComplicationData = new NoDataComplicationData();
     }
 
@@ -143,7 +142,9 @@ public class ComplicationView extends AppCompatImageView {
     mAmbientModeEnabled = enabled;
 
     // Some components change based off ambient mode. This will invalidate them.
-    setComplicationData(mComplicationData);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      setComplicationData(mComplicationData);
+    }
   }
 
   public int getComplicationId() {
@@ -160,7 +161,9 @@ public class ComplicationView extends AppCompatImageView {
 
   public void setComplicationDrawableStyle(ComplicationDrawable.Style style) {
     mComplicationDrawableStyle = style;
-    setComplicationData(mComplicationData);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      setComplicationData(mComplicationData);
+    }
   }
 
   public Style getComplicationStyle() {
@@ -169,7 +172,9 @@ public class ComplicationView extends AppCompatImageView {
 
   public void setComplicationStyle(Style style) {
     mComplicationStyle = style;
-    setComplicationData(mComplicationData);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      setComplicationData(mComplicationData);
+    }
   }
 
   public List<ComplicationType> getSupportedComplicationTypes() {
@@ -260,14 +265,11 @@ public class ComplicationView extends AppCompatImageView {
   }
 
   @CallSuper
+  @RequiresApi(api = Build.VERSION_CODES.O)
   public void setComplicationData(ComplicationData complicationData) {
-    if (Build.VERSION.SDK_INT < 26) {
-      return;
-    }
-
     mComplicationData = complicationData;
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {
+    if (mUseDynamicForeground) {
       super.setForeground(mDefaultForegroundDrawable);
     }
 
@@ -481,6 +483,7 @@ public class ComplicationView extends AppCompatImageView {
             .build());
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.O)
   public ComplicationData getComplicationData() {
     return mComplicationData;
   }
@@ -589,7 +592,7 @@ public class ComplicationView extends AppCompatImageView {
     getContext().startActivity(intent);
   }
 
-  @RequiresApi(26)
+  @RequiresApi(api = Build.VERSION_CODES.O)
   public void setTime(ZonedDateTime dateTime) {
     mDateTime = dateTime;
     mTimeMillis = -1;
@@ -601,7 +604,7 @@ public class ComplicationView extends AppCompatImageView {
   }
 
   public long getTimeMillis() {
-    if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
       return mDateTime.toInstant().toEpochMilli();
     } else {
       return mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();

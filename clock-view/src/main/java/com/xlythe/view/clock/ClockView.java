@@ -1,5 +1,8 @@
 package com.xlythe.view.clock;
 
+import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
+import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
+
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
@@ -18,7 +21,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
-import android.view.ViewParent;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -40,9 +42,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-
-import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
-import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
 
 /**
  * An adjustable clock view
@@ -446,7 +445,7 @@ public class ClockView extends FrameLayout {
         return null;
     }
 
-    @RequiresApi(26)
+    @RequiresApi(Build.VERSION_CODES.O)
     public void setTime(ZonedDateTime dateTime) {
         mDateTime = dateTime;
         mTimeMillis = -1;
@@ -477,7 +476,7 @@ public class ClockView extends FrameLayout {
     }
 
     public long getTimeMillis() {
-        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
             return mDateTime.toInstant().toEpochMilli();
         } else {
             return mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
@@ -499,7 +498,7 @@ public class ClockView extends FrameLayout {
     }
 
     public int getHour() {
-        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
             return mDateTime.getHour();
         } else {
             long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
@@ -519,7 +518,7 @@ public class ClockView extends FrameLayout {
     }
 
     public int getMinute() {
-        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
             return mDateTime.getMinute();
         } else {
             long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
@@ -539,7 +538,7 @@ public class ClockView extends FrameLayout {
     }
 
     public int getSecond() {
-        if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
             return mDateTime.getSecond();
         } else {
             long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
@@ -581,7 +580,7 @@ public class ClockView extends FrameLayout {
 
         mDigitalEnabled = mDigitalEnabled || !supportsAnalog();
 
-        if (Build.VERSION.SDK_INT >= 26) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (isInWatchfaceEditor()) {
                 try {
                     EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
@@ -734,7 +733,7 @@ public class ClockView extends FrameLayout {
 
         if (mTimeView != null) {
             final String formattedDate;
-            if (Build.VERSION.SDK_INT >= 26 && mDateTime != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
                 formattedDate = mDateTime.format(DateTimeFormatter.ofPattern(getDateFormat()));
             } else {
                 formattedDate = DateFormat.format(getDateFormat(), getTimeMillis()).toString();
