@@ -56,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 @OptIn(markerClass = ComplicationExperimental.class)
 public class ComplicationView extends AppCompatImageView {
   private int mComplicationId;
-  private ComplicationData mComplicationData = new NoDataComplicationData();
+  private ComplicationData mComplicationData;
   private boolean mAmbientModeEnabled = false;
   private ComplicationDrawable.Style mComplicationDrawableStyle = ComplicationDrawable.Style.DOT;
   private Style mComplicationStyle = Style.CHIP;
@@ -75,7 +75,7 @@ public class ComplicationView extends AppCompatImageView {
   private long mTimeMillis = -1;
 
   public enum Style {
-    // TODO: Add edge, list, and layout
+    // TODO: Add edge
     CHIP, BACKGROUND
   }
 
@@ -111,6 +111,10 @@ public class ComplicationView extends AppCompatImageView {
       a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.foreground });
       hasForeground = a.hasValue(0);
       a.recycle();
+    }
+
+    if (Build.VERSION.SDK_INT >= 26) {
+      mComplicationData = new NoDataComplicationData();
     }
 
     mPlaceholderDrawable = new PlaceholderDrawable(getContext());
@@ -257,6 +261,10 @@ public class ComplicationView extends AppCompatImageView {
 
   @CallSuper
   public void setComplicationData(ComplicationData complicationData) {
+    if (Build.VERSION.SDK_INT < 26) {
+      return;
+    }
+
     mComplicationData = complicationData;
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mUseDynamicForeground) {

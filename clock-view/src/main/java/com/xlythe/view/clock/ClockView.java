@@ -581,35 +581,37 @@ public class ClockView extends FrameLayout {
 
         mDigitalEnabled = mDigitalEnabled || !supportsAnalog();
 
-        if (isInWatchfaceEditor()) {
-            try {
-                EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
-                    @Override
-                    public void onUpdate(EditorSession editorSession) {
-                        for (ComplicationView view : getComplicationViews()) {
-                            view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
+        if (Build.VERSION.SDK_INT >= 26) {
+            if (isInWatchfaceEditor()) {
+                try {
+                    EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
+                        @Override
+                        public void onUpdate(EditorSession editorSession) {
+                            for (ComplicationView view : getComplicationViews()) {
+                                view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
 
-                            addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
-                                ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
-                                if (complicationDataSourceInfo == null) {
-                                    view.setComplicationData(new EmptyComplicationData());
-                                    return;
-                                }
+                                addObserver(editorSession.getComplicationsDataSourceInfo(), idsToDataSourceInfo -> {
+                                    ComplicationDataSourceInfo complicationDataSourceInfo = idsToDataSourceInfo.get(view.getComplicationId());
+                                    if (complicationDataSourceInfo == null) {
+                                        view.setComplicationData(new EmptyComplicationData());
+                                        return;
+                                    }
 
-                                view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
-                            });
+                                    view.setComplicationData(complicationDataSourceInfo.getFallbackPreviewData());
+                                });
+                            }
                         }
+                    });
+                } catch (IllegalStateException e) {
+                    Log.w(TAG, "Failed to load WearOS EditorSession. If you are using ComplicationView, please create ClockView in onCreate()", e);
+                    for (ComplicationView view : getComplicationViews()) {
+                        view.setComplicationData(new NoDataComplicationData());
                     }
-                });
-            } catch (IllegalStateException e) {
-                Log.w(TAG, "Failed to load WearOS EditorSession. If you are using ComplicationView, please create ClockView in onCreate()", e);
+                }
+            } else {
                 for (ComplicationView view : getComplicationViews()) {
                     view.setComplicationData(new NoDataComplicationData());
                 }
-            }
-        } else {
-            for (ComplicationView view : getComplicationViews()) {
-                view.setComplicationData(new NoDataComplicationData());
             }
         }
 
