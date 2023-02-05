@@ -43,6 +43,7 @@ import androidx.wear.watchface.complications.data.SmallImage;
 import androidx.wear.watchface.complications.data.SmallImageComplicationData;
 import androidx.wear.watchface.complications.data.WeightedElementsComplicationData;
 
+import com.xlythe.view.clock.utils.BitmapUtils;
 import com.xlythe.watchface.clock.PermissionActivity;
 
 import java.time.Duration;
@@ -123,7 +124,7 @@ public class ComplicationView extends AppCompatImageView {
       mDefaultForegroundDrawable = new RippleDrawable(
               getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
               null,
-              mPlaceholderDrawable);
+              BitmapUtils.clone(mPlaceholderDrawable));
       super.setForeground(mDefaultForegroundDrawable);
     } else {
       mUseDynamicForeground = false;
@@ -344,7 +345,7 @@ public class ComplicationView extends AppCompatImageView {
         super.setForeground(new RippleDrawable(
                 getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
                 null,
-                smallIcon));
+                BitmapUtils.clone(smallIcon)));
       }
     } else {
       setImageDrawable(new ComplicationDrawable.Builder(getContext())
@@ -449,7 +450,7 @@ public class ComplicationView extends AppCompatImageView {
         super.setForeground(new RippleDrawable(
                 getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
                 null,
-                smallIcon));
+                BitmapUtils.clone(smallIcon)));
       }
     } else {
       setImageDrawable(null);
@@ -466,7 +467,7 @@ public class ComplicationView extends AppCompatImageView {
         super.setForeground(new RippleDrawable(
                 getResources().getColorStateList(R.color.complication_pressed, getContext().getTheme()),
                 null,
-                image));
+                BitmapUtils.clone(image)));
       }
     } else {
       setImageDrawable(null);

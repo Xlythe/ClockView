@@ -103,6 +103,15 @@ public class BitmapUtils {
         return bitmap;
     }
 
+    public static Drawable clone(Drawable drawable) {
+        Drawable.ConstantState state = drawable.getConstantState();
+        if (state == null) {
+            return drawable;
+        }
+
+        return state.newDrawable().mutate();
+    }
+
     public static Bitmap resize(Bitmap bitmap, int width, int height, boolean keepAspectRatio) {
         if (!keepAspectRatio) {
             return Bitmap.createScaledBitmap(bitmap, width, height, false);
