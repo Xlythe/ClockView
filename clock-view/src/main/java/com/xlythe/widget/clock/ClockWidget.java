@@ -150,8 +150,7 @@ public abstract class ClockWidget extends AppWidgetProvider {
             int maxHeight = bundle.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT);
             int min = MathUtils.min(minWidth, maxWidth, minHeight, maxHeight);
             int pixels = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, min, context.getResources().getDisplayMetrics());
-            PreferenceManager.getDefaultSharedPreferences(context).edit()
-                    .putInt(PREFERENCE_WIDGET_SIZE_PREAMBLE + appWidgetId, pixels).apply();
+            getSharedPreferences(context).edit().putInt(PREFERENCE_WIDGET_SIZE_PREAMBLE + appWidgetId, pixels).apply();
         }
     }
 
