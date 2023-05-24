@@ -220,7 +220,8 @@ public abstract class WatchfaceService extends WatchFaceService {
 
     private class WatchfaceRenderer extends Renderer.CanvasRenderer2<Renderer.SharedAssets> {
         // Default for how long each frame is displayed at expected frame rate.
-        private static final long FRAME_PERIOD_MS_DEFAULT = 1000L;
+        // Set to the highest possible value, since we have our own timer.
+        private static final long FRAME_PERIOD_MS_DEFAULT = 60000L;
 
         private final Drawable.Callback mDrawableCallback;
 

@@ -714,7 +714,7 @@ public class ClockView extends FrameLayout {
     }
 
     public boolean isMillisecondsEnabled() {
-        return !isAmbientModeEnabled() && isSecondsEnabled() && mMillisecondsEnabled;
+        return !isAmbientModeEnabled() && isDigitalEnabled() && isSecondsEnabled() && mMillisecondsEnabled;
     }
 
     public void setMillisecondsEnabled(boolean enabled) {
