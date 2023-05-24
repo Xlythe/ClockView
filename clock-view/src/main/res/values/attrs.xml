@@ -5,7 +5,8 @@
             <enum name="analog" value="0"/>
             <enum name="digital" value="1"/>
         </attr>
-        <attr name="showSecondHand" format="boolean" />
+        <attr name="showSeconds" format="boolean" />
+        <attr name="showMilliseconds" format="boolean" />
         <attr name="partialRotation" format="boolean" />
         <attr name="lowBitAmbient" format="boolean" />
         <attr name="hasBurnInProtection" format="boolean" />

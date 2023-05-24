@@ -4,6 +4,7 @@ import static com.xlythe.watchface.clock.utils.KotlinUtils.addObserver;
 import static com.xlythe.watchface.clock.utils.KotlinUtils.continuation;
 import static com.xlythe.watchface.clock.utils.KotlinUtils.removeObserver;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
@@ -38,13 +39,16 @@ import androidx.wear.watchface.editor.EditorSession;
 
 import com.xlythe.watchface.clock.utils.KotlinUtils;
 
+import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -56,12 +60,14 @@ public class ClockView extends FrameLayout {
     public static final boolean DEBUG = false;
     static final String ACTION_WATCH_FACE_EDITOR = "androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR";
 
+    private static final long ONE_MILLISECOND = 1;
     private static final long ONE_SECOND = 1000;
     private static final long ONE_MINUTE = 60 * 1000;
 
     private static final String BUNDLE_SUPER = "super";
     private static final String EXTRA_DIGITAL_ENABLED = "digital_enabled";
     private static final String EXTRA_SECONDS_ENABLED = "seconds_enabled";
+    private static final String EXTRA_MILLISECONDS_ENABLED = "milliseconds_enabled";
     private static final String EXTRA_AMBIENT_MODE_ENABLED = "ambient_mode_enabled";
     private static final String EXTRA_PARTIAL_ROTATION_ENABLED = "partial_rotation_enabled";
     private static final String EXTRA_LOW_BIT_AMBIENT = "low_bit_ambient";
@@ -85,6 +91,7 @@ public class ClockView extends FrameLayout {
 
     private boolean mDigitalEnabled = false;
     private boolean mSecondsEnabled = true;
+    private boolean mMillisecondsEnabled = false;
     private boolean mAmbientModeEnabled = false;
     private boolean mPartialRotationEnabled = false;
     private boolean mLowBitAmbient = false;
@@ -104,7 +111,7 @@ public class ClockView extends FrameLayout {
         @Override
         public void run() {
             onTimeTick();
-            mHandler.postDelayed(this, isSecondHandEnabled() ? ONE_SECOND : ONE_MINUTE);
+            mHandler.postDelayed(this, isSecondsEnabled() ? isMillisecondsEnabled() ? ONE_MILLISECOND : ONE_SECOND : ONE_MINUTE);
         }
     };
 
@@ -143,7 +150,8 @@ public class ClockView extends FrameLayout {
         if (attrs != null) {
             TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ClockView);
             mDigitalEnabled = a.getInteger(R.styleable.ClockView_clockStyle, mDigitalEnabled ? 1 : 0) == 1;
-            mSecondsEnabled = a.getBoolean(R.styleable.ClockView_showSecondHand, mSecondsEnabled);
+            mSecondsEnabled = a.getBoolean(R.styleable.ClockView_showSeconds, mSecondsEnabled);
+            mMillisecondsEnabled = a.getBoolean(R.styleable.ClockView_showMilliseconds, mMillisecondsEnabled);
             mPartialRotationEnabled = a.getBoolean(R.styleable.ClockView_partialRotation, mPartialRotationEnabled);
             mLowBitAmbient = a.getBoolean(R.styleable.ClockView_lowBitAmbient, mLowBitAmbient);
             mBurnInProtection = a.getBoolean(R.styleable.ClockView_hasBurnInProtection, mBurnInProtection);
@@ -324,6 +332,7 @@ public class ClockView extends FrameLayout {
      * #getHandler, #post and #postDelayed and that's enough to get touch
      * working, but we can't do the same for any of our children views.
      */
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (!isManualInvalidationEnabled()) {
@@ -679,16 +688,33 @@ public class ClockView extends FrameLayout {
         }
     }
 
-    public boolean isSecondHandEnabled() {
-        return !isDigitalEnabled() && !isAmbientModeEnabled() && mSecondsEnabled;
+    public boolean isSecondsEnabled() {
+        return !isAmbientModeEnabled() && mSecondsEnabled;
     }
 
-    public void setSecondHandEnabled(boolean enabled) {
+    public void setSecondsEnabled(boolean enabled) {
         if (mSecondsEnabled == enabled) {
             return;
         }
 
         mSecondsEnabled = enabled;
+        onTimeTick();
+        if (isStarted()) {
+            stop();
+            start();
+        }
+    }
+
+    public boolean isMillisecondsEnabled() {
+        return !isAmbientModeEnabled() && isSecondsEnabled() && mMillisecondsEnabled;
+    }
+
+    public void setMillisecondsEnabled(boolean enabled) {
+        if (mMillisecondsEnabled == enabled) {
+            return;
+        }
+
+        mMillisecondsEnabled = enabled;
         onTimeTick();
         if (isStarted()) {
             stop();
@@ -725,7 +751,19 @@ public class ClockView extends FrameLayout {
     }
 
     protected String getDateFormat() {
-        return DateFormat.is24HourFormat(getContext()) ? "HH:mm" : "hh:mm";
+        StringBuilder format = new StringBuilder();
+        format.append(DateFormat.is24HourFormat(getContext()) ? "HH" : "hh");
+        format.append(":");
+        format.append("mm");
+        if (isSecondsEnabled()) {
+            format.append(":");
+            format.append("ss");
+        }
+        if (isSecondsEnabled() && isMillisecondsEnabled()) {
+            format.append(".");
+            format.append("SSS");
+        }
+        return format.toString();
     }
 
     @Override
@@ -734,6 +772,7 @@ public class ClockView extends FrameLayout {
         bundle.putParcelable(BUNDLE_SUPER, super.onSaveInstanceState());
         bundle.putBoolean(EXTRA_DIGITAL_ENABLED, mDigitalEnabled);
         bundle.putBoolean(EXTRA_SECONDS_ENABLED, mSecondsEnabled);
+        bundle.putBoolean(EXTRA_MILLISECONDS_ENABLED, mMillisecondsEnabled);
         bundle.putBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
         bundle.putBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
         bundle.putBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
@@ -747,6 +786,7 @@ public class ClockView extends FrameLayout {
         super.onRestoreInstanceState(bundle.getParcelable(BUNDLE_SUPER));
         mDigitalEnabled = bundle.getBoolean(EXTRA_DIGITAL_ENABLED, mDigitalEnabled);
         mSecondsEnabled = bundle.getBoolean(EXTRA_SECONDS_ENABLED, mSecondsEnabled);
+        mMillisecondsEnabled = bundle.getBoolean(EXTRA_MILLISECONDS_ENABLED, mMillisecondsEnabled);
         mAmbientModeEnabled = bundle.getBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
         mPartialRotationEnabled = bundle.getBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
         mLowBitAmbient = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
@@ -763,7 +803,8 @@ public class ClockView extends FrameLayout {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
                 formattedDate = mDateTime.format(DateTimeFormatter.ofPattern(getDateFormat()));
             } else {
-                formattedDate = DateFormat.format(getDateFormat(), getTimeMillis()).toString();
+                SimpleDateFormat formatter = new SimpleDateFormat(getDateFormat(), Locale.getDefault());
+                formattedDate = formatter.format(new Date(getTimeMillis()));
             }
             mTimeView.setText(formattedDate);
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
@@ -786,7 +827,7 @@ public class ClockView extends FrameLayout {
             mMinutes.setVisibility(isDigitalEnabled() ? View.GONE : View.VISIBLE);
         }
         if (mSeconds != null) {
-            if (isSecondHandEnabled() && !isDigitalEnabled()) {
+            if (isSecondsEnabled() && !isDigitalEnabled()) {
                 degrees = second * 6;
                 mSeconds.setRotation(degrees);
                 mSeconds.setVisibility(View.VISIBLE);

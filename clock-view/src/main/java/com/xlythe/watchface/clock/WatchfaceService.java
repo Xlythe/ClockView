@@ -77,6 +77,7 @@ public abstract class WatchfaceService extends WatchFaceService {
 
     private void createClockView() {
         mWatchface = onCreateClockView(getThemedContext());
+        mWatchface.start();
     }
 
     @NonNull
@@ -198,6 +199,7 @@ public abstract class WatchfaceService extends WatchFaceService {
         unregisterComplicationDataObservers();
 
         if (mWatchface != null) {
+            mWatchface.stop();
             mWatchface.onDetachedFromWindow();
         }
     }

@@ -77,7 +77,8 @@ public abstract class ClockWidget extends AppWidgetProvider {
             return;
         }
 
-        mClockView.setSecondHandEnabled(false);
+        mClockView.setSecondsEnabled(false);
+        mClockView.setMillisecondsEnabled(false);
 
         // Set the bounds
         int clockSize = getWidgetSize(context, appWidgetId);
