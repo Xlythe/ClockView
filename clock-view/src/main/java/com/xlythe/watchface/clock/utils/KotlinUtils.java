@@ -1,8 +1,12 @@
 package com.xlythe.watchface.clock.utils;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.Observer;
+
+import com.xlythe.view.clock.ClockView;
 
 import java.lang.ref.WeakReference;
 import java.util.HashSet;
@@ -72,6 +76,7 @@ public class KotlinUtils {
     stateFlow.collect((value, continuation) -> {
       Observer<T> possibleObserver = weakObserver.get();
       if (possibleObserver == null) {
+        Log.w(ClockView.TAG, "Failed to read value. Observer expired.");
         return null;
       }
 
@@ -83,11 +88,13 @@ public class KotlinUtils {
       @Override
       public void onUpdate(T value) {
         if (value instanceof Result.Failure) {
+          Log.e(ClockView.TAG, "Failed to read value", ((Result.Failure) value).exception);
           return;
         }
 
         Observer<T> possibleObserver = weakObserver.get();
         if (possibleObserver == null) {
+          Log.w(ClockView.TAG, "Failed to read value. Observer expired.");
           return;
         }
 
@@ -98,6 +105,7 @@ public class KotlinUtils {
     });
 
     T currentValue = stateFlow.getValue();
+    Log.v(ClockView.TAG, "Current value " + currentValue);
     if (currentValue != null) {
       observer.onChanged(currentValue);
     }

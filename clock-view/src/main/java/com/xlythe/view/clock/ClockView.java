@@ -76,7 +76,7 @@ public class ClockView extends FrameLayout {
     // Debug logic
     private long mInvalidationCycle = -1;
     private int mInvalidationCount = 0;
-    private static final int MAX_INVALIDATIONS_PER_SECOND = 500;
+    private static final int MAX_INVALIDATIONS_PER_SECOND = 1001;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -631,6 +631,7 @@ public class ClockView extends FrameLayout {
                     EditorSession.createOnWatchEditorSession((ComponentActivity) getContext(), new KotlinUtils.Continuation<EditorSession>() {
                         @Override
                         public void onUpdate(EditorSession editorSession) {
+                            editorSession.setCommitChangesOnClose(true);
                             for (ComplicationView view : getComplicationViews()) {
                                 view.setOnClickListener(v -> editorSession.openComplicationDataSourceChooser(view.getComplicationId(), continuation()));
                                 registerEditableComplicationObserver(editorSession, view);
@@ -648,6 +649,13 @@ public class ClockView extends FrameLayout {
                     view.setComplicationData(new NoDataComplicationData());
                 }
             }
+        }
+
+
+        for (ComplicationView complicationView : getComplicationViews()) {
+            complicationView.setLowBitAmbient(isLowBitAmbient());
+            complicationView.setHasBurnInProtection(hasBurnInProtection());
+            complicationView.setAmbientModeEnabled(isAmbientModeEnabled());
         }
 
         super.onFinishInflate();
@@ -740,6 +748,9 @@ public class ClockView extends FrameLayout {
 
     public void setLowBitAmbient(boolean lowBitAmbient) {
         mLowBitAmbient = lowBitAmbient;
+        for (ComplicationView complicationView : getComplicationViews()) {
+            complicationView.setLowBitAmbient(lowBitAmbient);
+        }
     }
 
     public boolean hasBurnInProtection() {
@@ -748,6 +759,9 @@ public class ClockView extends FrameLayout {
 
     public void setHasBurnInProtection(boolean burnInProtection) {
         mBurnInProtection = burnInProtection;
+        for (ComplicationView complicationView : getComplicationViews()) {
+            complicationView.setHasBurnInProtection(burnInProtection);
+        }
     }
 
     protected String getDateFormat() {

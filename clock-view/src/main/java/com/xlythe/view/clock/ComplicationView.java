@@ -10,8 +10,10 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.ViewParent;
@@ -55,8 +57,21 @@ import java.util.concurrent.TimeUnit;
 
 @OptIn(markerClass = ComplicationExperimental.class)
 public class ComplicationView extends AppCompatImageView {
+  // Doesn't seem to draw anything. Not sure why.
+  private static final boolean USE_ANDROIDX_DRAWABLE = false;
+
+  private static final String BUNDLE_SUPER = "super";
+  private static final String EXTRA_COMPLICATION_ID = "complication_id";
+  private static final String EXTRA_COMPLICATION_DRAWABLE_STYLE = "complication_drawable_style";
+  private static final String EXTRA_COMPLICATION_STYLE = "complication_style";
+  private static final String EXTRA_AMBIENT_MODE_ENABLED = "ambient_mode_enabled";
+  private static final String EXTRA_LOW_BIT_AMBIENT = "low_bit_ambient";
+  private static final String EXTRA_BURN_IN_PROTECTION = "burn_in_protection";
+
   private int mComplicationId;
   private ComplicationData mComplicationData;
+  private boolean mLowBitAmbient = false;
+  private boolean mBurnInProtection = false;
   private boolean mAmbientModeEnabled = false;
   private ComplicationDrawable.Style mComplicationDrawableStyle = ComplicationDrawable.Style.DOT;
   private Style mComplicationStyle = Style.CHIP;
@@ -128,6 +143,65 @@ public class ComplicationView extends AppCompatImageView {
       super.setForeground(mDefaultForegroundDrawable);
     } else {
       mUseDynamicForeground = false;
+    }
+  }
+
+  @Override
+  public Parcelable onSaveInstanceState() {
+    Bundle bundle = new Bundle();
+    bundle.putParcelable(BUNDLE_SUPER, super.onSaveInstanceState());
+    bundle.putInt(EXTRA_COMPLICATION_ID, mComplicationId);
+    bundle.putInt(EXTRA_COMPLICATION_DRAWABLE_STYLE, mComplicationDrawableStyle.ordinal());
+    bundle.putInt(EXTRA_COMPLICATION_STYLE, mComplicationStyle.ordinal());
+    bundle.putBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
+    bundle.putBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
+    bundle.putBoolean(EXTRA_BURN_IN_PROTECTION, mBurnInProtection);
+    return bundle;
+  }
+
+  @Override
+  public void onRestoreInstanceState(Parcelable state) {
+    Bundle bundle = (Bundle) state;
+    super.onRestoreInstanceState(bundle.getParcelable(BUNDLE_SUPER));
+    mComplicationId = bundle.getInt(EXTRA_COMPLICATION_ID, mComplicationId);
+    mComplicationDrawableStyle = ComplicationDrawable.Style.values()[bundle.getInt(EXTRA_COMPLICATION_DRAWABLE_STYLE, mComplicationDrawableStyle.ordinal())];
+    mComplicationStyle = Style.values()[bundle.getInt(EXTRA_COMPLICATION_STYLE, mComplicationStyle.ordinal())];
+    mAmbientModeEnabled = bundle.getBoolean(EXTRA_AMBIENT_MODE_ENABLED, mAmbientModeEnabled);
+    mLowBitAmbient = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
+    mBurnInProtection = bundle.getBoolean(EXTRA_BURN_IN_PROTECTION, mBurnInProtection);
+  }
+
+  public boolean isLowBitAmbient() {
+    return mLowBitAmbient;
+  }
+
+  public void setLowBitAmbient(boolean lowBitAmbient) {
+    if (lowBitAmbient == mLowBitAmbient) {
+      return;
+    }
+
+    mLowBitAmbient = lowBitAmbient;
+
+    // Some components change based off ambient mode. This will invalidate them.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      setComplicationData(mComplicationData);
+    }
+  }
+
+  public boolean hasBurnInProtection() {
+    return mBurnInProtection;
+  }
+
+  public void setHasBurnInProtection(boolean burnInProtection) {
+    if (burnInProtection == mBurnInProtection) {
+      return;
+    }
+
+    mBurnInProtection = burnInProtection;
+
+    // Some components change based off ambient mode. This will invalidate them.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      setComplicationData(mComplicationData);
     }
   }
 
@@ -316,6 +390,16 @@ public class ComplicationView extends AppCompatImageView {
         setContentDescription(null);
         setImageDrawable(isInWatchfaceEditor() ? mPlaceholderDrawable : null);
         break;
+    }
+
+    if (USE_ANDROIDX_DRAWABLE) {
+      androidx.wear.watchface.complications.rendering.ComplicationDrawable androidxDrawable = new androidx.wear.watchface.complications.rendering.ComplicationDrawable(getContext());
+      androidxDrawable.setComplicationData(complicationData, true);
+      androidxDrawable.setLowBitAmbient(isAmbientModeEnabled());
+      androidxDrawable.setBurnInProtectionOn(hasBurnInProtection());
+      androidxDrawable.setInAmbientMode(isAmbientModeEnabled());
+      androidxDrawable.setCurrentTime(getInstant());
+      setImageDrawable(androidxDrawable);
     }
 
     scheduleNextUpdate(complicationData);

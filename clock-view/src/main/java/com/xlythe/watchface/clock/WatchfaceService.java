@@ -264,6 +264,7 @@ public abstract class WatchfaceService extends WatchFaceService {
                         continue;
                     }
 
+                    Log.d(ClockView.TAG, "Observing complication slot  " + view.getComplicationId());
                     registerComplicationDataObserver(complicationSlot, view);
                 }
             }
