@@ -9,11 +9,11 @@ Properties localProperties = new Properties()
 localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
 
 android {
-    compileSdkVersion 33
+    compileSdkVersion 35
 
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 33
+        minSdkVersion 26
+        targetSdkVersion 35
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -98,11 +98,11 @@ dependencies {
     }
     def withoutSupportLib = { exclude group: 'com.android.support' }
     api fileTree(include: ['*.jar'], dir: 'libs')
-    api 'androidx.wear.watchface:watchface:[1.2.0-alpha08,)'
-    api 'androidx.wear.watchface:watchface-editor:[1.2.0-alpha08,)'
-    api 'androidx.wear.watchface:watchface-complications-rendering:[1.2.0-alpha08,)'
+    api 'androidx.wear.watchface:watchface:[1.2.1,)'
+    api 'androidx.wear.watchface:watchface-editor:[1.2.1,)'
+    api 'androidx.wear.watchface:watchface-complications-rendering:[1.2.1,)'
     api 'androidx.legacy:legacy-support-v4:[1.0.0,)'
-    api 'androidx.annotation:annotation:[1.6.0,)'
-    api 'androidx.appcompat:appcompat:[1.6.1,)'
-    api 'com.google.android.gms:play-services-wearable:[17.1.0,)', withoutSupportLib
+    api 'androidx.annotation:annotation:[1.9.1,)'
+    api 'androidx.appcompat:appcompat:[1.7.0,)'
+    api 'com.google.android.gms:play-services-wearable:[18.2.0,)', withoutSupportLib
 }
