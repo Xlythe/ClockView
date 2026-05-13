@@ -9,7 +9,6 @@ android {
         targetSdkVersion 37
         versionCode 1
         versionName "1.0.0"
-        vectorDrawables.useSupportLibrary = true
     }
     tasks.withType(JavaCompile) {
         options.warnings = false
@@ -25,8 +24,7 @@ android {
 }
 
 dependencies {
-    def withoutSupportLib = { exclude group: 'com.android.support' }
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation project(':clock-view')
-    implementation 'com.google.android.gms:play-services-wearable:+', withoutSupportLib
+    implementation 'com.google.android.gms:play-services-wearable:+'
 }

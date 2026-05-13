@@ -9,7 +9,6 @@ android {
         targetSdkVersion 37
         versionCode 1
         versionName "1.0.0"
-        vectorDrawables.useSupportLibrary = true
     }
     tasks.withType(JavaCompile) {
         options.warnings = false
