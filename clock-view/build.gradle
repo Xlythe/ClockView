@@ -9,11 +9,10 @@ Properties localProperties = new Properties()
 localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
 
 android {
-    compileSdkVersion 35
+    compileSdkVersion 37
 
     defaultConfig {
         minSdkVersion 26
-        targetSdkVersion 35
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -21,6 +20,7 @@ android {
     }
     lint {
         abortOnError false
+        targetSdk 37
     }
     publishing {
         singleVariant("release") {
@@ -29,6 +29,9 @@ android {
         }
     }
     namespace 'com.xlythe.view.clock'
+    testOptions {
+        targetSdk 37
+    }
 }
 
 afterEvaluate {
@@ -89,10 +92,10 @@ signing {
 
 dependencies {
     constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.20") {
             because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
         }
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.20") {
             because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
         }
     }

@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 35
+    compileSdkVersion 37
 
     defaultConfig {
         applicationId "com.xlythe.sample.clock"
         minSdkVersion 26
-        targetSdkVersion 35
+        targetSdkVersion 37
         versionCode 1
         versionName "1.0.0"
         vectorDrawables.useSupportLibrary = true
@@ -27,7 +27,6 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation project(':clock-view')
-    wearApp project(':wear')
     implementation 'androidx.appcompat:appcompat:+'
     implementation 'androidx.legacy:legacy-support-v4:+'
 }
