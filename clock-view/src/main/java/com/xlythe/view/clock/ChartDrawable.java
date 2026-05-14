@@ -48,6 +48,12 @@ public class ChartDrawable extends ComplicationDrawable {
 
     @Override
     public void draw(@NonNull Canvas canvas) {
+        super.draw(canvas);
+
+        if (mWeightSum <= 0f) {
+            return;
+        }
+
         int startingAngle = -90;
         for (int i = 0; i < mWeights.size(); i++) {
             float weight = mWeights.get(i);
