@@ -48,8 +48,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
 
             @Override
             public void remove() {
-                removeViewAt(i);
-                i--;
+                removeViewAt(--i);
             }
         };
     }
@@ -157,7 +156,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
                 width = MeasureSpec.makeMeasureSpec(widthSize, MeasureSpec.AT_MOST);
             } else if (params.width == LayoutParams.MATCH_PARENT) {
                 width = MeasureSpec.makeMeasureSpec(widthSize, MeasureSpec.EXACTLY);
-            } else if (params.width == LayoutParams.PARENT_PERCENT) {
+            } else if (params.width == LayoutParams.PARENT_PERCENT || params.hasWidthPercent) {
                 width = MeasureSpec.makeMeasureSpec((int) (widthSize * params.widthPercent), MeasureSpec.EXACTLY);
             } else {
                 width = MeasureSpec.makeMeasureSpec(params.width, MeasureSpec.EXACTLY);
@@ -166,7 +165,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
                 height = MeasureSpec.makeMeasureSpec(heightSize, MeasureSpec.AT_MOST);
             } else if (params.height == LayoutParams.MATCH_PARENT) {
                 height = MeasureSpec.makeMeasureSpec(heightSize, MeasureSpec.EXACTLY);
-            } else if (params.height == LayoutParams.PARENT_PERCENT) {
+            } else if (params.height == LayoutParams.PARENT_PERCENT || params.hasHeightPercent) {
                 height = MeasureSpec.makeMeasureSpec((int) (heightSize * params.heightPercent), MeasureSpec.EXACTLY);
             } else {
                 height = MeasureSpec.makeMeasureSpec(params.height, MeasureSpec.EXACTLY);
@@ -196,10 +195,12 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
     }
 
     public static class LayoutParams extends ViewGroup.LayoutParams {
-        public static final int PARENT_PERCENT = 0;
+        public static final int PARENT_PERCENT = -3;
 
         public float widthPercent;
         public float heightPercent;
+        public boolean hasWidthPercent;
+        public boolean hasHeightPercent;
         public float leftMarginPercent;
         public float topMarginPercent;
         public float rightMarginPercent;
@@ -216,6 +217,8 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
                 LayoutParams params = (LayoutParams) layoutParams;
                 widthPercent = params.widthPercent;
                 heightPercent = params.heightPercent;
+                hasWidthPercent = params.hasWidthPercent;
+                hasHeightPercent = params.hasHeightPercent;
                 leftMarginPercent = params.leftMarginPercent;
                 topMarginPercent = params.topMarginPercent;
                 rightMarginPercent = params.rightMarginPercent;
@@ -229,9 +232,11 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
         }
 
         public LayoutParams(float width, float height) {
-            super(0, 0);
+            super(PARENT_PERCENT, PARENT_PERCENT);
             widthPercent = width;
             heightPercent = height;
+            hasWidthPercent = true;
+            hasHeightPercent = true;
         }
 
         public LayoutParams(int width, int height) {
@@ -249,6 +254,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
                 width = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_width, 0);
             } else if (TypedValue.TYPE_FLOAT == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_width)) {
                 widthPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_width, 0);
+                hasWidthPercent = true;
             } else {
                 width = arr.getInt(R.styleable.PercentBasedLayout_Layout_layout_width, MATCH_PARENT);
             }
@@ -260,6 +266,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
                 height = arr.getDimensionPixelSize(R.styleable.PercentBasedLayout_Layout_layout_height, 0);
             } else if (TypedValue.TYPE_FLOAT == getType(arr, R.styleable.PercentBasedLayout_Layout_layout_height)) {
                 heightPercent = arr.getFloat(R.styleable.PercentBasedLayout_Layout_layout_height, 0);
+                hasHeightPercent = true;
             } else {
                 height = arr.getInt(R.styleable.PercentBasedLayout_Layout_layout_height, MATCH_PARENT);
             }
@@ -323,29 +330,7 @@ public class PercentBasedLayout extends ViewGroup implements Iterable<View> {
         }
 
         private int getType(TypedArray array, int index) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                return array.getType(index);
-            }
-            try {
-                Field numEntriesField = AssetManager.class.getDeclaredField("STYLE_NUM_ENTRIES");
-                numEntriesField.setAccessible(true);
-                final int STYLE_NUM_ENTRIES = numEntriesField.getInt(null);
-
-                Field typeField = AssetManager.class.getDeclaredField("STYLE_TYPE");
-                typeField.setAccessible(true);
-                final int STYLE_TYPE = typeField.getInt(null);
-
-                Field mDataField = TypedArray.class.getDeclaredField("mData");
-                mDataField.setAccessible(true);
-
-                final int[] mData = (int[]) mDataField.get(array);
-                index *= STYLE_NUM_ENTRIES;
-                return mData != null ? mData[index + STYLE_TYPE] : 0;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return TypedValue.TYPE_NULL;
+            return array.getType(index);
         }
     }
 }
