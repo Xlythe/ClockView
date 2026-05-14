@@ -58,14 +58,14 @@ public class BitmapUtils {
 
         // Rotate the image
         matrix.postRotate(degrees, bitmap.getWidth() / 2f, bitmap.getHeight() / 2f);
-        Bitmap b = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+        Bitmap b = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
 
         // Rotating a square makes it longer, so crop off those corners
         int x = (b.getWidth() - bitmap.getWidth()) / 2;
         int y = (b.getHeight() - bitmap.getHeight()) / 2;
         Bitmap croppedBmp;
-        if (x > 0 && y > 0) {
-            croppedBmp = Bitmap.createBitmap(b, x, y, bitmap.getWidth(), bitmap.getHeight());
+        if (x > 0 || y > 0) {
+            croppedBmp = Bitmap.createBitmap(b, Math.max(0, x), Math.max(0, y), bitmap.getWidth(), bitmap.getHeight());
         }
         else {
             croppedBmp = b;
@@ -220,7 +220,7 @@ public class BitmapUtils {
             @SuppressLint("PrivateApi") Method method = RippleDrawable.class.getDeclaredMethod("setForceSoftware", Boolean.TYPE);
             method.invoke(drawable, true);
         } catch (Exception e) {
-            Log.e(ClockView.TAG, "Failed to call RippleDrawable#setForceSoftware", e);
+            // Private API reflection is blocked on Android 9+, ignore silently
         }
     }
 }
