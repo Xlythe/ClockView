@@ -30,6 +30,55 @@ Widgets targeting Android 14 (API level 34) or higher should include the exact a
 <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 ```
 
+Clock
+-----------------
+`Clock` is a Composable for displaying time.
+
+`Clock` includes optional parameters for drawable resources (`clockFaceRes`, `hourHandRes`, `minuteHandRes`, `secondHandRes`) and digital text styling (`digitalTextColor`, `digitalTextSizeSp`), along with attributes `clockStyle` [analog, digital], `showSeconds`, `showMilliseconds`, `partialRotation`, `lowBitAmbient`, `hasBurnInProtection`, and `ambientModeEnabled`.
+
+```kotlin
+val clockController = remember { mutableStateOf<ClockController?>(null) }
+Clock(
+    modifier = Modifier.fillMaxSize(),
+    clockStyle = ClockStyle.ANALOG,
+    clockFaceRes = R.drawable.tick_roman,
+    hourHandRes = R.drawable.hour_hand,
+    minuteHandRes = R.drawable.minute_hand,
+    secondHandRes = R.drawable.second_hand,
+    digitalTextColor = Color.White,
+    digitalTextSizeSp = 40f,
+    showSeconds = true,
+    showMilliseconds = false,
+    partialRotation = false,
+    lowBitAmbient = false,
+    hasBurnInProtection = false,
+    ambientModeEnabled = false,
+    controller = clockController,
+    onTimeTick = {
+        // Called when time updates
+    }
+)
+```
+
+`Clock`'s imperative methods are exposed via `ClockController`.
+
+Starts or stops the automatic time ticker
+```kotlin
+clockController.value?.start()
+clockController.value?.stop()
+```
+
+Resets time tracking to system current time
+```kotlin
+clockController.value?.resetTime()
+```
+
+Sets a specific time imperatively
+```kotlin
+clockController.value?.setTime(timeInMillis)
+clockController.value?.setTime(hour, minute, second)
+```
+
 ClockView
 -----------------
 ```xml
