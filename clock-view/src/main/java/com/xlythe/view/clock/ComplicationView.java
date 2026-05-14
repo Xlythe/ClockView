@@ -342,6 +342,9 @@ public class ComplicationView extends AppCompatImageView {
   @CallSuper
   @RequiresApi(api = Build.VERSION_CODES.O)
   public void setComplicationData(ComplicationData complicationData) {
+    if (mComplicationData == complicationData) {
+      return;
+    }
     mComplicationData = complicationData;
 
     if (mUseDynamicForeground) {
@@ -599,8 +602,13 @@ public class ComplicationView extends AppCompatImageView {
       return;
     }
 
+    Instant nextChangeInstant = complicationData.getNextChangeInstant(getInstant());
+    if (nextChangeInstant == null || nextChangeInstant.equals(Instant.MAX)) {
+      return;
+    }
+
     // Note: Directly calling Duration#toMillis crashes. We'll manually convert it to millis instead.
-    Duration duration = Duration.between(getInstant(), complicationData.getNextChangeInstant(getInstant()));
+    Duration duration = Duration.between(getInstant(), nextChangeInstant);
     long timeUntilNextUpdate = duration.getSeconds() * 1000;
     timeUntilNextUpdate += TimeUnit.NANOSECONDS.toMillis(duration.getNano());
     if (timeUntilNextUpdate < 0) {
