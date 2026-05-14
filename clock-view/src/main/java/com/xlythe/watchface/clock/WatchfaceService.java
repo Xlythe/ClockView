@@ -300,13 +300,14 @@ public abstract class WatchfaceService extends WatchFaceService {
 
         @Override
         public void render(@NonNull Canvas canvas, @NonNull Rect bounds, @NonNull ZonedDateTime zonedDateTime, @NonNull SharedAssets sharedAssets) {
+            Rect localBounds = new Rect(bounds);
             // Some watches are not perfectly square, because of a small bump at the bottom
             // We still want to draw as if they are square, to avoid squishing the watchface
-            if (bounds.width() != bounds.height()) {
-                if (bounds.width() < bounds.height()) {
-                    bounds.right = bounds.left + bounds.height();
+            if (localBounds.width() != localBounds.height()) {
+                if (localBounds.width() < localBounds.height()) {
+                    localBounds.right = localBounds.left + localBounds.height();
                 } else {
-                    bounds.bottom = bounds.top + bounds.width();
+                    localBounds.bottom = localBounds.top + localBounds.width();
                 }
             }
             interceptDrawableCallbacks(mWatchface);
@@ -336,7 +337,7 @@ public abstract class WatchfaceService extends WatchFaceService {
             }
 
             // Draw the view
-            BitmapUtils.draw(mWatchface, canvas, bounds);
+            BitmapUtils.draw(mWatchface, canvas, localBounds);
 
             // Reset time so that complications can update themselves even if the timer hasn't ticked yet.
             mWatchface.resetTime();
