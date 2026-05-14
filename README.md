@@ -11,7 +11,7 @@ Where to Download
 -----------------
 ```groovy
 dependencies {
-  implementation 'com.xlythe:clock-view:2.0.6'
+  implementation 'com.xlythe:clock-view:3.0.0'
 }
 ```
 
