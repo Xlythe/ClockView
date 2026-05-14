@@ -57,6 +57,14 @@ public abstract class ClockWidget extends AppWidgetProvider {
                     updateAppWidget(context, appWidgetManager, appWidgetID);
                 }
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                try {
+                    alarmManager.setExact(AlarmManager.RTC, System.currentTimeMillis() + 60 * 1000, createClockTickIntent(context));
+                } catch (SecurityException e) {
+                    // Android 14+ exact alarm permission missing, ignore
+                }
+            }
         } else {
             super.onReceive(context, intent);
         }
@@ -126,7 +134,15 @@ public abstract class ClockWidget extends AppWidgetProvider {
     public void onEnabled(Context context) {
         super.onEnabled(context);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis(), 60 * 1000, createClockTickIntent(context));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                alarmManager.setExact(AlarmManager.RTC, System.currentTimeMillis() + 60 * 1000, createClockTickIntent(context));
+            } catch (SecurityException e) {
+                alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis(), 60 * 1000, createClockTickIntent(context));
+            }
+        } else {
+            alarmManager.setRepeating(AlarmManager.RTC, System.currentTimeMillis(), 60 * 1000, createClockTickIntent(context));
+        }
     }
 
     @Override

@@ -17,12 +17,17 @@ dependencies {
 
 Permissions
 -----------------
-WearOS apps require following permissions in AndroidManfiest.xml
+WearOS apps require the following permissions in AndroidManifest.xml:
 ```xml
 <uses-permission android:name="android.permission.WAKE_LOCK" />
 <uses-permission android:name="com.google.android.permission.PROVIDE_BACKGROUND" />
 <uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA" />
 <uses-feature android:name="android.hardware.type.watch" android:required="false" />
+```
+
+Widgets targeting Android 14 (API level 34) or higher should include the exact alarm permission:
+```xml
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 ```
 
 ClockView
