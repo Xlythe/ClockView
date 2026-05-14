@@ -72,6 +72,8 @@ public class ClockView extends FrameLayout {
     private static final String EXTRA_PARTIAL_ROTATION_ENABLED = "partial_rotation_enabled";
     private static final String EXTRA_LOW_BIT_AMBIENT = "low_bit_ambient";
     private static final String EXTRA_BURN_IN_PROTECTION = "burn_in_protection";
+    private static final String EXTRA_TIME_MILLIS = "time_millis";
+    private static final String EXTRA_DATE_TIME = "date_time";
 
     // Debug logic
     private long mInvalidationCycle = -1;
@@ -106,12 +108,14 @@ public class ClockView extends FrameLayout {
     @Nullable
     private ZonedDateTime mDateTime;
     private long mTimeMillis = -1;
+    private SimpleDateFormat mCachedFormatter;
+    private String mCachedFormatPattern;
 
     private final Runnable mTicker = new Runnable() {
         @Override
         public void run() {
             onTimeTick();
-            mHandler.postDelayed(this, isSecondsEnabled() ? isMillisecondsEnabled() ? ONE_MILLISECOND : ONE_SECOND : ONE_MINUTE);
+            mHandler.postDelayed(this, isSecondsEnabled() ? ((isMillisecondsEnabled() || isPartialRotationEnabled()) ? 16 : ONE_SECOND) : ONE_MINUTE);
         }
     };
 
@@ -520,7 +524,7 @@ public class ClockView extends FrameLayout {
             long timeInMillis = mTimeMillis >= 0 ? mTimeMillis : System.currentTimeMillis();
             Calendar calendar = Calendar.getInstance();
             calendar.setTimeInMillis(timeInMillis);
-            return calendar.get(Calendar.HOUR);
+            return calendar.get(Calendar.HOUR_OF_DAY);
         }
     }
 
@@ -573,7 +577,7 @@ public class ClockView extends FrameLayout {
         isStarted = true;
     }
 
-    private boolean isStarted() {
+    public boolean isStarted() {
         return isStarted;
     }
 
@@ -739,7 +743,15 @@ public class ClockView extends FrameLayout {
      * If enabled, seconds will affect rotation
      */
     public void setPartialRotationEnabled(boolean enabled) {
+        if (mPartialRotationEnabled == enabled) {
+            return;
+        }
         mPartialRotationEnabled = enabled;
+        onTimeTick();
+        if (isStarted()) {
+            stop();
+            start();
+        }
     }
 
     public boolean isLowBitAmbient() {
@@ -791,6 +803,10 @@ public class ClockView extends FrameLayout {
         bundle.putBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
         bundle.putBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
         bundle.putBoolean(EXTRA_BURN_IN_PROTECTION, mBurnInProtection);
+        bundle.putLong(EXTRA_TIME_MILLIS, mTimeMillis);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
+            bundle.putString(EXTRA_DATE_TIME, mDateTime.toString());
+        }
         return bundle;
     }
 
@@ -805,6 +821,10 @@ public class ClockView extends FrameLayout {
         mPartialRotationEnabled = bundle.getBoolean(EXTRA_PARTIAL_ROTATION_ENABLED, mPartialRotationEnabled);
         mLowBitAmbient = bundle.getBoolean(EXTRA_LOW_BIT_AMBIENT, mLowBitAmbient);
         mBurnInProtection = bundle.getBoolean(EXTRA_BURN_IN_PROTECTION, mBurnInProtection);
+        mTimeMillis = bundle.getLong(EXTRA_TIME_MILLIS, mTimeMillis);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bundle.containsKey(EXTRA_DATE_TIME)) {
+            mDateTime = ZonedDateTime.parse(bundle.getString(EXTRA_DATE_TIME));
+        }
     }
 
     public void onTimeTick() {
@@ -817,8 +837,12 @@ public class ClockView extends FrameLayout {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mDateTime != null) {
                 formattedDate = mDateTime.format(DateTimeFormatter.ofPattern(getDateFormat()));
             } else {
-                SimpleDateFormat formatter = new SimpleDateFormat(getDateFormat(), Locale.getDefault());
-                formattedDate = formatter.format(new Date(getTimeMillis()));
+                String pattern = getDateFormat();
+                if (mCachedFormatter == null || !pattern.equals(mCachedFormatPattern)) {
+                    mCachedFormatPattern = pattern;
+                    mCachedFormatter = new SimpleDateFormat(pattern, Locale.getDefault());
+                }
+                formattedDate = mCachedFormatter.format(new Date(getTimeMillis()));
             }
             mTimeView.setText(formattedDate);
             mTimeView.setVisibility(isDigitalEnabled() ? View.VISIBLE : View.GONE);
@@ -843,6 +867,9 @@ public class ClockView extends FrameLayout {
         if (mSeconds != null) {
             if (isSecondsEnabled() && !isDigitalEnabled()) {
                 degrees = second * 6;
+                if (mPartialRotationEnabled) {
+                    degrees += (getTimeMillis() % 1000) * 6f / 1000f;
+                }
                 mSeconds.setRotation(degrees);
                 mSeconds.setVisibility(View.VISIBLE);
             } else {
