@@ -72,11 +72,17 @@ public class AutoResizeTextView extends AppCompatTextView {
         mTextSize = getTextSize();
     }
 
+    // Flag to prevent recursive onTextChanged during resizing
+    private boolean mResizing = false;
+
     /**
      * When text changes, set the force resize flag to true and reset the text size.
      */
     @Override
     protected void onTextChanged(final CharSequence text, final int start, final int before, final int after) {
+        if (mResizing) {
+            return;
+        }
         mNeedsResize = true;
 
         // Since this view may be reused, it is good to reset the text size
@@ -148,6 +154,10 @@ public class AutoResizeTextView extends AppCompatTextView {
         mMaxTextSize = maxTextSize;
         requestLayout();
         invalidate();
+    }
+
+    void resetMaxTextSizeWithoutLayout() {
+        mMaxTextSize = 0;
     }
 
     /**
@@ -240,86 +250,80 @@ public class AutoResizeTextView extends AppCompatTextView {
             text = getTransformationMethod().getTransformation(text, this);
         }
 
-        // Get the text view's paint object
-        TextPaint textPaint = getPaint();
+        mResizing = true;
+        try {
+            // Get the text view's paint object
+            TextPaint textPaint = getPaint();
 
-        // Store the current text size
-        float oldTextSize = textPaint.getTextSize();
-        float targetTextSize = mTextSize;
+            // Store the current text size
+            float oldTextSize = textPaint.getTextSize();
+            float targetTextSize = mTextSize;
 
-        // Get the required text height
-        int textHeight = getTextHeight(text, textPaint, width, targetTextSize);
+            // Get the required text height
+            int textHeight = getTextHeight(text, textPaint, width, targetTextSize);
 
-        // Increase the text size as much as possible
-        if (mMaxTextSize > 0) {
-            while (textHeight < height && targetTextSize < mMaxTextSize) {
-                targetTextSize = Math.min(targetTextSize + 2, mMaxTextSize);
+            // Increase the text size as much as possible
+            float maxTextSize = mMaxTextSize > 0 ? mMaxTextSize : (height == Integer.MAX_VALUE ? mTextSize : 1000f);
+            while (textHeight < height && targetTextSize < maxTextSize) {
+                targetTextSize = Math.min(targetTextSize + 2, maxTextSize);
                 textHeight = getTextHeight(text, textPaint, width, targetTextSize);
             }
-        } else {
-            while (textHeight < height) {
-                targetTextSize = targetTextSize + 2;
+
+            // Until we either fit within our text view or we had reached our min text size, incrementally try smaller sizes
+            while (textHeight > height && targetTextSize > mMinTextSize) {
+                targetTextSize = Math.max(targetTextSize - 2, mMinTextSize);
                 textHeight = getTextHeight(text, textPaint, width, targetTextSize);
             }
-        }
 
-        // Until we either fit within our text view or we had reached our min text size, incrementally try smaller sizes
-        while (textHeight > height && targetTextSize > mMinTextSize) {
-            targetTextSize = Math.max(targetTextSize - 2, mMinTextSize);
-            textHeight = getTextHeight(text, textPaint, width, targetTextSize);
-        }
-
-        // If we had reached our minimum text size and still don't fit, append an ellipsis
-        if (mAddEllipsis && targetTextSize == mMinTextSize && textHeight > height) {
-            // Draw using a static layout
-            // modified: use a copy of TextPaint for measuring
-            TextPaint paint = new TextPaint(textPaint);
-
-            // Draw using a static layout
-            StaticLayout layout = new StaticLayout(text, paint, width, Alignment.ALIGN_NORMAL, mSpacingMult, mSpacingAdd, false);
-
-            // Check that we have a least one line of rendered text
-            if (layout.getLineCount() > 0) {
-                // Since the line at the specific vertical position would be cut off,
-                // we must trim up to the previous line
-                int lastLine = layout.getLineForVertical(height) - 1;
-
-                // If the text would not even fit on a single line, clear it
-                if (lastLine < 0) {
-                    setText("");
-                }
-                // Otherwise, trim to the previous line and add an ellipsis
-                else {
-                    int start = layout.getLineStart(lastLine);
-                    int end = layout.getLineEnd(lastLine);
-                    float lineWidth = layout.getLineWidth(lastLine);
-                    float ellipseWidth = textPaint.measureText(mEllipsis);
-
-                    // Trim characters off until we have enough room to draw the ellipsis
-                    while (width < lineWidth + ellipseWidth) {
-                        lineWidth = textPaint.measureText(text.subSequence(start, --end + 1).toString());
+            // If we had reached our minimum text size and still don't fit, append an ellipsis
+            if (mAddEllipsis && targetTextSize == mMinTextSize && textHeight > height) {
+                TextPaint paint = new TextPaint(textPaint);
+                StaticLayout layout = new StaticLayout(text, paint, width, Alignment.ALIGN_NORMAL, mSpacingMult, mSpacingAdd, false);
+                if (layout.getLineCount() > 0) {
+                    int lastLine = layout.getLineForVertical(height);
+                    if (layout.getLineBottom(lastLine) > height && lastLine > 0) {
+                        lastLine--;
                     }
-                    setText(text.subSequence(0, end) + mEllipsis);
+                    if (lastLine < 0) {
+                        setText("");
+                    } else {
+                        int start = layout.getLineStart(lastLine);
+                        int end = layout.getLineEnd(lastLine);
+                        float lineWidth = layout.getLineWidth(lastLine);
+                        float ellipseWidth = paint.measureText(mEllipsis);
+                        while (width < lineWidth + ellipseWidth && end > start) {
+                            lineWidth = paint.measureText(text.subSequence(start, --end + 1).toString());
+                        }
+                        if (end <= start) {
+                            setText("");
+                        } else {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append(text.subSequence(0, end)).append(mEllipsis);
+                            setText(sb.toString());
+                        }
+                    }
                 }
             }
+
+            // Some devices try to auto adjust line spacing, so force default line spacing
+            // and invalidate the layout as a side effect
+            if (oldTextSize != targetTextSize) {
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, targetTextSize);
+            }
+            setLineSpacing(mSpacingAdd, mSpacingMult);
+
+            // Notify the listener if registered
+            if (mTextResizeListener != null) {
+                mTextResizeListener.onTextResize(this, oldTextSize, targetTextSize);
+            }
+        } finally {
+            mResizing = false;
+            mNeedsResize = false;
         }
-
-        // Some devices try to auto adjust line spacing, so force default line spacing
-        // and invalidate the layout as a side effect
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, targetTextSize);
-        setLineSpacing(mSpacingAdd, mSpacingMult);
-
-        // Notify the listener if registered
-        if (mTextResizeListener != null) {
-            mTextResizeListener.onTextResize(this, oldTextSize, targetTextSize);
-        }
-
-        // Reset force resize flag
-        mNeedsResize = false;
     }
 
     // Set the text size of the text paint object and use a static layout to render text off screen before measuring
-    private int getTextHeight(CharSequence source, TextPaint paint, int width, float textSize) {
+    protected int getTextHeight(CharSequence source, TextPaint paint, int width, float textSize) {
         // modified: make a copy of the original TextPaint object for measuring
         // (apparently the object gets modified while measuring, see also the
         // docs for TextView.getPaint() (which states to access it read-only)
