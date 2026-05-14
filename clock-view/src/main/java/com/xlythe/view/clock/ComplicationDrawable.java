@@ -435,18 +435,24 @@ public class ComplicationDrawable extends Drawable {
         switch (style) {
             case FILL:
                 mShowBackground = true;
+                mBackgroundPaint.setStyle(Paint.Style.FILL);
+                mBackgroundPaint.setPathEffect(null);
                 break;
             case LINE:
+                mShowBackground = true;
                 mBackgroundPaint.setStyle(Paint.Style.STROKE);
                 mBackgroundPaint.setStrokeWidth(getLineStrokeWidth());
+                mBackgroundPaint.setPathEffect(null);
                 break;
             case DOT:
+                mShowBackground = true;
                 mBackgroundPaint.setStyle(Paint.Style.STROKE);
                 mBackgroundPaint.setStrokeWidth(getDotStrokeWidth());
                 mBackgroundPaint.setPathEffect(new DashPathEffect(new float[] { 6f, 3f}, 0));
                 break;
             case EMPTY:
                 mShowBackground = false;
+                mBackgroundPaint.setPathEffect(null);
                 break;
         }
     }
