@@ -22,9 +22,9 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RangeDrawable extends ComplicationDrawable {
     private final static int BACKGROUND_PROGRESS_ALPHA = 76;
@@ -41,7 +41,7 @@ public class RangeDrawable extends ComplicationDrawable {
     private Paint[] mMultiColoredForegroundPaints = new Paint[0];
 
     // To work around a bug in SweepGradient. See #createSweepGradient for details.
-    private static final Set<Integer> sReservedSweepGradientColors = new HashSet<>();
+    private static final Set<Integer> sReservedSweepGradientColors = ConcurrentHashMap.newKeySet();
     private int mSweepGradientHash;
 
     RangeDrawable(
@@ -184,20 +184,19 @@ public class RangeDrawable extends ComplicationDrawable {
     // SweepGradient can corrupt itself if multiple instances of it are used at the same time, using the same params.
     // To work around that, we'll keep track of what colors we're using and subtly modify them to create unique params.
     private SweepGradient createSweepGradient(float cx, float cy, @ColorInt int[] colors) {
-        synchronized (RangeDrawable.this) {
-            sReservedSweepGradientColors.remove(mSweepGradientHash);
+        int[] clonedColors = colors.clone();
+        sReservedSweepGradientColors.remove(mSweepGradientHash);
 
-            // We don't need to perfectly compare the colors, since the modification is subtle if we're wrong.
-            // So we'll just hash our colors and compare with the other hashes.
-            int hash = Arrays.hashCode(colors);
-            while (sReservedSweepGradientColors.contains(hash)) {
-                randomizeColors(colors);
-                hash = Arrays.hashCode(colors);
-            }
-            sReservedSweepGradientColors.add(hash);
-            mSweepGradientHash = hash;
-            return new SweepGradient(cx, cy, colors, null);
+        // We don't need to perfectly compare the colors, since the modification is subtle if we're wrong.
+        // So we'll just hash our colors and compare with the other hashes.
+        int hash = Arrays.hashCode(clonedColors);
+        while (sReservedSweepGradientColors.contains(hash)) {
+            randomizeColors(clonedColors);
+            hash = Arrays.hashCode(clonedColors);
         }
+        sReservedSweepGradientColors.add(hash);
+        mSweepGradientHash = hash;
+        return new SweepGradient(cx, cy, clonedColors, null);
     }
 
     private static void randomizeColors(int[] colors) {
@@ -230,10 +229,7 @@ public class RangeDrawable extends ComplicationDrawable {
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-
-        synchronized (RangeDrawable.this) {
-            sReservedSweepGradientColors.remove(mSweepGradientHash);
-        }
+        sReservedSweepGradientColors.remove(mSweepGradientHash);
     }
 
     private static <T> void reverse(T[] arr) {
