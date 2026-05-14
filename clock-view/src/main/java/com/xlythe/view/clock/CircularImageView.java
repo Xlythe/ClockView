@@ -212,7 +212,8 @@ public class CircularImageView extends AppCompatImageView implements Animator.On
 
         try {
             // Create Bitmap object out of the drawable
-            Bitmap bitmap = mImage != null && mImage.isMutable() ? mImage : Bitmap.createBitmap(intrinsicWidth, intrinsicHeight, Bitmap.Config.ARGB_8888);
+            Bitmap bitmap = mImage != null && mImage.isMutable() && mImage.getWidth() == intrinsicWidth && mImage.getHeight() == intrinsicHeight
+                    ? mImage : Bitmap.createBitmap(intrinsicWidth, intrinsicHeight, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -234,8 +235,13 @@ public class CircularImageView extends AppCompatImageView implements Animator.On
         mShader = new BitmapShader(mImage, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
         if (mCanvasSize != mImage.getWidth() || mCanvasSize != mImage.getHeight()) {
             Matrix matrix = new Matrix();
-            float scale = (float) mCanvasSize / (float) mImage.getWidth();
+            float scaleX = (float) mCanvasSize / (float) mImage.getWidth();
+            float scaleY = (float) mCanvasSize / (float) mImage.getHeight();
+            float scale = Math.max(scaleX, scaleY);
+            float dx = (mCanvasSize - mImage.getWidth() * scale) / 2f;
+            float dy = (mCanvasSize - mImage.getHeight() * scale) / 2f;
             matrix.setScale(scale, scale);
+            matrix.postTranslate(dx, dy);
             mShader.setLocalMatrix(matrix);
         }
     }
