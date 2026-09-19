@@ -65,10 +65,6 @@
     </Item>
 
     <!-- Copied from https://gml.noaa.gov/grad/solcalc/calcdetails.html -->
-    <!-- The number of days since January 1, 1900 -->
-    <Item name="${DAYS_SINCE_1900}">
-        ([YEAR] - 1900) * 365.25 + [DAY_OF_YEAR]
-    </Item>
     <!-- Percent (0.0 to 1.0) into the current day. -->
     <Item name="${TIME_PAST_LOCAL_MIDNIGHT}">
         ${CURRENT_MILLIS_SINCE_MIDNIGHT} / 86400000
@@ -83,12 +79,16 @@
         (${CURRENT_MILLIS_SINCE_MIDNIGHT} - ([UTC_TIMESTAMP] % 86400000)) / 3600000
     </Item>
     <!--
-        NOAA subtracts the UTC offset here to get the UTC date. It's left out because every use of this
-        variable is inlined: skipping it keeps the expanded watch face a fraction of the size, and it moves
-        the date by less than a day, which shifts sunrise and sunset by a minute or two at most.
+        Straight off the epoch, which is already UTC - where both NOAA's day number and sidereal
+        time are measured. 2440587.5 is the Julian day of 1 January 1970.
+
+        The calendar route is the obvious one and it is far dearer: counting years, leap years and
+        the day of the year, then subtracting ${LOCAL_OFFSET} to get back to UTC, comes to 311
+        characters against 45, and every one of them is re-evaluated on every tick that touches
+        the sun or the moon. ${JULIAN_CENTURY} is read nineteen times.
     -->
     <Item name="${JULIAN_DAY}">
-        ${DAYS_SINCE_1900} + 2415018.5 + ${TIME_PAST_LOCAL_MIDNIGHT}
+        [UTC_TIMESTAMP] / 86400000 + 2440587.5
     </Item>
     <Item name="${JULIAN_CENTURY}">
         (${JULIAN_DAY} - 2451545) / 36525
@@ -210,38 +210,22 @@
         a degree. The moon is half a degree wide, so the answer lands within about a moon of the
         real one, which is as much as a drawing of it can show.
     -->
-    <!--
-        The moon needs a better date than ${JULIAN_DAY}, which is half a day out. That moves the
-        sun by a fifth of a degree and nobody notices; it moves the moon by six and a half, which
-        is thirteen moon widths. This one counts the leap years properly and takes the clock back
-        to UTC, since sidereal time is measured there.
-    -->
-    <Item name="${JULIAN_DAY_UTC}">
-        1721425.5 + 365 * ([YEAR] - 1) + floor(([YEAR] - 1) / 4) - floor(([YEAR] - 1) / 100) + floor(([YEAR] - 1) / 400) + ([DAY_OF_YEAR] - 1) + ${TIME_PAST_LOCAL_MIDNIGHT} - ${LOCAL_OFFSET} / 24
-    </Item>
-    <Item name="${JULIAN_CENTURY_UTC}">
-        (${JULIAN_DAY_UTC} - 2451545) / 36525
-    </Item>
-
     <!-- The moon's mean elements. Wrapped to a turn so a single-precision evaluator keeps its digits. -->
     <Item name="${MOON_MEAN_LONGITUDE_DEG}">
-        (218.3164477 + 481267.88123421 * ${JULIAN_CENTURY_UTC}) % 360
+        (218.3164477 + 481267.88123421 * ${JULIAN_CENTURY}) % 360
     </Item>
     <Item name="${MOON_MEAN_ELONGATION_DEG}">
-        (297.8501921 + 445267.1114034 * ${JULIAN_CENTURY_UTC}) % 360
+        (297.8501921 + 445267.1114034 * ${JULIAN_CENTURY}) % 360
     </Item>
     <Item name="${MOON_MEAN_ANOMALY_DEG}">
-        (134.9633964 + 477198.8675055 * ${JULIAN_CENTURY_UTC}) % 360
+        (134.9633964 + 477198.8675055 * ${JULIAN_CENTURY}) % 360
     </Item>
     <Item name="${MOON_ARG_LATITUDE_DEG}">
-        (93.2720950 + 483202.0175233 * ${JULIAN_CENTURY_UTC}) % 360
-    </Item>
-    <Item name="${SUN_MEAN_ANOMALY_UTC_DEG}">
-        (357.5291092 + 35999.0502909 * ${JULIAN_CENTURY_UTC}) % 360
+        (93.2720950 + 483202.0175233 * ${JULIAN_CENTURY}) % 360
     </Item>
 
     <Item name="${MOON_ECLIPTIC_LONGITUDE_DEG}">
-        ${MOON_MEAN_LONGITUDE_DEG} + 6.289 * sin(rad(${MOON_MEAN_ANOMALY_DEG})) + 1.274 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG} - ${MOON_MEAN_ANOMALY_DEG})) + 0.658 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG})) + 0.214 * sin(rad(2 * ${MOON_MEAN_ANOMALY_DEG})) - 0.186 * sin(rad(${SUN_MEAN_ANOMALY_UTC_DEG})) - 0.114 * sin(rad(2 * ${MOON_ARG_LATITUDE_DEG}))
+        ${MOON_MEAN_LONGITUDE_DEG} + 6.289 * sin(rad(${MOON_MEAN_ANOMALY_DEG})) + 1.274 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG} - ${MOON_MEAN_ANOMALY_DEG})) + 0.658 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG})) + 0.214 * sin(rad(2 * ${MOON_MEAN_ANOMALY_DEG})) - 0.186 * sin(rad(${GEOM_MEAN_ANOM_SUN_DEG})) - 0.114 * sin(rad(2 * ${MOON_ARG_LATITUDE_DEG}))
     </Item>
     <Item name="${MOON_ECLIPTIC_LATITUDE_DEG}">
         5.128 * sin(rad(${MOON_ARG_LATITUDE_DEG})) + 0.281 * sin(rad(${MOON_MEAN_ANOMALY_DEG} + ${MOON_ARG_LATITUDE_DEG})) - 0.278 * sin(rad(${MOON_ARG_LATITUDE_DEG} - ${MOON_MEAN_ANOMALY_DEG})) - 0.173 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG} - ${MOON_ARG_LATITUDE_DEG}))
@@ -262,7 +246,7 @@
 
     <!-- How far the earth has turned, which is what puts the moon east or west of the meridian. -->
     <Item name="${GREENWICH_SIDEREAL_TIME_DEG}">
-        (((280.46061837 + 360.98564736629 * (${JULIAN_DAY_UTC} - 2451545)) % 360) + 360) % 360
+        (((280.46061837 + 360.98564736629 * (${JULIAN_DAY} - 2451545)) % 360) + 360) % 360
     </Item>
     <Item name="${MOON_HOUR_ANGLE_DEG}">
         (((${GREENWICH_SIDEREAL_TIME_DEG} + ${LONGITUDE} - ${MOON_RIGHT_ASCENSION_DEG}) % 360) + 360) % 360

@@ -23,7 +23,9 @@ class WffExpressions {
                     int year, int dayOfYear, double hour = 12d) {
         String expression = mResolved[variable]
         assert expression != null: "$variable is not defined in standard.xml"
-        long millis = Math.round(hour * 3600000d)
+        // The watch sits in UTC for these, so the epoch timestamp and the local clock agree.
+        long millis = java.time.LocalDate.ofYearDay(year, dayOfYear).toEpochDay() * 86400000L +
+                Math.round(hour * 3600000d)
         expression = expression
                 .replace('${LATITUDE}', "($latitude)")
                 .replace('${LONGITUDE}', "($longitude)")
