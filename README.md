@@ -334,6 +334,31 @@ version code it supports.
 Text is printed tight against its tags (`<Template>%s°<Parameter .../></Template>`), because the
 Wear OS renderer draws whitespace inside text.
 
+### Watch Face Push
+To build the same watch face as a package another app can install with
+[Watch Face Push](https://developer.android.com/training/wearables/watch-face-push), name the
+application id it should carry:
+```groovy
+watchFaceFormat {
+    pushApplicationId = 'com.example.marketplace.watchfacepush.scenery'
+}
+```
+The API only installs a package named *the pushing app's package* + `.watchfacepush.` + a name, and
+rejects anything else, so the part before `.watchfacepush.` has to be the package of the app doing
+the pushing — a different app from this one. The build fails early if the shape is wrong.
+
+Each variant gains a second flavor, `push` beside `store`, so `assembleWff3PushRelease` builds the
+package to hand the API and the store build is untouched. Both are resource-only. Because the ids
+differ, the marketplace app and the face it pushes install side by side.
+
+Watch Face Push also wants a validation token for the package, which only Google's Watch Face Push
+validation tool produces (CLI, JVM library or Android library — it can run on the watch). Generate
+it from the built APK and pass the two together to `addWatchFace`, or ship them as
+`assets/default_watchface.apk` plus a
+`com.google.android.wearable.marketplace.DEFAULT_WATCHFACE_VALIDATION_TOKEN` manifest entry. On
+Wear OS 6 a marketplace gets one slot, so after the first `addWatchFace` use `updateWatchFace` to
+replace it.
+
 ### Validation
 Point `validator` at Google's `wff-validator.jar`, from
 [google/watchface releases](https://github.com/google/watchface/releases), to check every build:

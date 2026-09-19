@@ -134,6 +134,30 @@ abstract class WatchFaceFormatExtension {
     /** Multiplies the base versionCode when {@link #getBundlePerFormatVersion()} is enabled. Defaults to 10. */
     abstract Property<Integer> getVersionCodeMultiplier()
 
+    /**
+     * Also builds each variant under this application id, for an app to install with Watch Face
+     * Push rather than for a store to distribute.
+     *
+     * <pre>
+     * watchFaceFormat {
+     *     pushApplicationId = 'com.example.marketplace.watchfacepush.scenery'
+     * }
+     * </pre>
+     *
+     * <p>Watch Face Push installs a watch face on behalf of another app, and insists the face be
+     * named <i>that app's package</i>{@code .watchfacepush.}<i>something</i> - it rejects anything
+     * else. So the value is not free: the part before {@code .watchfacepush.} has to be the package
+     * of the app doing the pushing, which is a different app from this one.
+     *
+     * <p>Every variant gains a second product flavor, {@code push} beside {@code store}, so
+     * {@code assembleWff3PushRelease} builds the package to hand the API and the store build is
+     * untouched. Both are resource-only, which Watch Face Push requires as much as Google Play does.
+     *
+     * <p>The API also wants a validation token for the package, which only Google's Watch Face Push
+     * validation tool can produce. Generate it from the built APK and pass the two together.
+     */
+    abstract Property<String> getPushApplicationId()
+
     void variants(Action<? super NamedDomainObjectContainer<WatchFaceVariant>> action) {
         action.execute(variants)
     }

@@ -1,5 +1,6 @@
 package com.xlythe.watchface.format
 
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
@@ -104,6 +105,9 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
                 if (extension.bundlePerFormatVersion.get()) {
                     addFormatVersionFlavors(android, extension)
                 }
+                if (extension.pushApplicationId.present) {
+                    addDistributionFlavors(android, extension)
+                }
             }
             androidComponents.onVariants(androidComponents.selector().all()) { variant ->
                 if (extension.bundlePerFormatVersion.get()) {
@@ -152,6 +156,37 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
         task.generatedResources.set(generate.flatMap { it.outputDirectory })
         task.formatVersions.set(formatVersions)
         task.onlyIf('watchFaceFormat.validator is set') { extension.validator.present }
+    }
+
+    /**
+     * The name Watch Face Push insists a pushable watch face carries.
+     *
+     * <p>The API rejects a package that is not the pushing app's own package followed by
+     * {@code .watchfacepush.} and a name, so a typo here fails at install time on the watch rather
+     * than at build time. Checking the shape moves that failure to the build.
+     */
+    private static final java.util.regex.Pattern PUSH_APPLICATION_ID =
+            ~/^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*\.watchfacepush\.[A-Za-z0-9_]+$/
+
+    static final String DISTRIBUTION_DIMENSION = 'distribution'
+
+    // A second flavor dimension, so each format version can also be built under the application id
+    // Watch Face Push expects. The store flavor keeps the module's own id and changes nothing.
+    private static void addDistributionFlavors(def android, WatchFaceFormatExtension extension) {
+        String pushApplicationId = extension.pushApplicationId.get()
+        if (!PUSH_APPLICATION_ID.matcher(pushApplicationId).matches()) {
+            throw new GradleException("pushApplicationId is '${pushApplicationId}', but Watch Face" +
+                    " Push only installs a package named <the pushing app's package>" +
+                    '.watchfacepush.<name>, for example com.example.marketplace.watchfacepush.scenery')
+        }
+        android.flavorDimensions.add(DISTRIBUTION_DIMENSION)
+        android.productFlavors.create('store') { flavor ->
+            flavor.dimension = DISTRIBUTION_DIMENSION
+        }
+        android.productFlavors.create('push') { flavor ->
+            flavor.dimension = DISTRIBUTION_DIMENSION
+            flavor.applicationId = pushApplicationId
+        }
     }
 
     // One flavor per variant, e.g. wff1Release and wff2Release. A higher format version gets a higher
