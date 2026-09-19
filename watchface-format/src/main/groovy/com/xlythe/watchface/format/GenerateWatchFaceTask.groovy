@@ -112,6 +112,12 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
         String templateText = templateFile.getText('UTF-8')
         Set<String> qualifiers = new HashSet<>()
         boolean defaultQualifiers = writeToDefaultQualifiers.getOrElse(false)
+
+        // Google Play checks every watchface.xml in a bundle against one format version, so in a
+        // shared bundle each variant has to stay valid at the lowest version in it - naming a
+        // complication type that arrived later fails the whole bundle, not just that variant.
+        // With a bundle per version there is nothing to hold back for.
+        int lowestInBundle = variants.get().collect { it.formatVersion.get() }.min()
         if (defaultQualifiers && variants.get().size() != 1) {
             throw new GradleException("Expected one watch face variant per bundle, but got ${variants.get()*.name}")
         }
@@ -171,7 +177,8 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
 
             Node root
             try {
-                root = expander.expand(TemplateProcessor.parse(expanded))
+                root = expander.expand(TemplateProcessor.parse(expanded),
+                        defaultQualifiers ? variant.formatVersion.get() : lowestInBundle)
             } catch (IllegalArgumentException e) {
                 throw new GradleException("${templateFile.name} (${variant.name}): ${e.message}", e)
             }

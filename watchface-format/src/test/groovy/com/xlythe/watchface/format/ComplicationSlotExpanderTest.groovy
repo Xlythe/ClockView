@@ -25,7 +25,7 @@ class ComplicationSlotExpanderTest {
         Node root = expander.expand(TemplateProcessor.parse('''
             <Scene>
                 <com.xlythe.ComplicationSlot slotId="1" x="200" y="200" width="160" height="160" type="chip" complicationDrawableStyle="line" />
-            </Scene>'''))
+            </Scene>'''), 2)
 
         Node slot = (Node) root.children()[0]
         assertEquals('ComplicationSlot', slot.name())
@@ -48,7 +48,7 @@ class ComplicationSlotExpanderTest {
             <Scene>
                 <com.xlythe.ComplicationSlot slotId="2" x="0" y="0" width="120" height="60" type="chip"
                     complicationDrawableStyle="empty" color="[CONFIGURATION.themeColor.0]" ambientColor="#FF000000" />
-            </Scene>'''))
+            </Scene>'''), 2)
 
         List<String> tints = root.depthFirst().findAll { it instanceof Node && it.name() == 'PartImage' }.collect { it.attribute('tintColor') }
         assertEquals(['[CONFIGURATION.themeColor.0]', '#FF000000'], tints)
@@ -60,7 +60,7 @@ class ComplicationSlotExpanderTest {
         Node root = expander.expand(TemplateProcessor.parse('''
             <Scene>
                 <com.xlythe.ComplicationSlot slotId="3" x="0" y="0" width="100" height="100" type="chip" complicationDrawableStyle="fill" />
-            </Scene>'''))
+            </Scene>'''), 2)
 
         // Arc only allows a Stroke child, so fills need a shape that accepts Fill.
         assertFalse(root.depthFirst().any { it instanceof Node && it.name() == 'Arc' })
@@ -80,7 +80,7 @@ class ComplicationSlotExpanderTest {
 
         for (String type : ['chip', 'background']) {
             Node root = bundledExpander.expand(TemplateProcessor.parse(
-                    "<Scene><com.xlythe.ComplicationSlot slotId=\"1\" x=\"10\" y=\"20\" width=\"120\" height=\"120\" type=\"${type}\" complicationDrawableStyle=\"line\" /></Scene>"))
+                    "<Scene><com.xlythe.ComplicationSlot slotId=\"1\" x=\"10\" y=\"20\" width=\"120\" height=\"120\" type=\"${type}\" complicationDrawableStyle=\"line\" /></Scene>"), 2)
             String printed = TemplateProcessor.print(root)
 
             assertTrue("${type} left placeholders: ${TemplateProcessor.findPlaceholders(printed)}", TemplateProcessor.findPlaceholders(printed).isEmpty())
@@ -96,7 +96,7 @@ class ComplicationSlotExpanderTest {
     void expand_rejectsUnknownTypes() {
         try {
             expander.expand(TemplateProcessor.parse(
-                    '<Scene><com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="10" height="10" type="ring" /></Scene>'))
+                    '<Scene><com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="10" height="10" type="ring" /></Scene>'), 2)
             fail('Expected an unknown type to be rejected')
         } catch (IllegalArgumentException expected) {
             assertTrue(expected.message.contains('ring'))
@@ -106,7 +106,7 @@ class ComplicationSlotExpanderTest {
     @Test
     void expand_keepsMixedContentOrder() {
         Node root = expander.expand(TemplateProcessor.parse(
-                '<PartText><Text><Font><Template>%s  hours <Parameter expression="[HOUR_0_23]" /></Template></Font></Text></PartText>'))
+                '<PartText><Text><Font><Template>%s  hours <Parameter expression="[HOUR_0_23]" /></Template></Font></Text></PartText>'), 2)
 
         Node template = (Node) root.depthFirst().find { it instanceof Node && it.name() == 'Template' }
         assertEquals(2, template.children().size())

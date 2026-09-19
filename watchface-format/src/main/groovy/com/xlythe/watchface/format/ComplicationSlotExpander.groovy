@@ -17,6 +17,11 @@ package com.xlythe.watchface.format
 final class ComplicationSlotExpander {
     static final String TAG = 'com.xlythe.ComplicationSlot'
 
+    /** GOAL_PROGRESS and WEIGHTED_ELEMENTS arrived in Watch Face Format 2. */
+    private static final int GOAL_PROGRESS_FORMAT_VERSION = 2
+
+    private int formatVersion = 1
+
     private final Map<String, String> templates
     private final String defaultColor
     private final String defaultAmbientColor
@@ -30,7 +35,9 @@ final class ComplicationSlotExpander {
         this.defaultAmbientColor = defaultAmbientColor
     }
 
-    Node expand(Node root) {
+    /** @param formatVersion gates the complication types the output may name. */
+    Node expand(Node root, int formatVersion) {
+        this.formatVersion = formatVersion
         return (Node) replaceCustomTags(root)
     }
 
@@ -162,6 +169,9 @@ final class ComplicationSlotExpander {
                 '${WIDTH}'                  : width,
                 '${HEIGHT}'                 : height,
                 '${BACKGROUND_GROUP}'       : bgGroup,
+                // The sweep that makes a ranged value look like one.
+                '${RANGED_VALUE_ARC}'       : progressArc(w, h, width, height, color, ambientColor, rangedFraction()),
+                '${GOAL_PROGRESS_ARC}'      : progressArc(w, h, width, height, color, ambientColor, goalFraction()),
                 // Single pane icon E.g. <Compare expression="icon">
                 '${IMG_POS_X_SINGLE}'       : "${iconXSingle}",
                 '${IMG_POS_Y_SINGLE}'       : "${iconYSingle}",
@@ -202,7 +212,10 @@ final class ComplicationSlotExpander {
         ]
 
         def type = node.attribute('type')
-        String template = templates.get(type)
+        String template = withGoalProgress(templates.get(type))
+        if (formatVersion < GOAL_PROGRESS_FORMAT_VERSION && template != null) {
+            template = template.replace(' GOAL_PROGRESS', '')
+        }
         if (template == null) {
             throw new IllegalArgumentException("Unknown ComplicationSlot type ${type}")
         }
@@ -217,7 +230,83 @@ final class ComplicationSlotExpander {
         return (Node) replaceCustomTags(TemplateProcessor.parse(content))
     }
 
+    /**
+     * Gives a slot a GOAL_PROGRESS layout by copying its RANGED_VALUE one.
+     *
+     * <p>The two show the same thing - a number against a bound, an optional icon, text and title
+     * - and differ only in where the bound comes from and in that a goal can be passed. Copying
+     * the block keeps one layout to maintain rather than three hundred lines said twice.
+     *
+     * <p>Format 1 has no such complication type, so it gets neither the layout nor the mention of
+     * it in supportedTypes.
+     */
+    private String withGoalProgress(String template) {
+        if (template == null || !template.contains('<Complication type="RANGED_VALUE">')
+                || formatVersion < GOAL_PROGRESS_FORMAT_VERSION) {
+            return template
+        }
+        int start = template.indexOf('<Complication type="RANGED_VALUE">')
+        int end = template.indexOf('</Complication>', start)
+        if (end < 0) {
+            throw new IllegalArgumentException('A RANGED_VALUE complication was opened and never closed')
+        }
+        end += '</Complication>'.length()
+        String goal = template.substring(start, end)
+                .replace('<Complication type="RANGED_VALUE">', '<Complication type="GOAL_PROGRESS">')
+                .replace('${RANGED_VALUE_ARC}', '${GOAL_PROGRESS_ARC}')
+        return template.substring(0, end) + System.lineSeparator() + goal + template.substring(end)
+    }
+
     private static String arc(int w, int h, Object width, Object height, String stroke) {
         return "<Arc startAngle=\"0\" endAngle=\"360\" centerX=\"${w / 2}\" centerY=\"${h / 2}\" width=\"${width}\" height=\"${height}\">${stroke}</Arc>"
+    }
+
+    /**
+     * The sweep that shows how far along a ranged value or a goal is.
+     *
+     * <p>Drawn over the slot's own ring, so the ring reads as the track and this as what has been
+     * filled. It starts at twelve o'clock, which is where Watch Face Format puts zero degrees,
+     * and goes clockwise.
+     *
+     * <p>endAngle takes a number rather than an expression, so the sweep is applied with a
+     * Transform - which is the only reason an Arc accepts one.
+     *
+     * @param fraction an expression between 0 and 1, already clamped.
+     */
+    private static String progressArc(int w, int h, Object width, Object height, String color,
+                                      String ambientColor, String fraction) {
+        String geometry = "centerX=\"${w / 2}\" centerY=\"${h / 2}\" width=\"${width}\" height=\"${height}\""
+        String sweep = "<Transform target=\"endAngle\" value=\"360 * (${fraction})\" />"
+        return """<Group name="Progress" x="0" y="0" width="${width}" height="${height}">
+                <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="0">
+                    <Variant mode="AMBIENT" target="alpha" value="255" />
+                    <Arc startAngle="0" endAngle="0" ${geometry}>
+                        ${sweep}
+                        <Stroke color="${ambientColor}" cap="ROUND" thickness="8" />
+                    </Arc>
+                </PartDraw>
+                <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="255">
+                    <Variant mode="AMBIENT" target="alpha" value="0" />
+                    <Arc startAngle="0" endAngle="0" ${geometry}>
+                        ${sweep}
+                        <Stroke color="${color}" cap="ROUND" thickness="8" />
+                    </Arc>
+                </PartDraw>
+            </Group>"""
+    }
+
+    /** How far between the minimum and the maximum the value sits, as 0 to 1. */
+    private static String rangedFraction() {
+        return 'clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN])' +
+                ' / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1)'
+    }
+
+    /**
+     * How much of the goal is done, as 0 to 1. A goal can be passed - that is rather the point of
+     * one - and the ring has nowhere to put more than a full turn, so it stops at the top.
+     */
+    private static String goalFraction() {
+        return 'clamp([COMPLICATION.GOAL_PROGRESS_VALUE]' +
+                ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1)'
     }
 }

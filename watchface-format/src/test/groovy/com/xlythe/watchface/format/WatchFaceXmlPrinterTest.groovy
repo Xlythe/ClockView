@@ -27,7 +27,7 @@ class WatchFaceXmlPrinterTest {
                     </PartText>
                     <PartImage x="0" y="0" width="1" height="1"><Image resource="dot" /></PartImage>
                 </Scene>
-            </WatchFace>'''))
+            </WatchFace>'''), 2)
 
         assertEquals('''<WatchFace width="450" height="450">
   <Scene>

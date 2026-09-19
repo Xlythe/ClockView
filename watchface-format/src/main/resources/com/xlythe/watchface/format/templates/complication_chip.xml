@@ -1,4 +1,4 @@
-<ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY SHORT_TEXT LONG_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE SMALL_IMAGE">
+<ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY SHORT_TEXT LONG_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE">
     <BoundingOval x="0" y="0" width="${WIDTH}" height="${HEIGHT}" outlinePadding="2" />
     <Complication type="EMPTY">
     </Complication>
@@ -610,6 +610,7 @@
     <Complication type="RANGED_VALUE">
         <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
             ${BACKGROUND_GROUP}
+            ${RANGED_VALUE_ARC}
 
             <Condition>
                 <Expressions>
