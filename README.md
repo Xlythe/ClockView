@@ -231,7 +231,7 @@ share expressions and complication layouts instead of copying them.
 // Top-level build.gradle
 buildscript {
     dependencies {
-        classpath 'com.xlythe:watchface-format:1.0.0'
+        classpath 'com.xlythe:watchface-format:1.0.4'
     }
 }
 ```
