@@ -352,12 +352,25 @@ package to hand the API and the store build is untouched. Both are resource-only
 differ, the marketplace app and the face it pushes install side by side.
 
 Watch Face Push also wants a validation token for the package, which only Google's Watch Face Push
-validation tool produces (CLI, JVM library or Android library — it can run on the watch). Generate
-it from the built APK and pass the two together to `addWatchFace`, or ship them as
-`assets/default_watchface.apk` plus a
-`com.google.android.wearable.marketplace.DEFAULT_WATCHFACE_VALIDATION_TOKEN` manifest entry. On
-Wear OS 6 a marketplace gets one slot, so after the first `addWatchFace` use `updateWatchFace` to
-replace it.
+validation tool produces. The Android build of it
+(`com.google.android.wearable.watchface.validator:validator-push-android`, on Google's Maven, and
+it pulls one transitive dependency from JitPack) runs on the watch, so the pushing app can validate
+the package it is holding and use the token straight away. On Wear OS 6 a marketplace gets one
+slot, so after the first `addWatchFace` use `updateWatchFace` to replace it.
+
+Three things the validator refuses, each of which it reports only on the watch:
+
+- **Code.** The package must be resource-only, so push the release build: a debug build carries
+  the R class in a dex file and fails with "APK contains files that are not allowed".
+- **A format version named through a resource.** The validator reads the package from outside,
+  without a resource table, and gives up on `@integer/watchface_format_version` with "Validator
+  does not support the version #@id/0x7f040000". Override the property in the push flavor's own
+  manifest (`src/push/AndroidManifest.xml`) with the number written out.
+- **No signature.** Nothing else signs a pushed package, and AGP leaves a flavor's release build
+  unsigned unless the build type names a key. Give the release build type a signing config, or
+  sign the package where the pushing app picks it up.
+
+`Watchfaces/ReflectiveScenery/WearPush` is a worked example of all three.
 
 ### Validation
 Point `validator` at Google's `wff-validator.jar`, from
