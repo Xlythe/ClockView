@@ -402,9 +402,15 @@ final class ComplicationSlotExpander {
                 : "ellipsis=\"TRUE\" maxLines=\"${maxLines}\""
         // TextCircular carries the angles itself and lays one line along them, so it takes an
         // alignment rather than a line count.
+        //
+        // The line is laid on the oval given, and grows outwards from it rather than straddling
+        // it, so on a band at the bezel the tops of the letters run off the edge of the screen.
+        // Pulling the oval in by the height of the type puts the line back inside the band it
+        // belongs to, and centres it there.
         String shape = curved
-                ? "<TextCircular ${geometry.arc.geometryAttributes()} startAngle=\"${geometry.arc.startAngle}\"" +
-                  " endAngle=\"${geometry.arc.sweepEnd()}\" align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
+                ? "<TextCircular ${geometry.arc.forText(size).geometryAttributes()}" +
+                  " startAngle=\"${geometry.arc.startAngle}\" endAngle=\"${geometry.arc.sweepEnd()}\"" +
+                  " align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
                 : "<Text ${fit}"
         String closing = curved ? '</TextCircular>' : '</Text>'
         Closure<String> part = { String textColor, int shown, int inAmbient ->
@@ -783,6 +789,16 @@ final class ComplicationSlotExpander {
             this.endAngle = endAngle
             this.thickness = thickness
             this.direction = direction
+        }
+
+        /**
+         * The oval to lay a line of type on so that the line sits inside this band.
+         *
+         * @param size the type's height, which is how far the line grows outwards from the oval.
+         */
+        ArcSpan forText(int size) {
+            return new ArcSpan(centerX, centerY, width - size, height - size,
+                    startAngle, endAngle, thickness, direction)
         }
 
         /** How far round the band goes, in degrees, whichever way it is travelling. */

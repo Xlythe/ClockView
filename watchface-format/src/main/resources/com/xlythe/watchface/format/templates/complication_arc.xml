@@ -23,21 +23,23 @@
     <Complication type="EMPTY">
     </Complication>
 
-    <!-- A short string, bent along the band. An icon takes the band's near end. -->
+    <!--
+        A short string, bent along the band and centred on it.
+
+        Where a chip can stack an icon above the text, a band can only put the two side by side,
+        and then the text has to be pushed to one end - out where the curve is sharpest and the
+        band runs out of room. So a band shows the text on its own and keeps it in the middle,
+        which is also what Wear asks for: of an icon and a title, show one.
+    -->
     <Complication type="SHORT_TEXT">
         <Group name="ShortText" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
             ${BACKGROUND_GROUP}
             <Condition>
                 <Expressions>
-                    <Expression name="icon_and_text"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TEXT] != null]]></Expression>
                     <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
                     <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
                     <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
                 </Expressions>
-                <Compare expression="icon_and_text">
-                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_start" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" align="END" scale="large" weight="MEDIUM" />
-                </Compare>
                 <Compare expression="text">
                     <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" scale="large" weight="MEDIUM" />
                 </Compare>
