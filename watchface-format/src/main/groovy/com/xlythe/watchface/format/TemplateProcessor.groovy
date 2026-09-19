@@ -88,24 +88,54 @@ final class TemplateProcessor {
      * selected at runtime by the watch's {@code [TIMEZONE_ID]}. Unknown zones fall back to 0.
      */
     static Map<String, String> parseTimeZoneCoordinates(String xml) {
+        return parseTimeZoneCoordinates(xml, Integer.MAX_VALUE, '0', '0')
+    }
+
+    /**
+     * @param limit how many entries to keep, from the top of the table. Every zone costs one
+     *     string comparison at each use, so a face that inlines these rather than publishing them
+     *     with {@code <Reference>} pays for the whole table every time it asks where it is.
+     * @param defaultLatitude what a zone outside the table falls back to, along with
+     *     {@code defaultLongitude}.
+     */
+    static Map<String, String> parseTimeZoneCoordinates(
+            String xml, int limit, String defaultLatitude, String defaultLongitude) {
         StringBuilder latitude = new StringBuilder()
         StringBuilder longitude = new StringBuilder()
+        StringBuilder offset = new StringBuilder()
+        StringBuilder daylight = new StringBuilder()
+        int kept = 0
         for (Object child : newParser().parseText(xml).children()) {
-            if (!(child instanceof Node)) {
+            if (!(child instanceof Node) || kept >= limit) {
                 continue
             }
             Node location = (Node) child
-            String zone = location.attribute('name')
-            latitude.append('([TIMEZONE_ID] == &quot;').append(zone).append('&quot;) ? ')
-                    .append(location.attribute('latitude')).append(' : ')
-            longitude.append('([TIMEZONE_ID] == &quot;').append(zone).append('&quot;) ? ')
-                    .append(location.attribute('longitude')).append(' : ')
+            kept++
+            String test = '([TIMEZONE_ID] == &quot;' + location.attribute('name') + '&quot;) ? '
+            latitude.append(test).append(location.attribute('latitude')).append(' : ')
+            longitude.append(test).append(location.attribute('longitude')).append(' : ')
+            if (location.attribute('utcOffsetMinutes') != null) {
+                offset.append(test).append(location.attribute('utcOffsetMinutes')).append(' : ')
+            }
+            // Only the zones that put the clock forward by something other than an hour need
+            // naming. A zone that doesn't observe it never has [IS_DAYLIGHT_SAVING_TIME] set, so
+            // what we would add is never added, and listing the two hundred of them would cost a
+            // comparison each for nothing.
+            String dst = location.attribute('dstMinutes')
+            if (dst != null && dst != '0' && dst != '60') {
+                daylight.append(test).append(dst).append(' : ')
+            }
         }
-        latitude.append('0')
-        longitude.append('0')
+        latitude.append(defaultLatitude)
+        longitude.append(defaultLongitude)
+        offset.append('0')
+        daylight.append('60')
+
         Map<String, String> variables = new LinkedHashMap<>()
         variables.put('${LATITUDE}', '(' + latitude + ')')
         variables.put('${LONGITUDE}', '(' + longitude + ')')
+        variables.put('${TIMEZONE_STANDARD_OFFSET_MINUTES}', '(' + offset + ')')
+        variables.put('${TIMEZONE_DAYLIGHT_MINUTES}', '(' + daylight + ')')
         return variables
     }
 

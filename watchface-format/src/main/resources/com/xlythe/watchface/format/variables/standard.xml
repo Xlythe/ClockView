@@ -90,13 +90,22 @@
         ${CURRENT_MILLIS_TO_THE_MINUTE} / 86400000
     </Item>
     <!--
-        The UTC offset in hours, including daylight saving time, possibly off by a whole day (e.g. -4 or
-        +20 for UTC-4). [TIMEZONE_OFFSET_DST] can't be used: it's text, so arithmetic on it evaluates to
-        nothing. Comparing the local time of day with UTC's works in every format version, and anything
-        that uses it wraps to a time of day, where a whole day doesn't matter.
+        The UTC offset in hours, including daylight saving.
+
+        Looked up from the time zone table rather than measured, because measuring it means
+        subtracting [UTC_TIMESTAMP], and a source that changes every millisecond re-evaluates
+        everything holding it on every frame. [TIMEZONE_ID] changes when you fly somewhere and
+        [IS_DAYLIGHT_SAVING_TIME] twice a year, so this costs nothing to keep up to date.
+
+        [TIMEZONE_OFFSET] has been readable since format 1 and is no use: it returns "+1:30"
+        rather than 90, and arithmetic on text evaluates to nothing. Format 3 has
+        [TIMEZONE_OFFSET_MINUTES], which the plugin switches to - see StandardDates - since it
+        knows every zone rather than the ones in the table.
+
+        A zone the table doesn't carry falls back to UTC, which is what it did before.
     -->
     <Item name="${LOCAL_OFFSET}">
-        (${CURRENT_MILLIS_TO_THE_MINUTE} - ([UTC_TIMESTAMP] % 86400000)) / 3600000
+        (${TIMEZONE_STANDARD_OFFSET_MINUTES} + ([IS_DAYLIGHT_SAVING_TIME] ? ${TIMEZONE_DAYLIGHT_MINUTES} : 0)) / 60
     </Item>
     <!--
         Counted from the calendar, which is dearer to write than [UTC_TIMESTAMP] / 86400000 and
@@ -123,12 +132,12 @@
         turns the earth 15 degrees, so a local date would put the moon three quarters of the sky
         away in a place like UTC+5 - the error the sun shrugs off is the one the moon cannot.
 
-        On format 1 and 2 the only numeric route to UTC is [UTC_TIMESTAMP], which is a fast
-        source, so a face that draws the moon pays for it. Nothing else reads this, so a face
-        that does not draw the moon pays nothing.
+        Taking the offset off the local day rather than reading [UTC_TIMESTAMP] keeps the moon on
+        the same slow sources as everything else. It is only as good as the zone table, which is
+        good to the minute, and the moon moves a fifth of a degree in one.
     -->
     <Item name="${JULIAN_DAY_UTC}">
-        [UTC_TIMESTAMP] / 86400000 + 2440587.5
+        ${JULIAN_DAY} - ${LOCAL_OFFSET} / 24
     </Item>
     <Item name="${JULIAN_CENTURY}">
         (${JULIAN_DAY} - 2451545) / 36525

@@ -21,12 +21,12 @@ class ExpressionSizeTest {
             // Format 3 and up get [MINUTES_SINCE_EPOCH] and come out smaller as well as slower.
             '${JULIAN_DAY}'                   : 200,
             '${SUNRISE_MILLIS_SINCE_MIDNIGHT}': 20_000,
-            '${MOON_DECLINATION_DEG}'         : 8_000,
-            '${MOON_RIGHT_ASCENSION_DEG}'     : 30_000,
-            '${MOON_ALTITUDE_DEG}'            : 45_000,
+            '${MOON_DECLINATION_DEG}'         : 12_000,
+            '${MOON_RIGHT_ASCENSION_DEG}'     : 50_000,
+            '${MOON_ALTITUDE_DEG}'            : 70_000,
             // The dearest of the lot: it inlines the altitude, and the altitude inlines the right
             // ascension. Reach for it once per face, not once per element.
-            '${MOON_AZIMUTH_DEG}'             : 220_000,
+            '${MOON_AZIMUTH_DEG}'             : 350_000,
             '${GET_TRANSITION_ALPHA}'         : 140_000,
             '${PERCENT_OF_DAY}'               : 160_000,
     ]

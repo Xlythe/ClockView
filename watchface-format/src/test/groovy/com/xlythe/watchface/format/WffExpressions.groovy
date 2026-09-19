@@ -29,6 +29,11 @@ class WffExpressions {
         expression = expression
                 .replace('${LATITUDE}', "($latitude)")
                 .replace('${LONGITUDE}', "($longitude)")
+                // The place is given directly rather than looked up from a zone, so stand the
+                // zone table down and put the watch in UTC, which is what these tests assume.
+                .replace('${TIMEZONE_STANDARD_OFFSET_MINUTES}', '(0)')
+                .replace('${TIMEZONE_DAYLIGHT_MINUTES}', '(60)')
+                .replace('[IS_DAYLIGHT_SAVING_TIME]', '(0)')
                 .replace('[YEAR]', "($year)")
                 .replace('[DAY_OF_YEAR]', "($dayOfYear)")
                 .replace('[HOUR_0_23]', "(${(int) hour})")

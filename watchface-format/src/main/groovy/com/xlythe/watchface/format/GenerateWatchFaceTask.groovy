@@ -63,6 +63,18 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
     @Input
     abstract ListProperty<String> getSharedVariables()
 
+    @Input
+    @Optional
+    abstract Property<Integer> getTimeZoneCount()
+
+    @Input
+    @Optional
+    abstract Property<String> getDefaultLatitude()
+
+    @Input
+    @Optional
+    abstract Property<String> getDefaultLongitude()
+
     @Nested
     abstract ListProperty<WatchFaceVariant> getVariants()
 
@@ -88,7 +100,9 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
         try {
             for (WatchFaceVariant variant : variants.get()) {
                 int version = variant.formatVersion.get()
-                variablesByVersion.computeIfAbsent(version) { TemplateProcessor.resolve(declaredVariables(it)) }
+                if (!variablesByVersion.containsKey(version)) {
+                    variablesByVersion.put(version, TemplateProcessor.resolve(declaredVariables(version)))
+                }
             }
             expander = new ComplicationSlotExpander(
                     complicationLayouts(), complicationColor.get(), complicationAmbientColor.get())
@@ -180,7 +194,7 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
      * @param formatVersion decides how the date and the UTC offset are worked out. See
      *     {@link StandardDates}.
      */
-    private Map<String, String> declaredVariables(int formatVersion) {
+    protected Map<String, String> declaredVariables(int formatVersion) {
         Map<String, String> declared = new LinkedHashMap<>()
         if (standardVariables.get()) {
             declared.putAll(TemplateProcessor.parseVariables(bundledResource('variables/standard.xml'), 'standard variables'))
@@ -193,7 +207,9 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
             String table = timeZoneTable.present
                     ? timeZoneTable.get().asFile.getText('UTF-8')
                     : bundledResource('geo/timezones.xml')
-            declared.putAll(TemplateProcessor.parseTimeZoneCoordinates(table))
+            declared.putAll(TemplateProcessor.parseTimeZoneCoordinates(table,
+                    timeZoneCount.getOrElse(Integer.MAX_VALUE),
+                    defaultLatitude.getOrElse('0'), defaultLongitude.getOrElse('0')))
         }
         return declared
     }

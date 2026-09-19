@@ -54,6 +54,22 @@ abstract class WatchFaceFormatExtension {
     /** Replaces the bundled time zone coordinate table. */
     abstract RegularFileProperty getTimeZoneTable()
 
+    /**
+     * How many time zones to keep, counting from the top of the table. Defaults to all of them.
+     *
+     * <p>Watch Face Format has no location source, so the zone is the only clue to where the
+     * watch is, and every zone in the table costs one string comparison at each place the face
+     * asks. Inlined that adds up; published once with {@code <Reference>} it does not. The
+     * bundled table leads with the zones the apps already offered, so trimming keeps those.
+     */
+    abstract Property<Integer> getTimeZoneCount()
+
+    /** Where a zone outside the table is assumed to be. Defaults to 0, off the coast of Africa. */
+    abstract Property<String> getDefaultLatitude()
+
+    /** @see #getDefaultLatitude() */
+    abstract Property<String> getDefaultLongitude()
+
     /** Directory with {@code complication_<type>.xml} files overriding the bundled slot layouts. */
     abstract DirectoryProperty getComplicationTemplates()
 
