@@ -220,6 +220,165 @@ public class MyWatchfaceService extends WatchfaceService {
 }
 ```
 
+Watch Face Format
+-----------------
+Google Play no longer installs code-based watch faces, so new watch faces use the declarative
+[Watch Face Format](https://developer.android.com/training/wearables/wff) (WFF). The
+`com.xlythe.watchface-format` Gradle plugin expands a templated `watchface.xml` so watch faces can
+share expressions and complication layouts instead of copying them.
+
+```groovy
+// Top-level build.gradle
+buildscript {
+    dependencies {
+        classpath 'com.xlythe:watchface-format:1.0.0'
+    }
+}
+```
+```groovy
+// Watch face module. It must be resource-only: no code and no dependencies on modules with code.
+apply plugin: 'com.android.application'
+apply plugin: 'com.xlythe.watchface-format'
+
+android {
+    defaultConfig {
+        minSdkVersion 33
+    }
+    buildTypes {
+        release {
+            minifyEnabled true      // R8 strips the generated R class; bundles can't contain dex.
+            shrinkResources false   // Resources are referenced by name from watchface.xml.
+        }
+    }
+}
+
+watchFaceFormat {
+    template = file('src/main/template/raw/watchface.xml')    // the default
+    variables.from('src/main/template-variables/values/vars.xml')
+    standardVariables = true                                  // see "Variables" below
+    sharedResources.from('../ClockLibrary/src/main/res')      // art shared with a phone app or widget
+}
+```
+Also set `android.builtInKotlin=false` in `gradle.properties`, or the bundle picks up Kotlin
+metadata that Watch Face Push rejects.
+
+`sharedResources` copies drawables, mipmaps, fonts, raw files and strings/integers/bools/colors/dimens
+values, but no layouts, styles or attrs. To ship only the art a watch face uses, narrow it:
+```groovy
+watchFaceFormat {
+    sharedResourceIncludes = ['drawable*/hand_*.png', 'values*/strings.xml']
+}
+```
+
+The manifest declares the format version with a generated resource:
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.type.watch" />
+    <application android:label="@string/app_name" android:hasCode="false">
+        <property
+            android:name="com.google.wear.watchface.format.version"
+            android:value="@integer/watchface_format_version" />
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
+    </application>
+</manifest>
+```
+
+### Output
+The template is written twice by default. The `wff1` variant writes WFF v1 to `res/raw` for API 33, and
+the `wff2` variant writes WFF v2 to `res/raw-v34`. `@integer/watchface_format_version` is generated to
+match. WFF v1 has no weather data, so `wff1` replaces every `[WEATHER.*]` data source: availability and
+error flags become `0`, day flags `1`, names `""` and everything else `0`. Weather UI hidden behind
+`[WEATHER.IS_AVAILABLE]` therefore stays hidden on API 33.
+
+Adjust the defaults, add variants, or remove them:
+```groovy
+watchFaceFormat {
+    variants {
+        wff1 {
+            replace('[WEATHER.TEMPERATURE]', '20')   // literal replacement in this variant only
+        }
+        wff4 {
+            resourceQualifier = 'raw-v36'
+            formatVersion = 4
+        }
+    }
+}
+```
+The build fails if a template references an undefined `${VARIABLE}`, or if a WFF v1 variant still
+uses `[WEATHER.*]` data sources.
+
+In one bundle, keep every variant valid at the lowest format version. Google's memory footprint
+check, which Google Play also runs, validates each `watchface.xml` in a bundle against the manifest's
+format version, which resolves to the lowest one. Only data sources such as weather can differ
+between variants. Also reference resources by name (`resource="hour_hand"`) rather than as
+`@drawable/hour_hand`, which that check can't resolve.
+
+To use newer schema features (for example `<Sweep frequency="SYNC_TO_DEVICE"/>` or flavors) on watches
+that support them, build a bundle per format version instead:
+```groovy
+watchFaceFormat {
+    bundlePerFormatVersion = true
+    variants {
+        wff1 {
+            replace('<Sweep frequency="SYNC_TO_DEVICE"', '<Sweep frequency="15"')
+        }
+    }
+}
+```
+Each variant becomes a product flavor (`bundleWff1Release`, `bundleWff2Release`) with its own
+`res/raw/watchface.xml`, format version, minSdk (from its resource qualifier, e.g. `raw-v34` means 34)
+and a version code of `versionCode * versionCodeMultiplier + formatVersion` (multiplier 10 by
+default). Upload all of the bundles in the same release. Google Play gives each watch the highest
+version code it supports.
+
+Text is printed tight against its tags (`<Template>%s°<Parameter .../></Template>`), because the
+Wear OS renderer draws whitespace inside text.
+
+### Validation
+Point `validator` at Google's `wff-validator.jar`, from
+[google/watchface releases](https://github.com/google/watchface/releases), to check every build:
+```groovy
+watchFaceFormat {
+    validator = file("${System.getProperty('user.home')}/tools/wff-validator.jar")
+}
+```
+Each variant is validated against its own format version and the lowest one. Release bundles are
+also checked for code (dex) automatically. Before uploading, run Google's
+`memory-footprint.jar --watch-face <bundle.aab>` from the same releases page.
+
+### Variables
+Variable files hold reusable expressions:
+```xml
+<ItemList>
+    <Item name="${IS_MORNING}"><![CDATA[ [HOUR_0_23] < 12 ]]></Item>
+</ItemList>
+```
+In the template, `${IS_MORNING}` becomes `([HOUR_0_23] &lt; 12)`. When a placeholder is an entire
+attribute value, the outer parentheses are dropped: `alpha="${ALPHA}"`.
+
+`timeZoneCoordinates = true` defines `${LATITUDE}` and `${LONGITUDE}` from the watch's time zone.
+`standardVariables = true` also adds helpers built on them, including `${IS_SUNRISE}`, `${IS_DAY}`,
+`${IS_SUNSET}`, `${IS_NIGHT}`, `${GET_TRANSITION_ALPHA}`, `${PERCENT_OF_DAY}`, `${IS_MOON_FULL}` and
+`${IS_WEATHER_RAINY}`. Your own variables override bundled ones with the same name. Every use is
+inlined, so the sunrise and sunset helpers add a lot of XML each time they're referenced.
+
+### Complications
+`com.xlythe.ComplicationSlot` mirrors `ComplicationView` and expands into a full `ComplicationSlot`
+that handles text, title, icon and ranged value complications:
+```xml
+<com.xlythe.ComplicationSlot slotId="1" x="200" y="200" width="160" height="160"
+    type="chip" complicationDrawableStyle="line"
+    color="#FFFFFFFF" ambientColor="#FFFFFFFF" />
+```
+`type` is `chip` or `background`, and `complicationDrawableStyle` is `fill`, `line`, `dot` or `empty`.
+The colors are optional (see `complicationColor` and `complicationAmbientColor`) and accept
+configuration references such as `[CONFIGURATION.themeColor.0]`. To change the layouts, point
+`complicationTemplates` at a directory of `complication_<type>.xml` files.
+
+To publish the plugin, run `./gradlew :watchface-format:publish`. For local testing, run
+`./gradlew :watchface-format:publishToMavenLocal` and add `mavenLocal()` to the consuming
+project's buildscript repositories.
+
 License
 -------
 

@@ -1,0 +1,1515 @@
+<ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY SHORT_TEXT LONG_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE SMALL_IMAGE">
+    <BoundingOval x="0" y="0" width="${WIDTH}" height="${HEIGHT}" outlinePadding="2" />
+    <Complication type="EMPTY">
+    </Complication>
+    <!-- eg. Alarm Clock -->
+    <Complication type="SHORT_TEXT">
+        <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+
+            <Condition>
+                <Expressions>
+                    <Expression name="icon_text">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TEXT] != null]]>
+                    </Expression>
+                    <Expression name="icon_title">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TITLE] != null]]>
+                    </Expression>
+                    <Expression name="text_title">
+                        <![CDATA[([COMPLICATION.TITLE] != null && [COMPLICATION.TEXT] != null)]]>
+                    </Expression>
+                    <Expression name="icon">[COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon_text">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon_title">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="text_title">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_TEXT}" y="${TEXT_POS_Y_SPLIT_TEXT}" width="${TEXT_WIDTH_SPLIT_TEXT}" height="${TEXT_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TITLE_POS_X_SPLIT_TEXT}" y="${TITLE_POS_Y_SPLIT_TEXT}" width="${TITLE_WIDTH_SPLIT_TEXT}" height="${TITLE_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <!-- IMAGE_STYLE values: 1 = PHOTO, 2 = ICON -->
+                                    <!-- Photos cannot be tinted (but we can set saturation to 0 to greyscale them) -->
+                                    <Expression name="icon_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+                </Compare>
+                <Compare expression="text">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="title">
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <Complication type="LONG_TEXT">
+        <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+
+            <Condition>
+                <Expressions>
+                    <Expression name="icon_text">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TEXT] != null]]>
+                    </Expression>
+                    <Expression name="icon_title">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TITLE] != null]]>
+                    </Expression>
+                    <Expression name="text_title">
+                        <![CDATA[([COMPLICATION.TITLE] != null && [COMPLICATION.TEXT] != null)]]>
+                    </Expression>
+                    <Expression name="icon">[COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon_text">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon_title">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="text_title">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_TEXT}" y="${TEXT_POS_Y_SPLIT_TEXT}" width="${TEXT_WIDTH_SPLIT_TEXT}" height="${TEXT_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TITLE_POS_X_SPLIT_TEXT}" y="${TITLE_POS_Y_SPLIT_TEXT}" width="${TITLE_WIDTH_SPLIT_TEXT}" height="${TITLE_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <!-- IMAGE_STYLE values: 1 = PHOTO, 2 = ICON -->
+                                    <!-- Photos cannot be tinted (but we can set saturation to 0 to greyscale them) -->
+                                    <Expression name="icon_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+                </Compare>
+                <Compare expression="text">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="title">
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <Complication type="RANGED_VALUE">
+        <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+
+            <Condition>
+                <Expressions>
+                    <Expression name="icon_text">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TEXT] != null]]>
+                    </Expression>
+                    <Expression name="icon_title">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TITLE] != null]]>
+                    </Expression>
+                    <Expression name="text_title">
+                        <![CDATA[([COMPLICATION.TITLE] != null && [COMPLICATION.TEXT] != null)]]>
+                    </Expression>
+                    <Expression name="icon">[COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon_text">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon_title">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="text_title">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_TEXT}" y="${TEXT_POS_Y_SPLIT_TEXT}" width="${TEXT_WIDTH_SPLIT_TEXT}" height="${TEXT_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TITLE_POS_X_SPLIT_TEXT}" y="${TITLE_POS_Y_SPLIT_TEXT}" width="${TITLE_WIDTH_SPLIT_TEXT}" height="${TITLE_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <!-- IMAGE_STYLE values: 1 = PHOTO, 2 = ICON -->
+                                    <!-- Photos cannot be tinted (but we can set saturation to 0 to greyscale them) -->
+                                    <Expression name="icon_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+                </Compare>
+                <Compare expression="text">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="title">
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <Complication type="MONOCHROMATIC_IMAGE">
+        <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+
+            <Condition>
+                <Expressions>
+                    <Expression name="icon_text">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TEXT] != null]]>
+                    </Expression>
+                    <Expression name="icon_title">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TITLE] != null]]>
+                    </Expression>
+                    <Expression name="text_title">
+                        <![CDATA[([COMPLICATION.TITLE] != null && [COMPLICATION.TEXT] != null)]]>
+                    </Expression>
+                    <Expression name="icon">[COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon_text">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon_title">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="text_title">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_TEXT}" y="${TEXT_POS_Y_SPLIT_TEXT}" width="${TEXT_WIDTH_SPLIT_TEXT}" height="${TEXT_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TITLE_POS_X_SPLIT_TEXT}" y="${TITLE_POS_Y_SPLIT_TEXT}" width="${TITLE_WIDTH_SPLIT_TEXT}" height="${TITLE_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <!-- IMAGE_STYLE values: 1 = PHOTO, 2 = ICON -->
+                                    <!-- Photos cannot be tinted (but we can set saturation to 0 to greyscale them) -->
+                                    <Expression name="icon_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+                </Compare>
+                <Compare expression="text">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="title">
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <Complication type="SMALL_IMAGE">
+        <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+
+            <Condition>
+                <Expressions>
+                    <Expression name="icon_text">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TEXT] != null]]>
+                    </Expression>
+                    <Expression name="icon_title">
+                        <![CDATA[([COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null) && [COMPLICATION.TITLE] != null]]>
+                    </Expression>
+                    <Expression name="text_title">
+                        <![CDATA[([COMPLICATION.TITLE] != null && [COMPLICATION.TEXT] != null)]]>
+                    </Expression>
+                    <Expression name="icon">[COMPLICATION.SMALL_IMAGE] != null || [COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon_text">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon_title">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE_AMBIENT] != null</Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="color">[COMPLICATION.SMALL_IMAGE] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="color">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SPLIT}" y="${IMG_POS_Y_SPLIT}" width="${IMG_WIDTH_SPLIT}" height="${IMG_HEIGHT_SPLIT}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_ICON}" y="${TEXT_POS_Y_SPLIT_ICON}" width="${TEXT_WIDTH_SPLIT_ICON}" height="${TEXT_HEIGHT_SPLIT_ICON}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="text_title">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SPLIT_TEXT}" y="${TEXT_POS_Y_SPLIT_TEXT}" width="${TEXT_WIDTH_SPLIT_TEXT}" height="${TEXT_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TITLE_POS_X_SPLIT_TEXT}" y="${TITLE_POS_Y_SPLIT_TEXT}" width="${TITLE_WIDTH_SPLIT_TEXT}" height="${TITLE_HEIGHT_SPLIT_TEXT}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="icon">
+                    <!-- Draw the icon -->
+                    <Group name="Icon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <Group name="AmbientIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="monochromatic_ambient">[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null</Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                    <!-- IMAGE_STYLE values: 1 = PHOTO, 2 = ICON -->
+                                    <!-- Photos cannot be tinted (but we can set saturation to 0 to greyscale them) -->
+                                    <Expression name="icon_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo_ambient"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                </Expressions>
+                                <Compare expression="monochromatic_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo_ambient">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE_AMBIENT]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${AMBIENT_COLOR}" alpha="0">
+                                        <Variant mode="AMBIENT" target="alpha" value="255" />
+                                        <ImageFilters>
+                                            <HsbFilter saturate="0" brightness="0.5"/>
+                                        </ImageFilters>
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                        <Group name="FullResIcon" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                            <Condition>
+                                <Expressions>
+                                    <Expression name="photo"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 1]]></Expression>
+                                    <Expression name="icon"><![CDATA[[COMPLICATION.SMALL_IMAGE_AMBIENT] != null && [COMPLICATION.IMAGE_STYLE] == 2]]></Expression>
+                                    <Expression name="monochromatic">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                                </Expressions>
+                                <Compare expression="photo">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="icon">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                                <Compare expression="monochromatic">
+                                    <PartImage x="${IMG_POS_X_SINGLE}" y="${IMG_POS_Y_SINGLE}" width="${IMG_WIDTH_SINGLE}" height="${IMG_HEIGHT_SINGLE}" tintColor="${COLOR}" alpha="255">
+                                        <Variant mode="AMBIENT" target="alpha" value="0" />
+                                        <Image resource="[COMPLICATION.SMALL_IMAGE]" />
+                                    </PartImage>
+                                </Compare>
+                            </Condition>
+                        </Group>
+                    </Group>
+                </Compare>
+                <Compare expression="text">
+                    <!-- Draw the text -->
+                    <Group name="Text" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TEXT]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+                <Compare expression="title">
+                    <!-- Draw the title -->
+                    <Group name="Title" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+                        <PartText x="${TEXT_POS_X_SINGLE}" y="${TEXT_POS_Y_SINGLE}" width="${TEXT_WIDTH_SINGLE}" height="${TEXT_HEIGHT_SINGLE}">
+                            <Localization calendar="GREGORIAN" />
+                            <Text ellipsis="TRUE" maxLines="2">
+                                <Font family="SYNC_TO_DEVICE" size="30" color="#ffffff">
+                                    <Template>%s
+                                        <Parameter expression="[COMPLICATION.TITLE]" />
+                                    </Template>
+                                </Font>
+                            </Text>
+                        </PartText>
+                    </Group>
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+</ComplicationSlot>

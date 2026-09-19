@@ -1,0 +1,259 @@
+<ItemList>
+    <!--
+        Helper variables bundled with com.xlythe.watchface-format (enable with standardVariables = true).
+        ${LATITUDE} and ${LONGITUDE} are generated from the watch's time zone.
+        Variables declared by the watch face override these.
+    -->
+    <Item name="${IS_SUNRISE}">
+        <!-- Sunrise is defined as -1hr / +1hr from exact sunrise -->
+        <![CDATA[
+            ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} <= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
+        ]]>
+    </Item>
+    <Item name="${IS_DAY}">
+        <!-- Day is defined as +1hr from exact sunrise and -1hr from exact sunset -->
+        <![CDATA[
+            ${CURRENT_MILLIS_SINCE_MIDNIGHT} > (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} < (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
+        ]]>
+    </Item>
+    <Item name="${IS_SUNSET}">
+        <!-- Sunset is defined as -1hr / +1hr from exact sunset -->
+        <![CDATA[
+            ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} <= (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
+        ]]>
+    </Item>
+    <Item name="${IS_NIGHT}">
+        <!-- Night is defined as -1hr from exact sunrise or +1hr from exact sunset -->
+        <![CDATA[
+            ${CURRENT_MILLIS_SINCE_MIDNIGHT} < (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            || ${CURRENT_MILLIS_SINCE_MIDNIGHT} > (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
+        ]]>
+    </Item>
+    <Item name="${IS_TRANSITIONING_OVER_DAY}">
+        <!-- Day is defined as sunrise_time <= current_hour < sunset_time  -->
+        <![CDATA[
+            ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} < ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+        ]]>
+    </Item>
+    <!-- Only true during sunrise/sunset. 2hr-1hr before sunrise ends, 1hr-0hr before sunset ends. -->
+    <Item name="${IS_TRANSITIONING_OVER_NIGHT}">
+        <!-- Night is defined as current_hour < sunrise_time or sunset_time <= current_hour  -->
+        <![CDATA[
+            ${CURRENT_MILLIS_SINCE_MIDNIGHT} < ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+            || ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+        ]]>
+    </Item>
+    <!--
+        Calculates the alpha (0-255) for the foreground as we transition between Night -> Sunrise -> Day -> Sunset -> Night
+    -->
+    <Item name="${GET_TRANSITION_ALPHA}">
+        (${IS_SUNRISE}) ?
+            (${IS_TRANSITIONING_OVER_NIGHT}) ?
+                clamp(255 * (1 - (${MILLIS_UNTIL_SUNRISE} / 3600000)), 0, 255) :
+                clamp(255 * (1 - (${MILLIS_SINCE_SUNRISE} / 3600000)), 0, 255) :
+            (${IS_TRANSITIONING_OVER_DAY}) ?
+                clamp(255 * (1 - (${MILLIS_UNTIL_SUNSET} / 3600000)), 0, 255) :
+                clamp(255 * (1 - (${MILLIS_SINCE_SUNSET} / 3600000)), 0, 255)
+    </Item>
+    <!-- Returns the time in millis since 12:00am. -->
+    <Item name="${CURRENT_MILLIS_SINCE_MIDNIGHT}">
+        ([HOUR_0_23] * 3600000) + ([MINUTE] * 60000) + ([SECOND] * 1000) + [MILLISECOND]
+    </Item>
+
+    <!-- Copied from https://gml.noaa.gov/grad/solcalc/calcdetails.html -->
+    <!-- The number of days since January 1, 1900 -->
+    <Item name="${DAYS_SINCE_1900}">
+        ([YEAR] - 1900) * 365.25 + [DAY_OF_YEAR]
+    </Item>
+    <!-- Percent (0.0 to 1.0) into the current day. -->
+    <Item name="${TIME_PAST_LOCAL_MIDNIGHT}">
+        ${CURRENT_MILLIS_SINCE_MIDNIGHT} / 86400000
+    </Item>
+    <!--
+        The UTC offset in hours, including daylight saving time, possibly off by a whole day (e.g. -4 or
+        +20 for UTC-4). [TIMEZONE_OFFSET_DST] can't be used: it's text, so arithmetic on it evaluates to
+        nothing. Comparing the local time of day with UTC's works in every format version, and anything
+        that uses it wraps to a time of day, where a whole day doesn't matter.
+    -->
+    <Item name="${LOCAL_OFFSET}">
+        (${CURRENT_MILLIS_SINCE_MIDNIGHT} - ([UTC_TIMESTAMP] % 86400000)) / 3600000
+    </Item>
+    <!--
+        NOAA subtracts the UTC offset here to get the UTC date. It's left out because every use of this
+        variable is inlined: skipping it keeps the expanded watch face a fraction of the size, and it moves
+        the date by less than a day, which shifts sunrise and sunset by a minute or two at most.
+    -->
+    <Item name="${JULIAN_DAY}">
+        ${DAYS_SINCE_1900} + 2415018.5 + ${TIME_PAST_LOCAL_MIDNIGHT}
+    </Item>
+    <Item name="${JULIAN_CENTURY}">
+        (${JULIAN_DAY} - 2451545) / 36525
+    </Item>
+    <Item name="${GEOM_MEAN_LONG_SUN_DEG}">
+        (280.46646 + ${JULIAN_CENTURY} * (36000.76983 + ${JULIAN_CENTURY} * 0.0003032)) % 360
+    </Item>
+    <Item name="${GEOM_MEAN_ANOM_SUN_DEG}">
+        357.52911 + ${JULIAN_CENTURY} * (35999.05029 - 0.0001537 * ${JULIAN_CENTURY})
+    </Item>
+    <Item name="${ECCENT_EARTH_ORBIT}">
+        0.016708634 - ${JULIAN_CENTURY} * (0.000042037 + 0.0000001267 * ${JULIAN_CENTURY})
+    </Item>
+    <Item name="${SUN_EQ_OF_CTR}">
+        sin(rad(${GEOM_MEAN_ANOM_SUN_DEG})) * (1.914602 - ${JULIAN_CENTURY} * (0.004817 + 0.000014 * ${JULIAN_CENTURY})) + sin(rad(2 * ${GEOM_MEAN_ANOM_SUN_DEG})) * (0.019993 - 0.000101 * ${JULIAN_CENTURY}) + sin(rad(3 * ${GEOM_MEAN_ANOM_SUN_DEG})) * 0.000289
+    </Item>
+    <Item name="${SUN_TRUE_LONG_DEG}">
+        ${GEOM_MEAN_LONG_SUN_DEG} + ${SUN_EQ_OF_CTR}
+    </Item>
+    <Item name="${SUN_APP_LONG_DEG}">
+        ${SUN_TRUE_LONG_DEG} - 0.00569 - 0.00478 * sin(rad(125.04 - 1934.136 * ${JULIAN_CENTURY}))
+    </Item>
+    <Item name="${MEAN_OBLIQ_ECLIPTIC_DEG}">
+        23 + (26 + ((21.448 - ${JULIAN_CENTURY} * (46.815 + ${JULIAN_CENTURY} * (0.00059 - ${JULIAN_CENTURY} * 0.001813)))) / 60) / 60
+    </Item>
+    <Item name="${OBLIQ_CORR_DEG}">
+        ${MEAN_OBLIQ_ECLIPTIC_DEG} + 0.00256 * cos(rad(125.04 - 1934.136 * ${JULIAN_CENTURY}))
+    </Item>
+    <Item name="${SUN_DECLIN_DEG}">
+        deg(asin(sin(rad(${OBLIQ_CORR_DEG})) * sin(rad(${SUN_APP_LONG_DEG}))))
+    </Item>
+    <Item name="${VAR_Y}">
+        tan(rad(${OBLIQ_CORR_DEG} / 2)) * tan(rad(${OBLIQ_CORR_DEG} / 2))
+    </Item>
+    <Item name="${EQ_OF_TIME_MINUTES}">
+        4 * deg(${VAR_Y} * sin(2 * rad(${GEOM_MEAN_LONG_SUN_DEG})) - 2 * ${ECCENT_EARTH_ORBIT} * sin(rad(${GEOM_MEAN_ANOM_SUN_DEG})) + 4 * ${ECCENT_EARTH_ORBIT} * ${VAR_Y} * sin(rad(${GEOM_MEAN_ANOM_SUN_DEG})) * cos(2 * rad(${GEOM_MEAN_LONG_SUN_DEG})) - 0.5 * ${VAR_Y} * ${VAR_Y} * sin(4 * rad(${GEOM_MEAN_LONG_SUN_DEG})) - 1.25 * ${ECCENT_EARTH_ORBIT} * ${ECCENT_EARTH_ORBIT} * sin(2 * rad(${GEOM_MEAN_ANOM_SUN_DEG})))
+    </Item>
+    <Item name="${HA_SUNRISE_DEG}">
+        deg(acos(cos(rad(90.833)) / (cos(rad(${LATITUDE})) * cos(rad(${SUN_DECLIN_DEG}))) - tan(rad(${LATITUDE})) * tan(rad(${SUN_DECLIN_DEG}))))
+    </Item>
+    <!-- Returns the time of high noon from 0.0 to 1.0 as a percent of the day. Wrapped, since ${LOCAL_OFFSET} may be a day off. -->
+    <Item name="${SOLAR_NOON_LST}">
+        ((((720 - 4 * ${LONGITUDE} - ${EQ_OF_TIME_MINUTES} + ${LOCAL_OFFSET} * 60) / 1440) % 1) + 1) % 1
+    </Item>
+    <!-- Returns the sunrise time from 0.0 to 1.0 as a percent of the day. -->
+    <Item name="${SUNRISE_TIME_LST}">
+        ${SOLAR_NOON_LST} - ${HA_SUNRISE_DEG} * 4 / 1440
+    </Item>
+    <!-- Returns the sunset time from 0.0 to 1.0 as a percent of the day. -->
+    <Item name="${SUNSET_TIME_LST}">
+        ${SOLAR_NOON_LST} + ${HA_SUNRISE_DEG} * 4 / 1440
+    </Item>
+    <!-- Returns the sunrise time in millis since 12:00am. Assumes we are currently in sunrise. -->
+    <Item name="${SUNRISE_MILLIS_SINCE_MIDNIGHT}">
+        86400000 * ${SUNRISE_TIME_LST}
+    </Item>
+    <!-- Returns the sunset time in millis since 12:00am. Assumes we are currently in sunset. -->
+    <Item name="${SUNSET_MILLIS_SINCE_MIDNIGHT}">
+        86400000 * ${SUNSET_TIME_LST}
+    </Item>
+
+    <!-- Returns the time in millis until exactly sunrise. -->
+    <Item name="${MILLIS_UNTIL_SUNRISE}">
+        ${SUNRISE_MILLIS_SINCE_MIDNIGHT} - ${CURRENT_MILLIS_SINCE_MIDNIGHT}
+    </Item>
+    <!-- Returns the time in millis since exactly sunrise. -->
+    <Item name="${MILLIS_SINCE_SUNRISE}">
+        ${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+    </Item>
+    <!-- Returns the time in millis until exactly sunset. -->
+    <Item name="${MILLIS_UNTIL_SUNSET}">
+        ${SUNSET_MILLIS_SINCE_MIDNIGHT} - ${CURRENT_MILLIS_SINCE_MIDNIGHT}
+    </Item>
+    <!-- Returns the time in millis since exactly sunset. -->
+    <Item name="${MILLIS_SINCE_SUNSET}">
+        ${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+    </Item>
+    <!-- Returns the length of day in millis. -->
+    <Item name="${DAY_LENGTH_MILLIS}">
+        ${SUNSET_MILLIS_SINCE_MIDNIGHT} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+    </Item>
+    <!-- Returns the length of night in millis. -->
+    <Item name="${NIGHT_LENGTH_MILLIS}">
+        ${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 86400000 - ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+    </Item>
+    <Item name="${PERCENT_OF_DAY}">
+        (${IS_TRANSITIONING_OVER_DAY}) ?
+            ((${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}) / ${DAY_LENGTH_MILLIS}) :
+            (${CURRENT_MILLIS_SINCE_MIDNIGHT} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}) ?
+                (${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS} :
+                (${CURRENT_MILLIS_SINCE_MIDNIGHT} + 86400000 - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS}
+    </Item>
+    <!--
+        [MOON_PHASE_TYPE]
+        0 - NEW_MOON
+        1 - WAXING_CRESCENT_MOON
+        2 - FIRST_QUARTER_MOON
+        3 - WAXING_GIBBOUS_MOON
+        4 - FULL_MOON
+        5 - WANING_GIBBOUS_MOON
+        6 - THIRD_QUARTER_MOON
+        7 - WANING_CRESCENT_MOON
+    -->
+    <Item name="${IS_MOON_NEW}">[MOON_PHASE_TYPE]==0</Item>
+    <Item name="${IS_MOON_WAXING_CRESCENT}">[MOON_PHASE_TYPE]==1</Item>
+    <Item name="${IS_MOON_FIRST_QUARTER}">[MOON_PHASE_TYPE]==2</Item>
+    <Item name="${IS_MOON_WAXING_GIBBOUS}">[MOON_PHASE_TYPE]==3</Item>
+    <Item name="${IS_MOON_FULL}">[MOON_PHASE_TYPE]==4</Item>
+    <Item name="${IS_MOON_WANING_GIBBOUS}">[MOON_PHASE_TYPE]==5</Item>
+    <Item name="${IS_MOON_THIRD_QUARTER}">[MOON_PHASE_TYPE]==6</Item>
+    <Item name="${IS_MOON_WANING_CRESCENT}">[MOON_PHASE_TYPE]==7</Item>
+    <!--
+        [WEATHER.CONDITION]
+        0 - UNKNOWN_VALUE
+        1 - CLEAR
+        2 - CLOUDY
+        3 - FOG
+        4 - HEAVY_RAIN
+        5 - HEAVY_SNOW
+        6 - RAIN
+        7 - SNOW
+        8 - SUNNY
+        9 - THUNDERSTORM
+        10 - SLEET
+        11 - LIGHT_SNOW
+        12 - LIGHT_RAIN
+        13 - MIST
+        14 - PARTLY_CLOUDY
+        15 - WINDY
+    -->
+    <Item name="${IS_WEATHER_CLEAR}">
+        <![CDATA[
+            ![WEATHER.IS_AVAILABLE]
+            || ([WEATHER.IS_AVAILABLE]
+                && ([WEATHER.CONDITION]==0
+                || [WEATHER.CONDITION]==1
+                || [WEATHER.CONDITION]==8
+                || [WEATHER.CONDITION]==15))
+        ]]>
+    </Item>
+    <Item name="${IS_WEATHER_CLOUDY}">
+        <![CDATA[
+            [WEATHER.IS_AVAILABLE]
+                && ([WEATHER.CONDITION]==2
+                || [WEATHER.CONDITION]==3
+                || [WEATHER.CONDITION]==13
+                || [WEATHER.CONDITION]==14)
+        ]]>
+    </Item>
+    <Item name="${IS_WEATHER_RAINY}">
+        <![CDATA[
+            [WEATHER.IS_AVAILABLE]
+                && ([WEATHER.CONDITION]==4
+                || [WEATHER.CONDITION]==6
+                || [WEATHER.CONDITION]==9
+                || [WEATHER.CONDITION]==12)
+        ]]>
+    </Item>
+    <Item name="${IS_WEATHER_SNOWY}">
+        <![CDATA[
+            [WEATHER.IS_AVAILABLE]
+                && ([WEATHER.CONDITION]==5
+                || [WEATHER.CONDITION]==7
+                || [WEATHER.CONDITION]==10
+                || [WEATHER.CONDITION]==11)
+        ]]>
+    </Item>
+</ItemList>
