@@ -1,5 +1,25 @@
-<ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY SHORT_TEXT LONG_TEXT RANGED_VALUE MONOCHROMATIC_IMAGE SMALL_IMAGE">
+<!--
+    A complication that sits behind the rest of the watch face.
+
+    A background slot is the whole face, so the types worth offering are the ones that carry a
+    picture. PHOTO_IMAGE is the type made for it - Wear describes it as "expected to be large enough
+    to fill the watch face" - and it is the only type here that fills the slot; the other two are
+    badges, drawn centered with a ring around them so there is something to aim at.
+
+    A photograph is deliberately absent from ambient mode: hours of a lit photograph is what burn-in
+    is made of, and Wear recommends against it.
+-->
+<ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY PHOTO_IMAGE SMALL_IMAGE MONOCHROMATIC_IMAGE">
     <BoundingOval x="0" y="0" width="${WIDTH}" height="${HEIGHT}" outlinePadding="2" />
+    ${DEFAULT_PROVIDER_POLICY}
+
+    <Complication type="EMPTY">
+    </Complication>
+
+    <Complication type="PHOTO_IMAGE">
+        <com.xlythe.ComplicationImage source="PHOTO_IMAGE" area="full" />
+    </Complication>
+
     <Complication type="MONOCHROMATIC_IMAGE">
         <Group name="monochromatic_oval" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
             <PartDraw x="0" y="0" width="${WIDTH}" height="${HEIGHT}" alpha="0">
@@ -15,37 +35,10 @@
                 </Arc>
             </PartDraw>
         </Group>
-        <Condition>
-            <Expressions>
-                <Expression name="monochromatic_ambientImage">
-                    <![CDATA[
-                        [COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] != null
-                    ]]>
-                </Expression>
-                <Expression name="monochromatic_noAmbientImage">
-                    <![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT] == null]]>
-                </Expression>
-            </Expressions>
-            <Compare expression="monochromatic_ambientImage">
-                <PartImage x="${ICON_X}" y="${ICON_Y}" width="${ICON_SIZE}" height="${ICON_SIZE}" tintColor="${AMBIENT_COLOR}" alpha="0">
-                    <Variant mode="AMBIENT" target="alpha" value="255" />
-                    <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]" />
-                </PartImage>
-                <PartImage x="${ICON_X}" y="${ICON_Y}" width="${ICON_SIZE}" height="${ICON_SIZE}" tintColor="${COLOR}" alpha="255">
-                    <Variant mode="AMBIENT" target="alpha" value="0" />
-                    <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
-                </PartImage>
-            </Compare>
-            <Compare expression="monochromatic_noAmbientImage">
-                <PartImage x="${ICON_X}" y="${ICON_Y}" width="${ICON_SIZE}" height="${ICON_SIZE}" tintColor="${AMBIENT_COLOR}" alpha="0">
-                    <Variant mode="AMBIENT" target="alpha" value="255" />
-                    <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
-                </PartImage>
-                <PartImage x="${ICON_X}" y="${ICON_Y}" width="${ICON_SIZE}" height="${ICON_SIZE}" tintColor="${COLOR}" alpha="255">
-                    <Variant mode="AMBIENT" target="alpha" value="0" />
-                    <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
-                </PartImage>
-            </Compare>
-        </Condition>
+        <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
+    </Complication>
+
+    <Complication type="SMALL_IMAGE">
+        <com.xlythe.ComplicationImage source="SMALL_IMAGE" area="icon" />
     </Complication>
 </ComplicationSlot>

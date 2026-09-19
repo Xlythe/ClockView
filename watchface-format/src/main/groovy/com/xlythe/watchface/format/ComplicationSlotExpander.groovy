@@ -1,26 +1,63 @@
 package com.xlythe.watchface.format
 
 /**
- * Replaces {@code <com.xlythe.ComplicationSlot>} tags with full Watch Face Format
- * {@code <ComplicationSlot>} layouts, mirroring ClockView's {@code ComplicationView}.
+ * Replaces the {@code com.xlythe.*} complication tags with full Watch Face Format layouts,
+ * mirroring ClockView's {@code ComplicationView}.
  *
  * <pre>
  * &lt;com.xlythe.ComplicationSlot slotId="1" x="200" y="200" width="160" height="160"
  *     type="chip" complicationDrawableStyle="line" color="#FFFFFFFF" ambientColor="#FFFFFFFF" /&gt;
  * </pre>
  *
- * {@code type} is {@code chip} or {@code background}; {@code complicationDrawableStyle} is
- * {@code fill}, {@code line}, {@code dot} or {@code empty}. {@code color} and {@code ambientColor}
- * are optional and accept any WFF color, including configuration references such as
+ * {@code type} names a layout - {@code chip} and {@code background} are bundled, and
+ * {@code complicationTemplates} adds more; {@code complicationDrawableStyle} is {@code fill},
+ * {@code line}, {@code dot} or {@code empty}. {@code color} and {@code ambientColor} are optional
+ * and accept any WFF color, including configuration references such as
  * {@code [CONFIGURATION.themeColor.1]}.
+ *
+ * <p>{@code contentColor} and {@code ambientContentColor} colour what goes inside the ring, and
+ * default to the ring's own colour. A slot drawn {@code fill} wants them set to something that
+ * reads against the disc, since otherwise the text is the colour of what is behind it.
+ *
+ * <p>A layout is written in terms of three smaller tags. Each knows the slot it sits in, so a
+ * layout names a role rather than repeating geometry, and each expands to both an ambient and a
+ * full-res rendering, so a layout never says the same thing twice:
+ *
+ * <pre>
+ * &lt;com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="large" /&gt;
+ * &lt;com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" /&gt;
+ * &lt;com.xlythe.ComplicationArc kind="ranged" /&gt;
+ * </pre>
+ *
+ * See {@link #areas} for the areas a layout may ask for and {@link #fontSize} for the scales.
+ *
+ * <p>Watch Face Format grew over five versions and a bundle is validated against one of them, so
+ * the tags emit what the version in hand allows: a weighted stroke and the provider's own colors
+ * from 2, text that shrinks to fit rather than ellipsing from 3.
  */
 final class ComplicationSlotExpander {
     static final String TAG = 'com.xlythe.ComplicationSlot'
+    static final String TEXT_TAG = 'com.xlythe.ComplicationText'
+    static final String IMAGE_TAG = 'com.xlythe.ComplicationImage'
+    static final String ARC_TAG = 'com.xlythe.ComplicationArc'
 
-    /** GOAL_PROGRESS and WEIGHTED_ELEMENTS arrived in Watch Face Format 2. */
-    private static final int GOAL_PROGRESS_FORMAT_VERSION = 2
+    /** GOAL_PROGRESS, WEIGHTED_ELEMENTS and {@code <WeightedStroke>} arrived in format 2. */
+    private static final int WEIGHTED_FORMAT_VERSION = 2
+
+    /** Text that shrinks to fit its box, rather than ellipsing, arrived in format 3. */
+    private static final int AUTO_SIZE_FORMAT_VERSION = 3
+
+    /** Below this, a font size is too small to read on a watch. Also WFF's own autosize floor. */
+    private static final int MIN_FONT_SIZE = 12
 
     private int formatVersion = 1
+
+    /** The slot whose layout is being expanded, for the tags nested inside it. */
+    private Geometry geometry
+    private String color
+    private String ambientColor
+    private String contentColor
+    private String ambientContentColor
 
     private final Map<String, String> templates
     private final String defaultColor
@@ -35,7 +72,7 @@ final class ComplicationSlotExpander {
         this.defaultAmbientColor = defaultAmbientColor
     }
 
-    /** @param formatVersion gates the complication types the output may name. */
+    /** @param formatVersion gates the complication types and elements the output may name. */
     Node expand(Node root, int formatVersion) {
         this.formatVersion = formatVersion
         return (Node) replaceCustomTags(root)
@@ -46,8 +83,11 @@ final class ComplicationSlotExpander {
             return node
         }
         Node element = (Node) node
-        if (element.name() == TAG) {
-            return expandSlot(element)
+        switch (element.name()) {
+            case TAG: return expandSlot(element)
+            case TEXT_TAG: return expandText(element)
+            case IMAGE_TAG: return expandImage(element)
+            case ARC_TAG: return expandArc(element)
         }
 
         List<Object> newChildren = element.children().collect { replaceCustomTags(it) }
@@ -73,55 +113,22 @@ final class ComplicationSlotExpander {
         def width = node.attribute('width')
         def height = node.attribute('height')
         def drawableStyle = node.attribute('complicationDrawableStyle') // One of fill, line, dot, or empty
-        String color = node.attribute('color') ?: defaultColor
-        String ambientColor = node.attribute('ambientColor') ?: defaultAmbientColor
         if (slotId == null || x == null || y == null || width == null || height == null) {
             throw new IllegalArgumentException(
                     "${TAG} requires slotId, x, y, width and height, but was ${node.attributes()}")
         }
 
-        int w = width.toString().toInteger()
-        int h = height.toString().toInteger()
-        boolean isHorizontal = w > h
-
-        // Layout math intentionally uses Groovy's decimal division before truncating, matching the
-        // original build script so existing watch faces render identically.
-        int padH = isHorizontal ? (int) (h / 2) : (int) (h / 6)
-        int padV = (int) (h / 6)
-
-        int iconSize = (int) (h * (isHorizontal ? 0.6f : 0.33f))
-        int iconPadding = (int) ((h - iconSize) / 2)
-
-        // Single pane icon
-        int iconXSingle = isHorizontal ? iconPadding : (int) (w / 2 - iconSize / 2)
-        int iconYSingle = isHorizontal ? (int) (h / 2 - iconSize / 2) : (int) (h / 2 - iconSize / 2)
-
-        // Split pane icon (icon_text, icon_title)
-        int iconXSplit = isHorizontal ? iconPadding : (int) (w / 2 - iconSize / 2)
-        int iconYSplit = isHorizontal ? (int) (h / 2 - iconSize / 2) : (int) (h / 2 - iconSize)
-
-        // Single pane text / title
-        int textXSingle = padH
-        int textYSingle = padV
-        int textWidthSingle = w - 2 * padH
-        int textHeightSingle = h - 2 * padV
-
-        // Split pane text / title with icon (icon_text, icon_title)
-        int textXSplitIcon = isHorizontal ? (iconSize + 2 * iconPadding) : padH
-        int textYSplitIcon = isHorizontal ? padV : (iconYSplit + iconSize)
-        int textWidthSplitIcon = isHorizontal ? (w - padH - textXSplitIcon) : (w - 2 * padH)
-        int textHeightSplitIcon = isHorizontal ? (h - 2 * padV) : (h - padV - textYSplitIcon)
-
-        // Split pane text_title (no icon)
-        int titleXSplitText = padH
-        int titleYSplitText = padV
-        int titleWidthSplitText = w - 2 * padH
-        int titleHeightSplitText = (int) ((h - 2 * padV) / 2)
-
-        int textXSplitText = padH
-        int textYSplitText = padV + titleHeightSplitText
-        int textWidthSplitText = w - 2 * padH
-        int textHeightSplitText = (h - 2 * padV) - titleHeightSplitText
+        color = node.attribute('color') ?: defaultColor
+        ambientColor = node.attribute('ambientColor') ?: defaultAmbientColor
+        // What goes inside the ring, as opposed to the ring itself. The two are the same unless
+        // the slot is filled, where drawing the text in the color of the disc behind it would
+        // hide it. There is no working the contrast out here: the color may be a configuration
+        // reference, which is a name at build time and a color only on the watch.
+        contentColor = node.attribute('contentColor') ?: color
+        ambientContentColor = node.attribute('ambientContentColor') ?: ambientColor
+        geometry = new Geometry(width.toString().toInteger(), height.toString().toInteger())
+        int w = geometry.w
+        int h = geometry.h
 
         // Arcs only accept a Stroke, so the filled style draws an Ellipse instead.
         String bgShapeAmbient = ''
@@ -159,9 +166,6 @@ final class ComplicationSlotExpander {
 """
         }
 
-        // Background slots: a ring inset by its stroke, with a centered icon.
-        int backgroundIconSize = (int) (Math.min(w, h) * 0.4f)
-
         Map<String, Object> replacements = [
                 '${COMPLICATION_ID}'        : slotId,
                 '${POS_X}'                  : x,
@@ -169,56 +173,52 @@ final class ComplicationSlotExpander {
                 '${WIDTH}'                  : width,
                 '${HEIGHT}'                 : height,
                 '${BACKGROUND_GROUP}'       : bgGroup,
-                // The sweep that makes a ranged value look like one.
-                '${RANGED_VALUE_ARC}'       : progressArc(w, h, width, height, color, ambientColor, rangedFraction()),
-                '${GOAL_PROGRESS_ARC}'      : progressArc(w, h, width, height, color, ambientColor, goalFraction()),
+                '${DEFAULT_PROVIDER_POLICY}': defaultProviderPolicy(node),
                 // Single pane icon E.g. <Compare expression="icon">
-                '${IMG_POS_X_SINGLE}'       : "${iconXSingle}",
-                '${IMG_POS_Y_SINGLE}'       : "${iconYSingle}",
-                '${IMG_WIDTH_SINGLE}'       : "${iconSize}",
-                '${IMG_HEIGHT_SINGLE}'      : "${iconSize}",
+                '${IMG_POS_X_SINGLE}'       : "${geometry.iconXSingle}",
+                '${IMG_POS_Y_SINGLE}'       : "${geometry.iconYSingle}",
+                '${IMG_WIDTH_SINGLE}'       : "${geometry.iconSize}",
+                '${IMG_HEIGHT_SINGLE}'      : "${geometry.iconSize}",
                 // Split pane icon E.g. <Compare expression="icon_text">, <Compare expression="icon_title">
-                '${IMG_POS_X_SPLIT}'        : "${iconXSplit}",
-                '${IMG_POS_Y_SPLIT}'        : "${iconYSplit}",
-                '${IMG_WIDTH_SPLIT}'        : "${iconSize}",
-                '${IMG_HEIGHT_SPLIT}'       : "${iconSize}",
+                '${IMG_POS_X_SPLIT}'        : "${geometry.iconXSplit}",
+                '${IMG_POS_Y_SPLIT}'        : "${geometry.iconYSplit}",
+                '${IMG_WIDTH_SPLIT}'        : "${geometry.iconSize}",
+                '${IMG_HEIGHT_SPLIT}'       : "${geometry.iconSize}",
                 // Single pane text / title E.g. <Compare expression="text">, <Compare expression="title">
-                '${TEXT_POS_X_SINGLE}'      : "${textXSingle}",
-                '${TEXT_POS_Y_SINGLE}'      : "${textYSingle}",
-                '${TEXT_WIDTH_SINGLE}'      : "${textWidthSingle}",
-                '${TEXT_HEIGHT_SINGLE}'     : "${textHeightSingle}",
-                // Split pane text / title with icon E.g. <Compare expression="icon_text">, <Compare expression="icon_title">
-                '${TEXT_POS_X_SPLIT_ICON}'  : "${textXSplitIcon}",
-                '${TEXT_POS_Y_SPLIT_ICON}'  : "${textYSplitIcon}",
-                '${TEXT_WIDTH_SPLIT_ICON}'  : "${textWidthSplitIcon}",
-                '${TEXT_HEIGHT_SPLIT_ICON}' : "${textHeightSplitIcon}",
+                '${TEXT_POS_X_SINGLE}'      : "${geometry.textXSingle}",
+                '${TEXT_POS_Y_SINGLE}'      : "${geometry.textYSingle}",
+                '${TEXT_WIDTH_SINGLE}'      : "${geometry.textWidthSingle}",
+                '${TEXT_HEIGHT_SINGLE}'     : "${geometry.textHeightSingle}",
+                // Split pane text / title with icon E.g. <Compare expression="icon_text">
+                '${TEXT_POS_X_SPLIT_ICON}'  : "${geometry.textXSplitIcon}",
+                '${TEXT_POS_Y_SPLIT_ICON}'  : "${geometry.textYSplitIcon}",
+                '${TEXT_WIDTH_SPLIT_ICON}'  : "${geometry.textWidthSplitIcon}",
+                '${TEXT_HEIGHT_SPLIT_ICON}' : "${geometry.textHeightSplitIcon}",
                 // Split pane text_title (no icon) E.g. <Compare expression="text_title">
-                '${TITLE_POS_X_SPLIT_TEXT}' : "${titleXSplitText}",
-                '${TITLE_POS_Y_SPLIT_TEXT}' : "${titleYSplitText}",
-                '${TITLE_WIDTH_SPLIT_TEXT}' : "${titleWidthSplitText}",
-                '${TITLE_HEIGHT_SPLIT_TEXT}': "${titleHeightSplitText}",
-                '${TEXT_POS_X_SPLIT_TEXT}'  : "${textXSplitText}",
-                '${TEXT_POS_Y_SPLIT_TEXT}'  : "${textYSplitText}",
-                '${TEXT_WIDTH_SPLIT_TEXT}'  : "${textWidthSplitText}",
-                '${TEXT_HEIGHT_SPLIT_TEXT}' : "${textHeightSplitText}",
+                '${TITLE_POS_X_SPLIT_TEXT}' : "${geometry.titleXSplitText}",
+                '${TITLE_POS_Y_SPLIT_TEXT}' : "${geometry.titleYSplitText}",
+                '${TITLE_WIDTH_SPLIT_TEXT}' : "${geometry.titleWidthSplitText}",
+                '${TITLE_HEIGHT_SPLIT_TEXT}': "${geometry.titleHeightSplitText}",
+                '${TEXT_POS_X_SPLIT_TEXT}'  : "${geometry.textXSplitText}",
+                '${TEXT_POS_Y_SPLIT_TEXT}'  : "${geometry.textYSplitText}",
+                '${TEXT_WIDTH_SPLIT_TEXT}'  : "${geometry.textWidthSplitText}",
+                '${TEXT_HEIGHT_SPLIT_TEXT}' : "${geometry.textHeightSplitText}",
                 // Background slot E.g. complication_background.xml
                 '${CENTER_X}'               : "${w / 2}",
                 '${CENTER_Y}'               : "${h / 2}",
                 '${RING_WIDTH}'             : "${w - 4}",
                 '${RING_HEIGHT}'            : "${h - 4}",
-                '${ICON_SIZE}'              : "${backgroundIconSize}",
-                '${ICON_X}'                 : "${(int) ((w - backgroundIconSize) / 2)}",
-                '${ICON_Y}'                 : "${(int) ((h - backgroundIconSize) / 2)}",
+                '${ICON_SIZE}'              : "${geometry.backgroundIconSize}",
+                '${ICON_X}'                 : "${(int) ((w - geometry.backgroundIconSize) / 2)}",
+                '${ICON_Y}'                 : "${(int) ((h - geometry.backgroundIconSize) / 2)}",
         ]
 
         def type = node.attribute('type')
-        String template = withGoalProgress(templates.get(type))
-        if (formatVersion < GOAL_PROGRESS_FORMAT_VERSION && template != null) {
-            template = template.replace(' GOAL_PROGRESS', '')
-        }
+        String template = templates.get(type)
         if (template == null) {
             throw new IllegalArgumentException("Unknown ComplicationSlot type ${type}")
         }
+        template = supportedTypes(template)
 
         String content = template
         replacements.each { String key, Object value -> content = content.replace(key, value.toString()) }
@@ -230,66 +230,310 @@ final class ComplicationSlotExpander {
         return (Node) replaceCustomTags(TemplateProcessor.parse(content))
     }
 
+    /** The providers Wear OS ships, any of which a slot may ask for before the user chooses. */
+    private static final List<String> SYSTEM_PROVIDERS = ['APP_SHORTCUT', 'DATE', 'DAY_OF_WEEK',
+                                                          'DAY_AND_DATE', 'FAVORITE_CONTACT',
+                                                          'NEXT_EVENT', 'STEP_COUNT',
+                                                          'SUNRISE_SUNSET', 'TIME_AND_DATE',
+                                                          'UNREAD_NOTIFICATION_COUNT',
+                                                          'WATCH_BATTERY', 'WORLD_CLOCK', 'EMPTY']
+
+    /** The types that only exist from format 2, and so can only be asked for from format 2. */
+    private static final List<String> WEIGHTED_TYPES = ['GOAL_PROGRESS', 'WEIGHTED_ELEMENTS']
+
     /**
-     * Gives a slot a GOAL_PROGRESS layout by copying its RANGED_VALUE one.
+     * What a slot shows before the user has chosen anything.
      *
-     * <p>The two show the same thing - a number against a bound, an optional icon, text and title
-     * - and differ only in where the bound comes from and in that a goal can be passed. Copying
-     * the block keeps one layout to maintain rather than three hundred lines said twice.
+     * <pre>
+     * &lt;com.xlythe.ComplicationSlot ... defaultProvider="WATCH_BATTERY"
+     *     defaultProviderType="RANGED_VALUE" /&gt;
+     * </pre>
      *
-     * <p>Format 1 has no such complication type, so it gets neither the layout nor the mention of
-     * it in supportedTypes.
+     * <p>A watch face whose slots start empty looks unfinished on the first run, and the user has to
+     * go and find the editor to fix it. Naming a system provider costs nothing and the user can
+     * still change it.
+     *
+     * <p>A type the format version has never heard of cannot be asked for either, so the whole
+     * policy is dropped there and the slot starts empty as it would have anyway.
      */
-    private String withGoalProgress(String template) {
-        if (template == null || !template.contains('<Complication type="RANGED_VALUE">')
-                || formatVersion < GOAL_PROGRESS_FORMAT_VERSION) {
+    private String defaultProviderPolicy(Node node) {
+        String provider = attribute(node, 'defaultProvider')
+        String type = attribute(node, 'defaultProviderType')
+        if (provider == null && type == null) {
+            return ''
+        }
+        if (provider == null || type == null) {
+            throw new IllegalArgumentException("${TAG} ${node.attribute('slotId')} needs both" +
+                    ' defaultProvider and defaultProviderType, or neither')
+        }
+        if (!SYSTEM_PROVIDERS.contains(provider)) {
+            throw new IllegalArgumentException("Unknown defaultProvider '${provider}';" +
+                    " expected one of ${SYSTEM_PROVIDERS.join(', ')}")
+        }
+        if (formatVersion < WEIGHTED_FORMAT_VERSION && WEIGHTED_TYPES.contains(type)) {
+            return ''
+        }
+        return "<DefaultProviderPolicy defaultSystemProvider=\"${provider}\"" +
+                " defaultSystemProviderType=\"${type}\" />"
+    }
+
+    /**
+     * Drops the complication types and their layouts that the format version in hand has never
+     * heard of.
+     *
+     * <p>Google Play validates a bundle against one format version, so naming GOAL_PROGRESS in a
+     * supportedTypes list fails the whole bundle on format 1 rather than being ignored there. The
+     * layout goes with it: a {@code <Complication>} for a type the runtime cannot report is dead
+     * weight in a file the memory footprint check reads.
+     */
+    private String supportedTypes(String template) {
+        if (formatVersion >= WEIGHTED_FORMAT_VERSION) {
             return template
         }
-        int start = template.indexOf('<Complication type="RANGED_VALUE">')
-        int end = template.indexOf('</Complication>', start)
-        if (end < 0) {
-            throw new IllegalArgumentException('A RANGED_VALUE complication was opened and never closed')
+        String stripped = template
+        for (String type : ['GOAL_PROGRESS', 'WEIGHTED_ELEMENTS']) {
+            stripped = stripped.replace(" ${type}", '')
+            int start = stripped.indexOf("<Complication type=\"${type}\">")
+            if (start >= 0) {
+                int end = stripped.indexOf('</Complication>', start)
+                if (end < 0) {
+                    throw new IllegalArgumentException(
+                            "A ${type} complication was opened and never closed")
+                }
+                stripped = stripped.substring(0, start) + stripped.substring(end + '</Complication>'.length())
+            }
         }
-        end += '</Complication>'.length()
-        String goal = template.substring(start, end)
-                .replace('<Complication type="RANGED_VALUE">', '<Complication type="GOAL_PROGRESS">')
-                .replace('${RANGED_VALUE_ARC}', '${GOAL_PROGRESS_ARC}')
-        return template.substring(0, end) + System.lineSeparator() + goal + template.substring(end)
-    }
-
-    private static String arc(int w, int h, Object width, Object height, String stroke) {
-        return "<Arc startAngle=\"0\" endAngle=\"360\" centerX=\"${w / 2}\" centerY=\"${h / 2}\" width=\"${width}\" height=\"${height}\">${stroke}</Arc>"
+        return stripped
     }
 
     /**
-     * The sweep that shows how far along a ranged value or a goal is.
+     * Draws one of the complication's strings.
      *
-     * <p>Drawn over the slot's own ring, so the ring reads as the track and this as what has been
-     * filled. It starts at twelve o'clock, which is where Watch Face Format puts zero degrees,
-     * and goes clockwise.
+     * <pre>
+     * &lt;com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value"
+     *     scale="large" weight="MEDIUM" maxLines="1" dim="false" /&gt;
+     * </pre>
      *
-     * <p>endAngle takes a number rather than an expression, so the sweep is applied with a
-     * Transform - which is the only reason an Arc accepts one.
-     *
-     * @param fraction an expression between 0 and 1, already clamped.
+     * <p>Only {@code expression} and {@code area} are required. {@code dim} holds a label back from
+     * the value it belongs to; it does that with alpha rather than a paler color, because the color
+     * may be a configuration reference the build cannot see into.
      */
-    private static String progressArc(int w, int h, Object width, Object height, String color,
-                                      String ambientColor, String fraction) {
-        String geometry = "centerX=\"${w / 2}\" centerY=\"${h / 2}\" width=\"${width}\" height=\"${height}\""
+    private Node expandText(Node node) {
+        String expression = required(node, 'expression')
+        int[] area = area(node)
+        int size = fontSize(node, 'medium')
+        String weight = attribute(node, 'weight') ?: 'NORMAL'
+        String maxLines = attribute(node, 'maxLines') ?: '1'
+        int alpha = 'true' == attribute(node, 'dim') ? 170 : 255
+
+        String box = "x=\"${area[0]}\" y=\"${area[1]}\" width=\"${area[2]}\" height=\"${area[3]}\""
+        // Text fits its box by shrinking where the runtime can, and by ellipsing where it cannot.
+        String fit = formatVersion >= AUTO_SIZE_FORMAT_VERSION
+                ? "ellipsis=\"TRUE\" maxLines=\"${maxLines}\" isAutoSize=\"TRUE\""
+                : "ellipsis=\"TRUE\" maxLines=\"${maxLines}\""
+        Closure<String> part = { String textColor, int shown, int inAmbient ->
+            """<PartText ${box} alpha="${shown}">
+                    <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
+                    <Localization calendar="GREGORIAN" />
+                    <Text ${fit}>
+                        <Font family="SYNC_TO_DEVICE" size="${size}" weight="${weight}" color="${textColor}">
+                            <Template>%s<Parameter expression="${escapeAttribute(expression)}" /></Template>
+                        </Font>
+                    </Text>
+                </PartText>"""
+        }
+
+        // One rendering does for both modes when the two colors agree, which is the common case.
+        String parts = contentColor == ambientContentColor
+                ? part(contentColor, alpha, alpha)
+                : part(ambientContentColor, 0, alpha) + part(contentColor, alpha, 0)
+        return parse("""<Group name="Text" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${parts}
+            </Group>""")
+    }
+
+    /**
+     * Draws one of the complication's images.
+     *
+     * <pre>
+     * &lt;com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" /&gt;
+     * </pre>
+     *
+     * <p>{@code source} is {@code MONOCHROMATIC_IMAGE}, {@code SMALL_IMAGE} or
+     * {@code PHOTO_IMAGE}. A monochromatic image is a single-color glyph the watch face is expected
+     * to tint; the other two carry their own color and are left alone.
+     *
+     * <p>Each source has an {@code _AMBIENT} companion that a provider may or may not supply, so
+     * ambient falls back to the full-res image rather than going blank.
+     */
+    private Node expandImage(Node node) {
+        String source = required(node, 'source')
+        int[] area = area(node)
+        String box = "x=\"${area[0]}\" y=\"${area[1]}\" width=\"${area[2]}\" height=\"${area[3]}\""
+        // PHOTO_IMAGE has no ambient companion: it is a photograph, and ambient is not the place
+        // for one. The slot simply shows nothing there.
+        boolean hasAmbient = source != 'PHOTO_IMAGE'
+        String tint = source == 'MONOCHROMATIC_IMAGE' ? " tintColor=\"${contentColor}\"" : ''
+        String ambientTint = source == 'MONOCHROMATIC_IMAGE' ? " tintColor=\"${ambientContentColor}\"" : ''
+
+        String fullRes = """<PartImage ${box}${tint} alpha="255">
+                    <Variant mode="AMBIENT" target="alpha" value="0" />
+                    <Image resource="[COMPLICATION.${source}]" />
+                </PartImage>"""
+        if (!hasAmbient) {
+            return parse("""<Group name="Image" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${fullRes}
+            </Group>""")
+        }
+        String ambient = """<Condition>
+                    <Expressions>
+                        <Expression name="has_ambient">[COMPLICATION.${source}_AMBIENT] != null</Expression>
+                    </Expressions>
+                    <Compare expression="has_ambient">
+                        <PartImage ${box}${ambientTint} alpha="0">
+                            <Variant mode="AMBIENT" target="alpha" value="255" />
+                            <Image resource="[COMPLICATION.${source}_AMBIENT]" />
+                        </PartImage>
+                    </Compare>
+                    <Default>
+                        <PartImage ${box}${ambientTint} alpha="0">
+                            <Variant mode="AMBIENT" target="alpha" value="255" />
+                            <Image resource="[COMPLICATION.${source}]" />
+                        </PartImage>
+                    </Default>
+                </Condition>"""
+        return parse("""<Group name="Image" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${ambient}
+                ${fullRes}
+            </Group>""")
+    }
+
+    /**
+     * Draws the ring that makes a number mean something.
+     *
+     * <pre>
+     * &lt;com.xlythe.ComplicationArc kind="ranged" /&gt;
+     * </pre>
+     *
+     * <p>{@code kind} is {@code ranged}, {@code goal} or {@code weighted}. All three draw over the
+     * slot's own ring, so that ring reads as the track and this as what has been filled.
+     */
+    private Node expandArc(Node node) {
+        String kind = required(node, 'kind')
+        switch (kind) {
+            case 'ranged': return parse(progressRing('RANGED_VALUE', rangedFraction(), 0))
+            case 'goal': return parse(goalRings())
+            case 'weighted': return parse(weightedRing())
+            default: throw new IllegalArgumentException(
+                    "Unknown ${ARC_TAG} kind '${kind}'; expected ranged, goal or weighted")
+        }
+    }
+
+    /**
+     * A sweep from twelve o'clock, which is where Watch Face Format puts zero degrees, clockwise to
+     * the fraction given.
+     *
+     * <p>endAngle takes a number rather than an expression - which is the only reason an Arc
+     * accepts a Transform at all - so the sweep is applied as one.
+     *
+     * <p>From format 2 the full-res sweep takes the provider's own colors when it offers any: a
+     * battery complication knows better than we do that it should turn red. Ambient stays one flat
+     * color, because a screen held lit for hours is the wrong place to ask for a gradient.
+     *
+     * @param type the complication type, naming its {@code _COLORS} sources.
+     * @param fraction an expression between 0 and 1, already clamped.
+     * @param inset how far inside the slot's edge to draw, for a ring that sits under another.
+     */
+    private String progressRing(String type, String fraction, int inset) {
+        int thickness = inset > 0 ? 4 : 8
+        String geometryAttributes = "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
+                " width=\"${geometry.w - 2 * inset}\" height=\"${geometry.h - 2 * inset}\""
         String sweep = "<Transform target=\"endAngle\" value=\"360 * (${fraction})\" />"
-        return """<Group name="Progress" x="0" y="0" width="${width}" height="${height}">
-                <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="0">
-                    <Variant mode="AMBIENT" target="alpha" value="255" />
-                    <Arc startAngle="0" endAngle="0" ${geometry}>
+        Closure<String> ring = { String stroke, int shown, int inAmbient ->
+            """<PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="${shown}">
+                    <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
+                    <Arc startAngle="0" endAngle="0" ${geometryAttributes}>
                         ${sweep}
-                        <Stroke color="${ambientColor}" cap="ROUND" thickness="8" />
+                        ${stroke}
+                    </Arc>
+                </PartDraw>"""
+        }
+        Closure<String> flat = { String c -> "<Stroke color=\"${c}\" cap=\"ROUND\" thickness=\"${thickness}\" />" }
+        String fullRes = ring(flat(color), 255, 0)
+        if (formatVersion >= WEIGHTED_FORMAT_VERSION) {
+            String weighted = "<WeightedStroke colors=\"[COMPLICATION.${type}_COLORS]\"" +
+                    " interpolate=\"[COMPLICATION.${type}_COLORS_INTERPOLATE]\"" +
+                    " cap=\"ROUND\" thickness=\"${thickness}\" />"
+            fullRes = """<Condition>
+                    <Expressions>
+                        <Expression name="provider_colors">[COMPLICATION.${type}_COLORS] != null</Expression>
+                    </Expressions>
+                    <Compare expression="provider_colors">
+                        ${ring(weighted, 255, 0)}
+                    </Compare>
+                    <Default>
+                        ${fullRes}
+                    </Default>
+                </Condition>"""
+        }
+        return """<Group name="Progress" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${ring(flat(ambientColor), 0, 255)}
+                ${fullRes}
+            </Group>"""
+    }
+
+    /**
+     * A goal is allowed to be passed - that is rather the point of one - and a ring has nowhere to
+     * put more than a full turn. So the outer ring fills and stops, and a second, thinner ring
+     * inside it carries however far past the goal the value has gone.
+     */
+    private String goalRings() {
+        String overshoot = 'clamp([COMPLICATION.GOAL_PROGRESS_VALUE]' +
+                ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE] - 1, 0, 1)'
+        return """<Group name="Goal" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${progressRing('GOAL_PROGRESS', goalFraction(), 0)}
+                ${progressRing('GOAL_PROGRESS', overshoot, geometry.overshootInset)}
+            </Group>"""
+    }
+
+    /**
+     * One ring divided into the provider's elements, each taking the share of the turn its weight
+     * asks for.
+     *
+     * <p>A weighted stroke does the dividing, so the whole donut is one Arc. The gap between
+     * segments is what makes them read as separate elements rather than one multicolored ring; a
+     * butt cap keeps each segment inside the share it was given.
+     *
+     * <p>The provider may also name a color for the part of the ring nothing accounts for, which is
+     * drawn underneath - a full turn, since the segments cover whatever they cover.
+     */
+    private String weightedRing() {
+        String geometryAttributes = "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
+                " width=\"${geometry.w}\" height=\"${geometry.h}\""
+        return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
+                    <Variant mode="AMBIENT" target="alpha" value="255" />
+                    <Arc startAngle="0" endAngle="360" ${geometryAttributes}>
+                        <Stroke color="${ambientColor}" cap="BUTT" thickness="8" />
                     </Arc>
                 </PartDraw>
-                <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="255">
+                <Condition>
+                    <Expressions>
+                        <Expression name="has_background">[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR] != null</Expression>
+                    </Expressions>
+                    <Compare expression="has_background">
+                        <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
+                            <Variant mode="AMBIENT" target="alpha" value="0" />
+                            <Arc startAngle="0" endAngle="360" ${geometryAttributes}>
+                                <Stroke color="[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR]" cap="BUTT" thickness="8" />
+                            </Arc>
+                        </PartDraw>
+                    </Compare>
+                </Condition>
+                <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
-                    <Arc startAngle="0" endAngle="0" ${geometry}>
-                        ${sweep}
-                        <Stroke color="${color}" cap="ROUND" thickness="8" />
+                    <Arc startAngle="0" endAngle="360" ${geometryAttributes}>
+                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" discreteGap="8" cap="BUTT" thickness="8" />
                     </Arc>
                 </PartDraw>
             </Group>"""
@@ -301,12 +545,186 @@ final class ComplicationSlotExpander {
                 ' / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1)'
     }
 
-    /**
-     * How much of the goal is done, as 0 to 1. A goal can be passed - that is rather the point of
-     * one - and the ring has nowhere to put more than a full turn, so it stops at the top.
-     */
+    /** How much of the goal is done, as 0 to 1. Past the goal it stops at the top. */
     private static String goalFraction() {
         return 'clamp([COMPLICATION.GOAL_PROGRESS_VALUE]' +
                 ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1)'
+    }
+
+    private static String arc(int w, int h, Object width, Object height, String stroke) {
+        return "<Arc startAngle=\"0\" endAngle=\"360\" centerX=\"${w / 2}\" centerY=\"${h / 2}\" width=\"${width}\" height=\"${height}\">${stroke}</Arc>"
+    }
+
+    private Node parse(String xml) {
+        return (Node) replaceCustomTags(TemplateProcessor.parse(xml))
+    }
+
+    /**
+     * A tag's attributes arrive unescaped, having already been through a parser, and go back into
+     * XML text here. An expression that names a string - {@code numberFormat("#%", ...)} - carries
+     * the quotes that would otherwise close the attribute early.
+     */
+    private static String escapeAttribute(String text) {
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                .replace('"', '&quot;')
+    }
+
+    private static String attribute(Node node, String name) {
+        def value = node.attribute(name)
+        return value == null ? null : value.toString()
+    }
+
+    private static String required(Node node, String name) {
+        String value = attribute(node, name)
+        if (value == null) {
+            throw new IllegalArgumentException(
+                    "<${node.name()}> requires ${name}, but was ${node.attributes()}")
+        }
+        return value
+    }
+
+    /**
+     * Where in the slot an element goes.
+     *
+     * <p>A slot is wider than it is tall or it is not, and that decides whether an icon sits beside
+     * what it labels or above it. The areas are named for the role rather than the arrangement, so
+     * one layout serves both shapes:
+     *
+     * <ul>
+     *   <li>{@code full} - the whole slot.
+     *   <li>{@code photo} - the largest square that fits inside a round slot.
+     *   <li>{@code icon} - an icon on its own, centered.
+     *   <li>{@code glyph} - an icon on its own and larger, for a slot showing nothing else.
+     *   <li>{@code icon_beside} - an icon paired with {@code text_beside}.
+     *   <li>{@code text} - a line on its own, centered.
+     *   <li>{@code text_beside} - a line paired with {@code icon_beside}.
+     *   <li>{@code value} and {@code label} - two lines, the value above the label.
+     *   <li>{@code header} and {@code body} - a heading over a paragraph.
+     * </ul>
+     */
+    private int[] area(Node node) {
+        String name = required(node, 'area')
+        int[] rect = geometry.areas()[name]
+        if (rect == null) {
+            throw new IllegalArgumentException("Unknown ${node.name()} area '${name}';" +
+                    " expected one of ${geometry.areas().keySet().join(', ')}")
+        }
+        return rect
+    }
+
+    /**
+     * How big to set the type, as a share of the slot's shorter side.
+     *
+     * <p>The shorter side rather than the area, because two areas of the same height can want very
+     * different sizes - a value with a label under it and a value on its own both sit in half the
+     * slot - and because it is the diameter of the ring the text has to live inside.
+     */
+    private int fontSize(Node node, String fallback) {
+        String scale = attribute(node, 'scale') ?: fallback
+        Double factor = ['large': 0.30d, 'medium': 0.23d, 'small': 0.16d, 'tiny': 0.13d][scale]
+        if (factor == null) {
+            throw new IllegalArgumentException("Unknown ${node.name()} scale '${scale}';" +
+                    ' expected large, medium, small or tiny')
+        }
+        return Math.max(MIN_FONT_SIZE, (int) Math.round(Math.min(geometry.w, geometry.h) * factor))
+    }
+
+    /**
+     * The slot's measurements.
+     *
+     * <p>The arithmetic uses Groovy's decimal division before truncating, matching the build script
+     * these layouts came from so that existing watch faces render identically.
+     */
+    private static class Geometry {
+        final int w
+        final int h
+        final boolean isHorizontal
+        final int padH
+        final int padV
+        final int iconSize
+        final int iconPadding
+        final int iconXSingle, iconYSingle
+        final int iconXSplit, iconYSplit
+        final int textXSingle, textYSingle, textWidthSingle, textHeightSingle
+        final int textXSplitIcon, textYSplitIcon, textWidthSplitIcon, textHeightSplitIcon
+        final int titleXSplitText, titleYSplitText, titleWidthSplitText, titleHeightSplitText
+        final int textXSplitText, textYSplitText, textWidthSplitText, textHeightSplitText
+        final int backgroundIconSize
+        final int glyphSize
+        final int overshootInset
+
+        Geometry(int w, int h) {
+            this.w = w
+            this.h = h
+            isHorizontal = w > h
+            padH = isHorizontal ? (int) (h / 2) : (int) (h / 6)
+            padV = (int) (h / 6)
+
+            iconSize = (int) (h * (isHorizontal ? 0.6f : 0.33f))
+            iconPadding = (int) ((h - iconSize) / 2)
+
+            iconXSingle = isHorizontal ? iconPadding : (int) (w / 2 - iconSize / 2)
+            iconYSingle = (int) (h / 2 - iconSize / 2)
+
+            iconXSplit = isHorizontal ? iconPadding : (int) (w / 2 - iconSize / 2)
+            iconYSplit = isHorizontal ? (int) (h / 2 - iconSize / 2) : (int) (h / 2 - iconSize)
+
+            textXSingle = padH
+            textYSingle = padV
+            textWidthSingle = w - 2 * padH
+            textHeightSingle = h - 2 * padV
+
+            textXSplitIcon = isHorizontal ? (iconSize + 2 * iconPadding) : padH
+            textYSplitIcon = isHorizontal ? padV : (iconYSplit + iconSize)
+            textWidthSplitIcon = isHorizontal ? (w - padH - textXSplitIcon) : (w - 2 * padH)
+            textHeightSplitIcon = isHorizontal ? (h - 2 * padV) : (h - padV - textYSplitIcon)
+
+            titleXSplitText = padH
+            titleYSplitText = padV
+            titleWidthSplitText = w - 2 * padH
+            titleHeightSplitText = (int) ((h - 2 * padV) / 2)
+
+            textXSplitText = padH
+            textYSplitText = padV + titleHeightSplitText
+            textWidthSplitText = w - 2 * padH
+            textHeightSplitText = (h - 2 * padV) - titleHeightSplitText
+
+            backgroundIconSize = (int) (Math.min(w, h) * 0.4f)
+            // An image with nothing to share the slot with can be half again as big as one that
+            // has, and still clear the ring.
+            glyphSize = (int) (Math.min(w, h) * 0.5f)
+            // Far enough inside the outer ring for the two to read as two rings.
+            overshootInset = Math.max(8, (int) (Math.min(w, h) * 0.09f))
+        }
+
+        Map<String, int[]> areas() {
+            return [
+                    'full'       : [0, 0, w, h] as int[],
+                    // The largest square inside a round slot, for an image meant to fill one.
+                    // Watch Face Format cannot clip, so the square is inscribed rather than
+                    // cropped: a photo pushed out to the edges would have its corners hanging
+                    // outside the ring.
+                    'photo'      : [(int) (w * 0.1465f), (int) (h * 0.1465f),
+                                    (int) (w * 0.707f), (int) (h * 0.707f)] as int[],
+                    'icon'       : [iconXSingle, iconYSingle, iconSize, iconSize] as int[],
+                    'glyph'      : [(int) ((w - glyphSize) / 2), (int) ((h - glyphSize) / 2),
+                                    glyphSize, glyphSize] as int[],
+                    'icon_beside': [iconXSplit, iconYSplit, iconSize, iconSize] as int[],
+                    'text'       : [textXSingle, textYSingle, textWidthSingle, textHeightSingle] as int[],
+                    'text_beside': [textXSplitIcon, textYSplitIcon, textWidthSplitIcon,
+                                    textHeightSplitIcon] as int[],
+                    // The value leads and the label follows, which is the order a reader expects
+                    // and the order Wear's own complications use.
+                    'value'      : [titleXSplitText, titleYSplitText, titleWidthSplitText,
+                                    titleHeightSplitText] as int[],
+                    'label'      : [textXSplitText, textYSplitText, textWidthSplitText,
+                                    textHeightSplitText] as int[],
+                    // A long string needs more of the slot than half of it, so the heading it sits
+                    // under gets a third and the string keeps the rest.
+                    'header'     : [padH, padV, w - 2 * padH, (int) ((h - 2 * padV) / 3)] as int[],
+                    'body'       : [padH, padV + (int) ((h - 2 * padV) / 3), w - 2 * padH,
+                                    (h - 2 * padV) - (int) ((h - 2 * padV) / 3)] as int[],
+            ]
+        }
     }
 }
