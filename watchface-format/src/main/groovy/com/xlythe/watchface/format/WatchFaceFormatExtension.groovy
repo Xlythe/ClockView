@@ -82,6 +82,21 @@ abstract class WatchFaceFormatExtension {
     abstract ListProperty<String> getSharedResourceIncludes()
 
     /**
+     * Variables to work out once and publish with {@code <Reference>}, rather than inlining at
+     * every use. Watch Face Format 4 and up only; variants targeting an older version inline them
+     * as usual, so the same template builds for both.
+     *
+     * <p>Worth doing for anything expensive that several elements read - sunrise, the position of
+     * the sun or moon - because the watch re-evaluates an inlined expression once per use, every
+     * time a data source in it changes.
+     *
+     * <p>Unverified on a device. The format says a reference falls back to its default value while
+     * its element "is not available", and whether a group that draws nothing counts as available
+     * is not written down anywhere. Check a published value arrives before relying on it.
+     */
+    abstract ListProperty<String> getSharedVariables()
+
+    /**
      * Google's wff-validator.jar (https://github.com/google/watchface/releases). When set, every build
      * validates each generated variant against the format version it targets.
      */

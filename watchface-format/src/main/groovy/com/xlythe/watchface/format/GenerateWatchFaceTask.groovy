@@ -24,6 +24,9 @@ import org.gradle.api.tasks.TaskAction
 abstract class GenerateWatchFaceTask extends DefaultTask {
     static final String FORMAT_VERSION_RESOURCE = 'watchface_format_version'
 
+    /** &lt;Reference&gt; arrived in Watch Face Format 4. */
+    private static final int REFERENCE_FORMAT_VERSION = 4
+
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract RegularFileProperty getTemplate()
@@ -56,6 +59,9 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
 
     @Input
     abstract Property<Boolean> getGenerateFormatVersionResource()
+
+    @Input
+    abstract ListProperty<String> getSharedVariables()
 
     @Nested
     abstract ListProperty<WatchFaceVariant> getVariants()
@@ -103,8 +109,25 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
             }
 
             Map<String, String> replacements = variant.replacements.get()
+            Map<String, String> variantVariables = TemplateProcessor.withReplacements(variables, replacements)
+
+            // Reference arrived in format 4. Older variants inline as usual, so one template
+            // serves both and the shared list costs nothing where it can't be honoured.
+            String variantTemplate = templateText
+            List<String> shared = sharedVariables.getOrElse([])
+            if (!shared.isEmpty() && variant.formatVersion.get() >= REFERENCE_FORMAT_VERSION) {
+                try {
+                    variantTemplate = SharedValues.insertIntoScene(variantTemplate,
+                            SharedValues.publisherXml(variantVariables, shared))
+                } catch (IllegalArgumentException e) {
+                    throw new GradleException("${templateFile.name} (${variant.name}): ${e.message}", e)
+                }
+                variantVariables = new LinkedHashMap<>(variantVariables)
+                variantVariables.putAll(SharedValues.asReferences(shared))
+            }
+
             String expanded = TemplateProcessor.replaceTokens(
-                    TemplateProcessor.expand(templateText, TemplateProcessor.withReplacements(variables, replacements)),
+                    TemplateProcessor.expand(variantTemplate, variantVariables),
                     replacements)
             if (variant.stubWeather.get()) {
                 expanded = TemplateProcessor.stubWeatherDataSources(expanded)

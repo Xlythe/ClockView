@@ -138,6 +138,7 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
         task.complicationColor.set(extension.complicationColor)
         task.complicationAmbientColor.set(extension.complicationAmbientColor)
         task.generateFormatVersionResource.set(extension.generateFormatVersionResource)
+        task.sharedVariables.set(extension.sharedVariables)
         task.variants.set(variants)
     }
 
