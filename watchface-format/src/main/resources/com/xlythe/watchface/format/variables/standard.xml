@@ -50,14 +50,19 @@
     <!--
         Calculates the alpha (0-255) for the foreground as we transition between Night -> Sunrise -> Day -> Sunset -> Night
     -->
+    <!--
+        Every branch clamps the same way and differs only in which edge it measures to and which
+        way round, so the clamp is written once and the sign is chosen instead. "Until" is just
+        "since" negated, which is what lets the two halves share one subtraction.
+
+        abs() would be shorter still and is not the same thing. Each half has to keep its own
+        test, because which side of the edge we are on decides the sign, and the answers at the
+        far end of the night depend on the difference going negative rather than growing.
+    -->
     <Item name="${GET_TRANSITION_ALPHA}">
-        (${IS_SUNRISE}) ?
-            (${IS_TRANSITIONING_OVER_NIGHT}) ?
-                clamp(255 * (1 - (${MILLIS_UNTIL_SUNRISE} / 3600000)), 0, 255) :
-                clamp(255 * (1 - (${MILLIS_SINCE_SUNRISE} / 3600000)), 0, 255) :
-            (${IS_TRANSITIONING_OVER_DAY}) ?
-                clamp(255 * (1 - (${MILLIS_UNTIL_SUNSET} / 3600000)), 0, 255) :
-                clamp(255 * (1 - (${MILLIS_SINCE_SUNSET} / 3600000)), 0, 255)
+        clamp(255 * (1 - ((${IS_SUNRISE}) ?
+            (${MILLIS_SINCE_SUNRISE} * ((${IS_TRANSITIONING_OVER_NIGHT}) ? -1 : 1)) :
+            (${MILLIS_SINCE_SUNSET} * ((${IS_TRANSITIONING_OVER_DAY}) ? -1 : 1))) / 3600000), 0, 255)
     </Item>
     <!--
         Returns the time in millis since 12:00am.
@@ -189,12 +194,16 @@
     <Item name="${NIGHT_LENGTH_MILLIS}">
         ${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 86400000 - ${SUNSET_MILLIS_SINCE_MIDNIGHT}
     </Item>
+    <!--
+        The two night branches are the same measurement a day apart: before midnight the clock is
+        already past sunset, after midnight it needs a day adding before the subtraction makes
+        sense. Adding the day conditionally says that once instead of twice, and the divide by
+        the night's length comes out of both branches.
+    -->
     <Item name="${PERCENT_OF_DAY}">
         (${IS_TRANSITIONING_OVER_DAY}) ?
             ((${CURRENT_MILLIS_TO_THE_MINUTE} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}) / ${DAY_LENGTH_MILLIS}) :
-            (${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}) ?
-                (${CURRENT_MILLIS_TO_THE_MINUTE} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS} :
-                (${CURRENT_MILLIS_TO_THE_MINUTE} + 86400000 - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS}
+            ((${MILLIS_SINCE_SUNSET} + ((${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}) ? 0 : 86400000)) / ${NIGHT_LENGTH_MILLIS})
     </Item>
     <!--
         [MOON_PHASE_TYPE]

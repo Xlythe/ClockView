@@ -23,6 +23,8 @@ class ExpressionSizeTest {
             // The dearest of the lot: it inlines the altitude, and the altitude inlines the right
             // ascension. Reach for it once per face, not once per element.
             '${MOON_AZIMUTH_DEG}'             : 150_000,
+            '${GET_TRANSITION_ALPHA}'         : 70_000,
+            '${PERCENT_OF_DAY}'               : 80_000,
     ]
 
     @Test

@@ -60,7 +60,7 @@ class WffExpressions {
         }
 
         private double readTernary() {
-            double condition = readComparison()
+            double condition = readOr()
             skipSpace()
             if (take('?')) {
                 double whenTrue = readTernary()
@@ -72,30 +72,54 @@ class WffExpressions {
             return condition
         }
 
-        private double readComparison() {
-            double value = readSum()
+        // Both sides are always read, short-circuiting or not: the parser has to get past them.
+        private double readOr() {
+            double value = readAnd()
             while (true) {
                 skipSpace()
-                if (takeAll('>=')) {
-                    value = (value >= readSum()) ? 1d : 0d
-                } else if (takeAll('<=')) {
-                    value = (value <= readSum()) ? 1d : 0d
-                } else if (takeAll('==')) {
-                    value = (value == readSum()) ? 1d : 0d
-                } else if (takeAll('!=')) {
-                    value = (value != readSum()) ? 1d : 0d
-                } else if (takeAll('&&')) {
-                    value = (value != 0d && readSum() != 0d) ? 1d : 0d
-                } else if (takeAll('||')) {
-                    value = (value != 0d || readSum() != 0d) ? 1d : 0d
-                } else if (take('>')) {
-                    value = (value > readSum()) ? 1d : 0d
-                } else if (take('<')) {
-                    value = (value < readSum()) ? 1d : 0d
+                if (takeAll('||')) {
+                    boolean left = value != 0d
+                    boolean right = readAnd() != 0d
+                    value = (left || right) ? 1d : 0d
                 } else {
                     return value
                 }
             }
+        }
+
+        private double readAnd() {
+            double value = readComparison()
+            while (true) {
+                skipSpace()
+                if (takeAll('&&')) {
+                    boolean left = value != 0d
+                    boolean right = readComparison() != 0d
+                    value = (left && right) ? 1d : 0d
+                } else {
+                    return value
+                }
+            }
+        }
+
+        private double readComparison() {
+            double value = readSum()
+            skipSpace()
+            if (takeAll('>=')) {
+                return (value >= readSum()) ? 1d : 0d
+            } else if (takeAll('<=')) {
+                return (value <= readSum()) ? 1d : 0d
+            } else if (takeAll('==')) {
+                return (value == readSum()) ? 1d : 0d
+            } else if (takeAll('!=')) {
+                return (value != readSum()) ? 1d : 0d
+            } else if (peekIs('>')) {
+                mAt++
+                return (value > readSum()) ? 1d : 0d
+            } else if (peekIs('<')) {
+                mAt++
+                return (value < readSum()) ? 1d : 0d
+            }
+            return value
         }
 
         private double readSum() {
