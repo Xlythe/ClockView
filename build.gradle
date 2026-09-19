@@ -14,6 +14,11 @@ buildscript {
     }
 }
 
+// Declared here, once, so every module that publishes shares one copy of the plugin.
+plugins {
+    id 'com.gradleup.nmcp' version '1.5.0' apply false
+}
+
 allprojects {
     repositories {
         mavenCentral()

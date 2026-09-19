@@ -3,7 +3,7 @@ plugins {
     id 'java-gradle-plugin'
     id 'maven-publish'
     id 'signing'
-    id 'com.gradleup.nmcp' version '1.5.0'
+    id 'com.gradleup.nmcp'
 }
 
 Properties projectProperties = new Properties()
@@ -39,6 +39,12 @@ tasks.named('javadocJar', Jar) {
 }
 
 gradlePlugin {
+    // Publish one artifact rather than the three java-gradle-plugin would add on its own. The
+    // watch faces apply this through buildscript/classpath, which only resolves the jar, so the
+    // plugin marker that the plugins{} block would need isn't worth a second publication.
+    // The descriptor inside the jar is generated either way.
+    automatedPublishing = false
+
     plugins {
         watchfaceFormat {
             id = 'com.xlythe.watchface-format'
@@ -55,6 +61,12 @@ dependencies {
 }
 
 publishing {
+    publications {
+        pluginMaven(MavenPublication) {
+            from components.java
+            artifactId = projectProperties.getProperty('watchfaceFormat.artifact')
+        }
+    }
     publications.withType(MavenPublication).configureEach {
         pom {
             name = projectProperties.getProperty('watchfaceFormat.libraryName')
@@ -79,10 +91,6 @@ publishing {
                 url = projectProperties.getProperty('bintray.siteUrl')
             }
         }
-    }
-    // java-gradle-plugin adds this publication lazily, so configure it when it appears.
-    publications.withType(MavenPublication).matching { it.name == 'pluginMaven' }.configureEach {
-        artifactId = projectProperties.getProperty('watchfaceFormat.artifact')
     }
 }
 
