@@ -47,6 +47,9 @@ final class ComplicationSlotExpander {
     /** Text that shrinks to fit its box, rather than ellipsing, arrived in format 3. */
     private static final int AUTO_SIZE_FORMAT_VERSION = 3
 
+    /** How far a completed lap is held back so the next one over it can be told apart. */
+    private static final int PASSED_LAP_ALPHA = 105
+
     /** Below this, a font size is too small to read on a watch. Also WFF's own autosize floor. */
     private static final int MIN_FONT_SIZE = 12
 
@@ -494,7 +497,7 @@ final class ComplicationSlotExpander {
     private Node expandArc(Node node) {
         String kind = required(node, 'kind')
         switch (kind) {
-            case 'ranged': return parse(progressRing('RANGED_VALUE', rangedFraction(), 0))
+            case 'ranged': return parse(progressRing('RANGED_VALUE', rangedFraction()))
             case 'goal': return parse(goalRings())
             case 'weighted': return parse(weightedRing())
             default: throw new IllegalArgumentException(
@@ -519,19 +522,16 @@ final class ComplicationSlotExpander {
      *
      * @param type the complication type, naming its {@code _COLORS} sources.
      * @param fraction an expression between 0 and 1, already clamped.
-     * @param inset how far inside the slot's edge to draw, for a ring that sits under another.
+     * @param alpha how strongly to draw it, so a lap already done can sit behind the next.
      */
-    private String progressRing(String type, String fraction, int inset) {
+    private String progressRing(String type, String fraction, int alpha = 255) {
         ArcSpan band = geometry.arc
-        if (band != null && inset > 0) {
-            band = band.insetBy(inset)
-        }
-        int thickness = band != null ? band.thickness : (inset > 0 ? 4 : 8)
+        int thickness = band != null ? band.thickness : 8
         double from = band != null ? band.startAngle : 0d
         String geometryAttributes = band != null
                 ? band.geometryAttributes()
                 : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
-                  " width=\"${geometry.w - 2 * inset}\" height=\"${geometry.h - 2 * inset}\""
+                  " width=\"${geometry.w}\" height=\"${geometry.h}\""
         double sweepDegrees = band != null ? band.span() : 360d
         String sweep = "<Transform target=\"endAngle\" value=\"${from} + ${sweepDegrees} * (${fraction})\" />"
         Closure<String> ring = { String stroke, int shown, int inAmbient ->
@@ -544,7 +544,7 @@ final class ComplicationSlotExpander {
                 </PartDraw>"""
         }
         Closure<String> flat = { String c -> "<Stroke color=\"${c}\" cap=\"ROUND\" thickness=\"${thickness}\" />" }
-        String fullRes = ring(flat(color), 255, 0)
+        String fullRes = ring(flat(color), alpha, 0)
         if (formatVersion >= WEIGHTED_FORMAT_VERSION) {
             String weighted = "<WeightedStroke colors=\"[COMPLICATION.${type}_COLORS]\"" +
                     " interpolate=\"[COMPLICATION.${type}_COLORS_INTERPOLATE]\"" +
@@ -554,7 +554,7 @@ final class ComplicationSlotExpander {
                         <Expression name="provider_colors">[COMPLICATION.${type}_COLORS] != null</Expression>
                     </Expressions>
                     <Compare expression="provider_colors">
-                        ${ring(weighted, 255, 0)}
+                        ${ring(weighted, alpha, 0)}
                     </Compare>
                     <Default>
                         ${fullRes}
@@ -562,37 +562,59 @@ final class ComplicationSlotExpander {
                 </Condition>"""
         }
         return """<Group name="Progress" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
-                ${ring(flat(ambientColor), 0, 255)}
+                ${ring(flat(ambientColor), 0, alpha)}
                 ${fullRes}
             </Group>"""
     }
 
     /**
-     * A goal is allowed to be passed - that is rather the point of one - and a ring has nowhere to
-     * put more than a full turn. So the outer ring fills and stops, and a second, thinner ring
-     * inside it carries however far past the goal the value has gone.
+     * A goal is allowed to be passed - that is rather the point of one - and neither a ring nor a
+     * band has anywhere to put more than one full pass.
+     *
+     * <p>So a passed goal is drawn as two laps: the one already done, held back, and however far
+     * into the next one the value has got, at full strength over the top. Where the two overlap
+     * reads as the brighter of them, which is the part of the lap that has been done twice.
+     *
+     * <p>The alternative was a second, thinner arc set apart from the first. On a ring that reads
+     * as two concentric readings; on a band, which is a stripe on the bezel with nothing inside
+     * it, it reads as something come loose. Strength works on both.
      */
     private String goalRings() {
         String overshoot = 'clamp([COMPLICATION.GOAL_PROGRESS_VALUE]' +
                 ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE] - 1, 0, 1)'
         return """<Group name="Goal" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
-                ${progressRing('GOAL_PROGRESS', goalFraction(), 0)}
-                ${progressRing('GOAL_PROGRESS', overshoot, geometry.overshootInset)}
+                <Condition>
+                    <Expressions>
+                        <Expression name="passed"><![CDATA[[COMPLICATION.GOAL_PROGRESS_VALUE] > [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE]]]></Expression>
+                    </Expressions>
+                    <Compare expression="passed">
+                        ${progressRing('GOAL_PROGRESS', '1', PASSED_LAP_ALPHA)}
+                        ${progressRing('GOAL_PROGRESS', overshoot)}
+                    </Compare>
+                    <Default>
+                        ${progressRing('GOAL_PROGRESS', goalFraction())}
+                    </Default>
+                </Condition>
             </Group>"""
     }
 
     /**
-     * One ring divided into the provider's elements, each taking the share of the turn its weight
-     * asks for.
+     * One ring divided into the provider's elements, each taking the share of the turn its
+     * weight asks for.
      *
-     * <p>A weighted stroke does the dividing, so the whole donut is one Arc. The gap between
-     * segments is what makes them read as separate elements rather than one multicolored ring,
-     * and it has to be wide enough for the round caps on either side of it - see #capGap.
+     * <p>A weighted stroke does the dividing, so the whole ring is one Arc, and it is capped
+     * the same way the gauges are: round, with no gap between segments. A round cap is drawn
+     * past the end of its segment, so with the segments touching, the caps inside the ring
+     * overlap their neighbours and disappear, and only the two at the ends of the ring are
+     * left to see. The ring finishes rounded and reads as one divided whole.
      *
-     * <p>The provider may also name a color for the part of the ring nothing accounts for, which is
-     * drawn underneath - a full turn, since the segments cover whatever they cover. That one is
-     * butt-capped, because it is a backdrop rather than a reading and should not poke out past the
-     * segments sitting on it.
+     * <p>Asking for a gap instead is what {@code discreteGap} is for, and it costs more than
+     * it looks: the gaps are holes in the quantity being divided up, and the color the
+     * provider named for the part nothing accounts for shows through each one as though
+     * something were missing.
+     *
+     * <p>That backdrop is drawn underneath, a full turn, since the segments cover whatever
+     * they cover.
      */
     private String weightedRing() {
         ArcSpan band = geometry.arc
@@ -603,14 +625,11 @@ final class ComplicationSlotExpander {
                 ? band.geometryAttributes()
                 : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
                   " width=\"${geometry.w}\" height=\"${geometry.h}\""
-        String gap = capGap(thickness, band != null
-                ? (band.width + band.height) / 4d
-                : (geometry.w + geometry.h) / 4d)
         return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
                     <Variant mode="AMBIENT" target="alpha" value="255" />
                     <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
-                        <Stroke color="${ambientColor}" cap="BUTT" thickness="${thickness}" />
+                        <Stroke color="${ambientColor}" cap="ROUND" thickness="${thickness}" />
                     </Arc>
                 </PartDraw>
                 <Condition>
@@ -621,7 +640,7 @@ final class ComplicationSlotExpander {
                         <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                             <Variant mode="AMBIENT" target="alpha" value="0" />
                             <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
-                                <Stroke color="[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR]" cap="BUTT" thickness="${thickness}" />
+                                <Stroke color="[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR]" cap="ROUND" thickness="${thickness}" />
                             </Arc>
                         </PartDraw>
                     </Compare>
@@ -629,23 +648,10 @@ final class ComplicationSlotExpander {
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
                     <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
-                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" discreteGap="${gap}" cap="ROUND" thickness="${thickness}" />
+                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" cap="ROUND" thickness="${thickness}" />
                     </Arc>
                 </PartDraw>
             </Group>"""
-    }
-
-    /**
-     * How wide, in degrees, the gap between two round-capped segments has to be.
-     *
-     * <p>A round cap is a half-circle drawn past the end of its segment, so two of them facing
-     * each other eat a full stroke width of the gap between them and touch. On an arc that width
-     * is an angle rather than a length, which is what the radius converts, and a quarter again
-     * leaves the gap visible rather than merely closed.
-     */
-    private static String capGap(int thickness, double radius) {
-        double degrees = Math.toDegrees(thickness / radius) * 1.25d
-        return String.format('%.1f', degrees)
     }
 
     /** How far between the minimum and the maximum the value sits, as 0 to 1. */
@@ -779,14 +785,6 @@ final class ComplicationSlotExpander {
             this.direction = direction
         }
 
-        /** A thinner band just inside this one, for a second reading of the same thing. */
-        ArcSpan insetBy(int inset) {
-            int thinner = Math.max(2, (int) (thickness * 0.4f))
-            double shrink = 2 * inset + thickness - thinner
-            return new ArcSpan(centerX, centerY, width - shrink, height - shrink,
-                    startAngle, endAngle, thinner, direction)
-        }
-
         /** How far round the band goes, in degrees, whichever way it is travelling. */
         double span() {
             double sweep = endAngle - startAngle
@@ -859,7 +857,6 @@ final class ComplicationSlotExpander {
         final int textXSplitText, textYSplitText, textWidthSplitText, textHeightSplitText
         final int backgroundIconSize
         final int glyphSize
-        final int overshootInset
         /** Set when the slot is a band around the bezel rather than a ring in a box. */
         final ArcSpan arc
 
@@ -904,8 +901,6 @@ final class ComplicationSlotExpander {
             // An image with nothing to share the slot with can be half again as big as one that
             // has, and still clear the ring.
             glyphSize = (int) (Math.min(w, h) * 0.5f)
-            // Far enough inside the outer ring for the two to read as two rings.
-            overshootInset = Math.max(8, (int) (Math.min(w, h) * 0.09f))
         }
 
         Map<String, int[]> areas() {
