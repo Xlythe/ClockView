@@ -7,44 +7,44 @@
     <Item name="${IS_SUNRISE}">
         <!-- Sunrise is defined as -1hr / +1hr from exact sunrise -->
         <![CDATA[
-            ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
-            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} <= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            ${CURRENT_MILLIS_TO_THE_MINUTE} >= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            && ${CURRENT_MILLIS_TO_THE_MINUTE} <= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
         ]]>
     </Item>
     <Item name="${IS_DAY}">
         <!-- Day is defined as +1hr from exact sunrise and -1hr from exact sunset -->
         <![CDATA[
-            ${CURRENT_MILLIS_SINCE_MIDNIGHT} > (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
-            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} < (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            ${CURRENT_MILLIS_TO_THE_MINUTE} > (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            && ${CURRENT_MILLIS_TO_THE_MINUTE} < (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
         ]]>
     </Item>
     <Item name="${IS_SUNSET}">
         <!-- Sunset is defined as -1hr / +1hr from exact sunset -->
         <![CDATA[
-            ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
-            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} <= (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            ${CURRENT_MILLIS_TO_THE_MINUTE} >= (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            && ${CURRENT_MILLIS_TO_THE_MINUTE} <= (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
         ]]>
     </Item>
     <Item name="${IS_NIGHT}">
         <!-- Night is defined as -1hr from exact sunrise or +1hr from exact sunset -->
         <![CDATA[
-            ${CURRENT_MILLIS_SINCE_MIDNIGHT} < (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
-            || ${CURRENT_MILLIS_SINCE_MIDNIGHT} > (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            ${CURRENT_MILLIS_TO_THE_MINUTE} < (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
+            || ${CURRENT_MILLIS_TO_THE_MINUTE} > (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
         ]]>
     </Item>
     <Item name="${IS_TRANSITIONING_OVER_DAY}">
         <!-- Day is defined as sunrise_time <= current_hour < sunset_time  -->
         <![CDATA[
-            ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
-            && ${CURRENT_MILLIS_SINCE_MIDNIGHT} < ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+            ${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+            && ${CURRENT_MILLIS_TO_THE_MINUTE} < ${SUNSET_MILLIS_SINCE_MIDNIGHT}
         ]]>
     </Item>
     <!-- Only true during sunrise/sunset. 2hr-1hr before sunrise ends, 1hr-0hr before sunset ends. -->
     <Item name="${IS_TRANSITIONING_OVER_NIGHT}">
         <!-- Night is defined as current_hour < sunrise_time or sunset_time <= current_hour  -->
         <![CDATA[
-            ${CURRENT_MILLIS_SINCE_MIDNIGHT} < ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
-            || ${CURRENT_MILLIS_SINCE_MIDNIGHT} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+            ${CURRENT_MILLIS_TO_THE_MINUTE} < ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+            || ${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}
         ]]>
     </Item>
     <!--
@@ -59,15 +59,30 @@
                 clamp(255 * (1 - (${MILLIS_UNTIL_SUNSET} / 3600000)), 0, 255) :
                 clamp(255 * (1 - (${MILLIS_SINCE_SUNSET} / 3600000)), 0, 255)
     </Item>
-    <!-- Returns the time in millis since 12:00am. -->
+    <!--
+        Returns the time in millis since 12:00am.
+
+        Reading this puts an expression on the every-second path: an expression is re-evaluated
+        whenever any source in it changes, and [SECOND] changes every second. Anything that only
+        needs to know roughly when it is - which is everything astronomical below - should read
+        ${CURRENT_MILLIS_TO_THE_MINUTE} instead.
+    -->
     <Item name="${CURRENT_MILLIS_SINCE_MIDNIGHT}">
         ([HOUR_0_23] * 3600000) + ([MINUTE] * 60000) + ([SECOND] * 1000) + [MILLISECOND]
+    </Item>
+    <!--
+        The same thing to the minute. The sun moves a quarter of a degree in that time and the
+        moon a fifth of one, so nothing here can tell the difference, and it keeps the whole
+        chain off the per-second path.
+    -->
+    <Item name="${CURRENT_MILLIS_TO_THE_MINUTE}">
+        ([HOUR_0_23] * 3600000) + ([MINUTE] * 60000)
     </Item>
 
     <!-- Copied from https://gml.noaa.gov/grad/solcalc/calcdetails.html -->
     <!-- Percent (0.0 to 1.0) into the current day. -->
     <Item name="${TIME_PAST_LOCAL_MIDNIGHT}">
-        ${CURRENT_MILLIS_SINCE_MIDNIGHT} / 86400000
+        ${CURRENT_MILLIS_TO_THE_MINUTE} / 86400000
     </Item>
     <!--
         The UTC offset in hours, including daylight saving time, possibly off by a whole day (e.g. -4 or
@@ -76,7 +91,7 @@
         that uses it wraps to a time of day, where a whole day doesn't matter.
     -->
     <Item name="${LOCAL_OFFSET}">
-        (${CURRENT_MILLIS_SINCE_MIDNIGHT} - ([UTC_TIMESTAMP] % 86400000)) / 3600000
+        (${CURRENT_MILLIS_TO_THE_MINUTE} - ([UTC_TIMESTAMP] % 86400000)) / 3600000
     </Item>
     <!--
         Straight off the epoch, which is already UTC - where both NOAA's day number and sidereal
@@ -152,19 +167,19 @@
 
     <!-- Returns the time in millis until exactly sunrise. -->
     <Item name="${MILLIS_UNTIL_SUNRISE}">
-        ${SUNRISE_MILLIS_SINCE_MIDNIGHT} - ${CURRENT_MILLIS_SINCE_MIDNIGHT}
+        ${SUNRISE_MILLIS_SINCE_MIDNIGHT} - ${CURRENT_MILLIS_TO_THE_MINUTE}
     </Item>
     <!-- Returns the time in millis since exactly sunrise. -->
     <Item name="${MILLIS_SINCE_SUNRISE}">
-        ${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
+        ${CURRENT_MILLIS_TO_THE_MINUTE} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
     </Item>
     <!-- Returns the time in millis until exactly sunset. -->
     <Item name="${MILLIS_UNTIL_SUNSET}">
-        ${SUNSET_MILLIS_SINCE_MIDNIGHT} - ${CURRENT_MILLIS_SINCE_MIDNIGHT}
+        ${SUNSET_MILLIS_SINCE_MIDNIGHT} - ${CURRENT_MILLIS_TO_THE_MINUTE}
     </Item>
     <!-- Returns the time in millis since exactly sunset. -->
     <Item name="${MILLIS_SINCE_SUNSET}">
-        ${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}
+        ${CURRENT_MILLIS_TO_THE_MINUTE} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}
     </Item>
     <!-- Returns the length of day in millis. -->
     <Item name="${DAY_LENGTH_MILLIS}">
@@ -176,10 +191,10 @@
     </Item>
     <Item name="${PERCENT_OF_DAY}">
         (${IS_TRANSITIONING_OVER_DAY}) ?
-            ((${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}) / ${DAY_LENGTH_MILLIS}) :
-            (${CURRENT_MILLIS_SINCE_MIDNIGHT} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}) ?
-                (${CURRENT_MILLIS_SINCE_MIDNIGHT} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS} :
-                (${CURRENT_MILLIS_SINCE_MIDNIGHT} + 86400000 - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS}
+            ((${CURRENT_MILLIS_TO_THE_MINUTE} - ${SUNRISE_MILLIS_SINCE_MIDNIGHT}) / ${DAY_LENGTH_MILLIS}) :
+            (${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}) ?
+                (${CURRENT_MILLIS_TO_THE_MINUTE} - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS} :
+                (${CURRENT_MILLIS_TO_THE_MINUTE} + 86400000 - ${SUNSET_MILLIS_SINCE_MIDNIGHT}) / ${NIGHT_LENGTH_MILLIS}
     </Item>
     <!--
         [MOON_PHASE_TYPE]
