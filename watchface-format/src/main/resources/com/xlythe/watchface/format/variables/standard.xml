@@ -200,6 +200,85 @@
     <Item name="${IS_MOON_WANING_GIBBOUS}">[MOON_PHASE_TYPE]==5</Item>
     <Item name="${IS_MOON_THIRD_QUARTER}">[MOON_PHASE_TYPE]==6</Item>
     <Item name="${IS_MOON_WANING_CRESCENT}">[MOON_PHASE_TYPE]==7</Item>
+
+    <!--
+        Where the moon actually is in the sky, as an altitude above the horizon and an azimuth
+        measured east from north. The platform has no source for this - [MOON_PHASE_POSITION] is
+        a position through the phases, not across the sky - so it's worked out here.
+
+        Meeus, Astronomical Algorithms, chapter 47, keeping the terms worth more than a tenth of
+        a degree. The moon is half a degree wide, so the answer lands within about a moon of the
+        real one, which is as much as a drawing of it can show.
+    -->
+    <!--
+        The moon needs a better date than ${JULIAN_DAY}, which is half a day out. That moves the
+        sun by a fifth of a degree and nobody notices; it moves the moon by six and a half, which
+        is thirteen moon widths. This one counts the leap years properly and takes the clock back
+        to UTC, since sidereal time is measured there.
+    -->
+    <Item name="${JULIAN_DAY_UTC}">
+        1721425.5 + 365 * ([YEAR] - 1) + floor(([YEAR] - 1) / 4) - floor(([YEAR] - 1) / 100) + floor(([YEAR] - 1) / 400) + ([DAY_OF_YEAR] - 1) + ${TIME_PAST_LOCAL_MIDNIGHT} - ${LOCAL_OFFSET} / 24
+    </Item>
+    <Item name="${JULIAN_CENTURY_UTC}">
+        (${JULIAN_DAY_UTC} - 2451545) / 36525
+    </Item>
+
+    <!-- The moon's mean elements. Wrapped to a turn so a single-precision evaluator keeps its digits. -->
+    <Item name="${MOON_MEAN_LONGITUDE_DEG}">
+        (218.3164477 + 481267.88123421 * ${JULIAN_CENTURY_UTC}) % 360
+    </Item>
+    <Item name="${MOON_MEAN_ELONGATION_DEG}">
+        (297.8501921 + 445267.1114034 * ${JULIAN_CENTURY_UTC}) % 360
+    </Item>
+    <Item name="${MOON_MEAN_ANOMALY_DEG}">
+        (134.9633964 + 477198.8675055 * ${JULIAN_CENTURY_UTC}) % 360
+    </Item>
+    <Item name="${MOON_ARG_LATITUDE_DEG}">
+        (93.2720950 + 483202.0175233 * ${JULIAN_CENTURY_UTC}) % 360
+    </Item>
+    <Item name="${SUN_MEAN_ANOMALY_UTC_DEG}">
+        (357.5291092 + 35999.0502909 * ${JULIAN_CENTURY_UTC}) % 360
+    </Item>
+
+    <Item name="${MOON_ECLIPTIC_LONGITUDE_DEG}">
+        ${MOON_MEAN_LONGITUDE_DEG} + 6.289 * sin(rad(${MOON_MEAN_ANOMALY_DEG})) + 1.274 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG} - ${MOON_MEAN_ANOMALY_DEG})) + 0.658 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG})) + 0.214 * sin(rad(2 * ${MOON_MEAN_ANOMALY_DEG})) - 0.186 * sin(rad(${SUN_MEAN_ANOMALY_UTC_DEG})) - 0.114 * sin(rad(2 * ${MOON_ARG_LATITUDE_DEG}))
+    </Item>
+    <Item name="${MOON_ECLIPTIC_LATITUDE_DEG}">
+        5.128 * sin(rad(${MOON_ARG_LATITUDE_DEG})) + 0.281 * sin(rad(${MOON_MEAN_ANOMALY_DEG} + ${MOON_ARG_LATITUDE_DEG})) - 0.278 * sin(rad(${MOON_ARG_LATITUDE_DEG} - ${MOON_MEAN_ANOMALY_DEG})) - 0.173 * sin(rad(2 * ${MOON_MEAN_ELONGATION_DEG} - ${MOON_ARG_LATITUDE_DEG}))
+    </Item>
+
+    <!-- Ecliptic to equatorial, tilting by the same obliquity the sun uses. -->
+    <Item name="${MOON_DECLINATION_DEG}">
+        deg(asin(sin(rad(${MOON_ECLIPTIC_LATITUDE_DEG})) * cos(rad(${OBLIQ_CORR_DEG})) + cos(rad(${MOON_ECLIPTIC_LATITUDE_DEG})) * sin(rad(${OBLIQ_CORR_DEG})) * sin(rad(${MOON_ECLIPTIC_LONGITUDE_DEG}))))
+    </Item>
+    <!--
+        Right ascension. There is no atan2, so this is the arc cosine of the x component over
+        cos(declination), turned into the other half of the circle when the y component is
+        negative - which is what atan2 would have done with the pair.
+    -->
+    <Item name="${MOON_RIGHT_ASCENSION_DEG}">
+        ((cos(rad(${MOON_ECLIPTIC_LATITUDE_DEG})) * sin(rad(${MOON_ECLIPTIC_LONGITUDE_DEG})) * cos(rad(${OBLIQ_CORR_DEG})) - sin(rad(${MOON_ECLIPTIC_LATITUDE_DEG})) * sin(rad(${OBLIQ_CORR_DEG}))) >= 0) ? deg(acos(clamp(cos(rad(${MOON_ECLIPTIC_LATITUDE_DEG})) * cos(rad(${MOON_ECLIPTIC_LONGITUDE_DEG})) / cos(rad(${MOON_DECLINATION_DEG})), -1, 1))) : (360 - deg(acos(clamp(cos(rad(${MOON_ECLIPTIC_LATITUDE_DEG})) * cos(rad(${MOON_ECLIPTIC_LONGITUDE_DEG})) / cos(rad(${MOON_DECLINATION_DEG})), -1, 1))))
+    </Item>
+
+    <!-- How far the earth has turned, which is what puts the moon east or west of the meridian. -->
+    <Item name="${GREENWICH_SIDEREAL_TIME_DEG}">
+        (((280.46061837 + 360.98564736629 * (${JULIAN_DAY_UTC} - 2451545)) % 360) + 360) % 360
+    </Item>
+    <Item name="${MOON_HOUR_ANGLE_DEG}">
+        (((${GREENWICH_SIDEREAL_TIME_DEG} + ${LONGITUDE} - ${MOON_RIGHT_ASCENSION_DEG}) % 360) + 360) % 360
+    </Item>
+
+    <!-- Above the horizon is positive, below is negative. -->
+    <Item name="${MOON_ALTITUDE_DEG}">
+        deg(asin(clamp(sin(rad(${LATITUDE})) * sin(rad(${MOON_DECLINATION_DEG})) + cos(rad(${LATITUDE})) * cos(rad(${MOON_DECLINATION_DEG})) * cos(rad(${MOON_HOUR_ANGLE_DEG})), -1, 1)))
+    </Item>
+    <!-- Measured east from north, so 90 is due east and 180 is due south. -->
+    <Item name="${MOON_AZIMUTH_DEG}">
+        (sin(rad(${MOON_HOUR_ANGLE_DEG})) > 0) ? (360 - deg(acos(clamp((sin(rad(${MOON_DECLINATION_DEG})) - sin(rad(${MOON_ALTITUDE_DEG})) * sin(rad(${LATITUDE}))) / (cos(rad(${MOON_ALTITUDE_DEG})) * cos(rad(${LATITUDE}))), -1, 1)))) : deg(acos(clamp((sin(rad(${MOON_DECLINATION_DEG})) - sin(rad(${MOON_ALTITUDE_DEG})) * sin(rad(${LATITUDE}))) / (cos(rad(${MOON_ALTITUDE_DEG})) * cos(rad(${LATITUDE}))), -1, 1)))
+    </Item>
+    <Item name="${IS_MOON_UP}">
+        <![CDATA[${MOON_ALTITUDE_DEG} > 0]]>
+    </Item>
     <!--
         [WEATHER.CONDITION]
         0 - UNKNOWN_VALUE
