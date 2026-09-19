@@ -71,16 +71,32 @@ class TransitionMathTest {
 
     /**
      * The alpha does not come back the same either side of midnight. Two hours after sunset it
-     * reads 0 and four hours after it reads 255, because ${MILLIS_SINCE_SUNSET} goes negative
-     * once the clock wraps and the clamp catches it at the far end.
+     * reads 0 and four hours after it reads 255, because the difference from sunset goes negative
+     * once the calendar day rolls over and the clamp catches it at the far end.
      *
-     * <p>This is pinned rather than corrected: it decides what the scene looks like all night,
-     * and changing it is a decision about the artwork, not a tidy-up.
+     * <p>That is not a porting mistake and it is not visible. Landscape#getTransitionPercent does
+     * the same thing - outside a sunrise or sunset transitionOverDay() returns false, so it
+     * measures from a sunset that is either hours behind or hours ahead - and in both
+     * implementations the alpha only ever multiplies the transition artwork, which is drawn only
+     * while IS_SUNRISE or IS_SUNSET holds. Every one of the fifty uses in ReflectiveScenery sits
+     * inside such a branch, or on a group whose contents do.
+     *
+     * <p>So this is pinned as correct rather than corrected. Anything that changes it should
+     * change Landscape too, or the watch and the phone will disagree.
      */
     @Test
-    void theAlphaJumpsAtMidnight() {
+    void theAlphaJumpsAtMidnightAndNothingDrawsIt() {
         assertEquals("two hours after sunset", 0.0d, alphaAt(22d), 1.0d)
         assertEquals("four hours after sunset, past midnight", 255.0d, alphaAt(0d), 1.0d)
+
+        // The window where it is actually drawn is continuous, which is the part that matters.
+        double previous = alphaAt(3.0d)
+        for (double hour = 3.0d; hour <= 4.5d; hour += 0.25d) {
+            double alpha = alphaAt(hour)
+            assertTrue("the alpha jumped from $previous to $alpha at ${hour}:00, inside sunrise",
+                    Math.abs(alpha - previous) < 120d)
+            previous = alpha
+        }
     }
 
     private double alphaAt(double hour) {
