@@ -401,7 +401,7 @@ final class ComplicationSlotExpander {
         // alignment rather than a line count.
         String shape = curved
                 ? "<TextCircular ${geometry.arc.geometryAttributes()} startAngle=\"${geometry.arc.startAngle}\"" +
-                  " endAngle=\"${geometry.arc.endAngle}\" align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
+                  " endAngle=\"${geometry.arc.sweepEnd()}\" align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
                 : "<Text ${fit}"
         String closing = curved ? '</TextCircular>' : '</Text>'
         Closure<String> part = { String textColor, int shown, int inAmbient ->
@@ -793,20 +793,33 @@ final class ComplicationSlotExpander {
             return sweep < 0 ? sweep + 360 : sweep
         }
 
+        /**
+         * The angle the band finishes at, counted on from where it starts rather than wrapped
+         * back round to a smaller number.
+         *
+         * <p>A band across twelve o'clock is written the way it reads - 330 to 30 - but written
+         * out that way the end is behind the start, and an Arc given those two draws nothing at
+         * all. Counting on says the same thing as 330 to 390, which is unambiguous, and the
+         * format's angles are plain floats with no upper bound to bump into.
+         */
+        double sweepEnd() {
+            return startAngle + span()
+        }
+
         String geometryAttributes() {
             return "centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\" height=\"${height}\"" +
                     " direction=\"${direction}\""
         }
 
         String shape(String stroke) {
-            return "<Arc startAngle=\"${startAngle}\" endAngle=\"${endAngle}\" ${geometryAttributes()}>${stroke}</Arc>"
+            return "<Arc startAngle=\"${startAngle}\" endAngle=\"${sweepEnd()}\" ${geometryAttributes()}>${stroke}</Arc>"
         }
 
         /** The region the watch treats as this complication, and outlines in the editor. */
         String bounding() {
             return "<BoundingArc centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\"" +
                     " height=\"${height}\" thickness=\"${thickness}\" startAngle=\"${startAngle}\"" +
-                    " endAngle=\"${endAngle}\" direction=\"${direction}\" isRoundEdge=\"TRUE\"" +
+                    " endAngle=\"${sweepEnd()}\" direction=\"${direction}\" isRoundEdge=\"TRUE\"" +
                     " outlinePadding=\"2\" />"
         }
 

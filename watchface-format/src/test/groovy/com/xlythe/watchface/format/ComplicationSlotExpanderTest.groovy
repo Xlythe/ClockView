@@ -242,6 +242,33 @@ class ComplicationSlotExpanderTest {
         }
     }
 
+    /**
+     * A band across twelve o'clock is written the way it reads, 330 to 30, and every angle that
+     * goes into the output has to be counted on from the start instead: an Arc whose end is behind
+     * its start draws nothing, and the schema will not catch it, because an angle is a plain float
+     * with no bound to cross.
+     */
+    @Test
+    void arcSlots_sweepForwardsEvenAcrossTwelve() {
+        Map<String, String> bundled = bundledLayouts()
+        Node root = new ComplicationSlotExpander(bundled, '#FFFFFFFF', '#FFFFFFFF').expand(
+                TemplateProcessor.parse('<Scene><com.xlythe.ComplicationSlot slotId="1" x="0" y="0"'
+                        + ' width="400" height="400" type="arc" startAngle="330" endAngle="30"'
+                        + ' thickness="40" complicationDrawableStyle="line" /></Scene>'), 5)
+
+        for (Node arc : root.depthFirst().findAll {
+            it instanceof Node && it.name() in ['Arc', 'BoundingArc', 'TextCircular']
+        }) {
+            double from = arc.attribute('startAngle').toString().toDouble()
+            double to = arc.attribute('endAngle').toString().toDouble()
+            // The progress arcs start collapsed and are swept open by a Transform, so equal is fine.
+            assertTrue("a ${arc.name()} runs from ${from} to ${to}, which is backwards", to >= from)
+        }
+        String printed = TemplateProcessor.print(root)
+        assertTrue('the band should finish 60 degrees on from where it starts',
+                printed.contains('endAngle="390.0"'))
+    }
+
     @Test
     void expand_rejectsUnknownTypes() {
         try {
