@@ -223,7 +223,7 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
 
     private Map<String, String> complicationLayouts() {
         Map<String, String> layouts = new LinkedHashMap<>()
-        for (String type : ['chip', 'background']) {
+        for (String type : ['chip', 'arc', 'background']) {
             layouts.put(type, bundledResource("templates/complication_${type}.xml"))
         }
         if (complicationTemplates.present) {

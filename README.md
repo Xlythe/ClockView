@@ -364,16 +364,60 @@ inlined, so the sunrise and sunset helpers add a lot of XML each time they're re
 
 ### Complications
 `com.xlythe.ComplicationSlot` mirrors `ComplicationView` and expands into a full `ComplicationSlot`
-that handles text, title, icon and ranged value complications:
+with a layout for every complication type:
 ```xml
 <com.xlythe.ComplicationSlot slotId="1" x="200" y="200" width="160" height="160"
     type="chip" complicationDrawableStyle="line"
-    color="#FFFFFFFF" ambientColor="#FFFFFFFF" />
+    color="#FFFFFFFF" ambientColor="#FFFFFFFF"
+    defaultProvider="WATCH_BATTERY" defaultProviderType="RANGED_VALUE" />
 ```
-`type` is `chip` or `background`, and `complicationDrawableStyle` is `fill`, `line`, `dot` or `empty`.
-The colors are optional (see `complicationColor` and `complicationAmbientColor`) and accept
-configuration references such as `[CONFIGURATION.themeColor.0]`. To change the layouts, point
-`complicationTemplates` at a directory of `complication_<type>.xml` files.
+`complicationDrawableStyle` is `fill`, `line`, `dot` or `empty`. The colors are optional (see
+`complicationColor` and `complicationAmbientColor`) and accept configuration references such as
+`[CONFIGURATION.themeColor.0]`; `contentColor` and `ambientContentColor` colour what goes inside
+the slot and default to the same, which a `fill` slot wants overriding so its text is not the
+colour of the disc behind it. `defaultProvider` and `defaultProviderType` fill the slot until the
+user picks something else.
+
+`type` names a bundled layout:
+
+| `type` | Shape | Suits |
+| --- | --- | --- |
+| `chip` | a ring with the data inside it | a slot in the body of the face |
+| `arc` | a band around the bezel | a gauge along the edge |
+| `background` | the whole face | a photograph behind everything |
+
+An `arc` slot is declared by the span it covers rather than by its shape. The box is still
+required, and for a band it is the box the band is drawn in, so usually the whole face:
+```xml
+<com.xlythe.ComplicationSlot slotId="5" x="0" y="0" width="450" height="450" type="arc"
+    startAngle="150" endAngle="210" thickness="44" inset="10"
+    complicationDrawableStyle="line" />
+```
+Angles are degrees from twelve o'clock; `direction` is `CLOCKWISE` (the default) or
+`COUNTER_CLOCKWISE`. A band has no inside, so a ranged value fills along it and text curves with
+it, where a chip puts the number in the middle of its ring.
+
+Each type gets a layout written for what Wear's
+[Complication reference](https://developer.android.com/training/wearables/wff/complication/complication)
+says it reports, so no layout asks for data its type never sends. `RANGED_VALUE` and
+`GOAL_PROGRESS` take the provider's own colours through a `WeightedStroke` from format 2, a passed
+goal draws its overshoot as a second ring, `WEIGHTED_ELEMENTS` divides one ring between the
+provider's weights, and a provider that sends no text still gets its number written out with
+`numberFormat`. From format 3, text shrinks to fit rather than ellipsing. On format 1 the types
+that arrived later are dropped from `supportedTypes` and their layouts removed.
+
+Layouts are written in terms of three more tags, which know the slot they are in:
+```xml
+<com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="large" />
+<com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
+<com.xlythe.ComplicationArc kind="ranged" />
+```
+`area` is `full`, `photo`, `icon`, `glyph`, `icon_beside`, `text`, `text_beside`, `value`, `label`,
+`header` or `body` in a box slot, and `full`, `arc_icon`, `arc_start` or `arc_end` in a band.
+`scale` is `large`, `medium`, `small` or `tiny`, measured against the slot rather than fixed in
+pixels. `ComplicationText` also takes `weight`, `maxLines`, `dim` and `curved`; `ComplicationArc`
+takes `ranged`, `goal` or `weighted`. To change the layouts, point `complicationTemplates` at a
+directory of `complication_<type>.xml` files, which also adds types of your own.
 
 To publish the plugin, run `./gradlew :watchface-format:publish`. For local testing, run
 `./gradlew :watchface-format:publishToMavenLocal` and add `mavenLocal()` to the consuming

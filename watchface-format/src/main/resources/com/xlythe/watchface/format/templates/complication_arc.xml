@@ -1,0 +1,132 @@
+<!--
+    A complication drawn as a band around the bezel, rather than as a ring with things inside it.
+
+    Declared with a span rather than a shape:
+
+        <com.xlythe.ComplicationSlot slotId="5" x="0" y="0" width="450" height="450" type="arc"
+            startAngle="200" endAngle="250" thickness="24" inset="6" />
+
+    The box is still required - Watch Face Format asks every ComplicationSlot for one - and for a
+    band it is the box the band is drawn in, so usually the whole face. Angles are degrees from
+    twelve o'clock.
+
+    A band has no inside, which decides the layouts. Where the chip puts a number in the middle of
+    a ring, a band is the number: a ranged value fills along it and that is the whole reading. Text
+    curves along the band instead, so the types that carry text and the types that carry a quantity
+    read differently at a glance - which is the point of having both styles on one face.
+-->
+<ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY SHORT_TEXT LONG_TEXT RANGED_VALUE GOAL_PROGRESS WEIGHTED_ELEMENTS MONOCHROMATIC_IMAGE SMALL_IMAGE">
+    ${BOUNDING_ARC}
+    ${DEFAULT_PROVIDER_POLICY}
+
+    <!-- A slot nobody has filled draws nothing, not even its track. -->
+    <Complication type="EMPTY">
+    </Complication>
+
+    <!-- A short string, bent along the band. An icon takes the band's near end. -->
+    <Complication type="SHORT_TEXT">
+        <Group name="ShortText" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+            <Condition>
+                <Expressions>
+                    <Expression name="icon_and_text"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TEXT] != null]]></Expression>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                    <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon_and_text">
+                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_start" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" align="END" scale="large" weight="MEDIUM" />
+                </Compare>
+                <Compare expression="text">
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" scale="large" weight="MEDIUM" />
+                </Compare>
+                <Compare expression="title">
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="full" curved="true" scale="large" />
+                </Compare>
+                <Compare expression="icon">
+                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_icon" />
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <!-- A longer string, which a band has room for because it can run as far round as it likes. -->
+    <Complication type="LONG_TEXT">
+        <Group name="LongText" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+            <Condition>
+                <Expressions>
+                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                </Expressions>
+                <Compare expression="text">
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" scale="medium" />
+                </Compare>
+                <Compare expression="title">
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="full" curved="true" scale="medium" />
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <!--
+        A number between a minimum and a maximum. The band fills from its own start to as far round
+        as the value reaches, over the track it already draws, so the whole slot is the gauge and
+        nothing needs to say the number as well.
+    -->
+    <Complication type="RANGED_VALUE">
+        <Group name="RangedValue" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+            <com.xlythe.ComplicationArc kind="ranged" />
+            <Condition>
+                <Expressions>
+                    <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon">
+                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_start" />
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <!-- The same, with a thinner band inside carrying however far past the goal the value is. -->
+    <Complication type="GOAL_PROGRESS">
+        <Group name="GoalProgress" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+            <com.xlythe.ComplicationArc kind="goal" />
+            <Condition>
+                <Expressions>
+                    <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                </Expressions>
+                <Compare expression="icon">
+                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_start" />
+                </Compare>
+            </Condition>
+        </Group>
+    </Complication>
+
+    <!-- The band divided between the provider's elements, each taking its share of the span. -->
+    <Complication type="WEIGHTED_ELEMENTS">
+        <Group name="WeightedElements" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            <com.xlythe.ComplicationArc kind="weighted" />
+        </Group>
+    </Complication>
+
+    <!-- A glyph sitting on the middle of the band, tinted to the slot. -->
+    <Complication type="MONOCHROMATIC_IMAGE">
+        <Group name="MonochromaticImage" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+            <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_icon" />
+        </Group>
+    </Complication>
+
+    <!-- An image that carries its own colour, so it is not tinted. A band is too thin to crop a
+         photograph into, so both styles are drawn the same size. -->
+    <Complication type="SMALL_IMAGE">
+        <Group name="SmallImage" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
+            <com.xlythe.ComplicationImage source="SMALL_IMAGE" area="arc_icon" />
+        </Group>
+    </Complication>
+</ComplicationSlot>

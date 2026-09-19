@@ -126,14 +126,24 @@ final class ComplicationSlotExpander {
         // reference, which is a name at build time and a color only on the watch.
         contentColor = node.attribute('contentColor') ?: color
         ambientContentColor = node.attribute('ambientContentColor') ?: ambientColor
-        geometry = new Geometry(width.toString().toInteger(), height.toString().toInteger())
+        geometry = new Geometry(width.toString().toInteger(), height.toString().toInteger(),
+                arcSpan(node))
         int w = geometry.w
         int h = geometry.h
 
-        // Arcs only accept a Stroke, so the filled style draws an Ellipse instead.
+        // An arc slot's track follows its own span rather than closing into a ring, and the four
+        // styles say how solid it is rather than what shape it is.
         String bgShapeAmbient = ''
         String bgShapeFullres = ''
-        if (drawableStyle == 'fill') {
+        if (geometry.arc != null) {
+            String dashes = drawableStyle == 'dot' ? ' dashIntervals="6 3"' : ''
+            bgShapeAmbient = geometry.arc.shape("<Stroke color=\"${ambientColor}\" cap=\"ROUND\" thickness=\"${geometry.arc.thickness}\"${dashes} />")
+            bgShapeFullres = geometry.arc.shape("<Stroke color=\"${color}\" cap=\"ROUND\" thickness=\"${geometry.arc.thickness}\"${dashes} />")
+            if (!['fill', 'line', 'dot', 'empty', null].contains(drawableStyle)) {
+                throw new IllegalArgumentException(
+                        "Unknown complicationDrawableStyle '${drawableStyle}' for ${TAG} ${slotId}; expected fill, line, dot or empty")
+            }
+        } else if (drawableStyle == 'fill') {
             bgShapeAmbient = "<Ellipse x=\"0\" y=\"0\" width=\"${width}\" height=\"${height}\"><Fill color=\"${ambientColor}\" /></Ellipse>"
             bgShapeFullres = "<Ellipse x=\"0\" y=\"0\" width=\"${width}\" height=\"${height}\"><Fill color=\"${color}\" /></Ellipse>"
         } else if (drawableStyle == 'line' || drawableStyle == null) {
@@ -147,6 +157,10 @@ final class ComplicationSlotExpander {
                     "Unknown complicationDrawableStyle '${drawableStyle}' for ${TAG} ${slotId}; expected fill, line, dot or empty")
         }
 
+        // An arc slot's track carries a gauge drawn over it in the same colour, so it is held back
+        // to read as the track rather than as part of the sweep. A ring slot has its content
+        // inside it instead of on top, so it stays at full strength.
+        int trackAlpha = (geometry.arc != null && drawableStyle != 'fill') ? 110 : 255
         String bgGroup = ''
         if (drawableStyle != 'empty') {
             bgGroup = """
@@ -154,11 +168,11 @@ final class ComplicationSlotExpander {
             <Group name="Background" x="0" y="0" width="${width}" height="${height}">
                 <!-- Ambient background -->
                 <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="0">
-                    <Variant mode="AMBIENT" target="alpha" value="255" />
+                    <Variant mode="AMBIENT" target="alpha" value="${trackAlpha}" />
                     ${bgShapeAmbient}
                 </PartDraw>
                 <!-- Full-res background -->
-                <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="255">
+                <PartDraw x="0" y="0" width="${width}" height="${height}" alpha="${trackAlpha}">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
                     ${bgShapeFullres}
                 </PartDraw>
@@ -174,6 +188,16 @@ final class ComplicationSlotExpander {
                 '${HEIGHT}'                 : height,
                 '${BACKGROUND_GROUP}'       : bgGroup,
                 '${DEFAULT_PROVIDER_POLICY}': defaultProviderPolicy(node),
+                // Arc slots only. A layout that does not use these is unaffected by them.
+                '${BOUNDING_ARC}'           : geometry.arc == null ? '' : geometry.arc.bounding(),
+                '${ARC_CENTER_X}'           : "${geometry.arc?.centerX}",
+                '${ARC_CENTER_Y}'           : "${geometry.arc?.centerY}",
+                '${ARC_WIDTH}'              : "${geometry.arc?.width}",
+                '${ARC_HEIGHT}'             : "${geometry.arc?.height}",
+                '${ARC_START_ANGLE}'        : "${geometry.arc?.startAngle}",
+                '${ARC_END_ANGLE}'          : "${geometry.arc?.endAngle}",
+                '${ARC_THICKNESS}'          : "${geometry.arc?.thickness}",
+                '${ARC_DIRECTION}'          : "${geometry.arc?.direction}",
                 // Single pane icon E.g. <Compare expression="icon">
                 '${IMG_POS_X_SINGLE}'       : "${geometry.iconXSingle}",
                 '${IMG_POS_Y_SINGLE}'       : "${geometry.iconYSingle}",
@@ -228,6 +252,40 @@ final class ComplicationSlotExpander {
         // Tidy the layout's text the same way as the rest of the document. WFF renders whitespace
         // inside text, e.g. around the %s in <Template>.
         return (Node) replaceCustomTags(TemplateProcessor.parse(content))
+    }
+
+    /**
+     * Reads the span of a slot that hugs the bezel rather than sitting in a box.
+     *
+     * <pre>
+     * &lt;com.xlythe.ComplicationSlot slotId="5" x="0" y="0" width="450" height="450" type="arc"
+     *     startAngle="200" endAngle="250" thickness="24" inset="6" /&gt;
+     * </pre>
+     *
+     * <p>A slot still needs a box, because Watch Face Format asks every ComplicationSlot for one;
+     * for an arc it is the box the arc is drawn in, usually the whole face. The angles are
+     * degrees from twelve o'clock, which is where the format puts zero.
+     */
+    private static ArcSpan arcSpan(Node node) {
+        String start = attribute(node, 'startAngle')
+        String end = attribute(node, 'endAngle')
+        if (start == null && end == null) {
+            return null
+        }
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("${TAG} ${node.attribute('slotId')} needs both" +
+                    ' startAngle and endAngle, or neither')
+        }
+        int width = node.attribute('width').toString().toInteger()
+        int height = node.attribute('height').toString().toInteger()
+        int thickness = (attribute(node, 'thickness') ?: '24').toInteger()
+        int inset = (attribute(node, 'inset') ?: '0').toInteger()
+        String direction = attribute(node, 'direction') ?: 'CLOCKWISE'
+        if (!['CLOCKWISE', 'COUNTER_CLOCKWISE'].contains(direction)) {
+            throw new IllegalArgumentException("Unknown ${TAG} direction '${direction}';" +
+                    ' expected CLOCKWISE or COUNTER_CLOCKWISE')
+        }
+        return new ArcSpan(width, height, start as double, end as double, thickness, inset, direction)
     }
 
     /** The providers Wear OS ships, any of which a slot may ask for before the user chooses. */
@@ -317,6 +375,9 @@ final class ComplicationSlotExpander {
      * <p>Only {@code expression} and {@code area} are required. {@code dim} holds a label back from
      * the value it belongs to; it does that with alpha rather than a paler color, because the color
      * may be a configuration reference the build cannot see into.
+     *
+     * <p>{@code curved="true"} bends the line along the slot's own arc, for a slot that is a band
+     * around the bezel and has no inside to put a line in.
      */
     private Node expandText(Node node) {
         String expression = required(node, 'expression')
@@ -325,21 +386,33 @@ final class ComplicationSlotExpander {
         String weight = attribute(node, 'weight') ?: 'NORMAL'
         String maxLines = attribute(node, 'maxLines') ?: '1'
         int alpha = 'true' == attribute(node, 'dim') ? 170 : 255
+        boolean curved = 'true' == attribute(node, 'curved')
+        if (curved && geometry.arc == null) {
+            throw new IllegalArgumentException(
+                    "<${node.name()}> is curved, but its slot has no startAngle to curve along")
+        }
 
         String box = "x=\"${area[0]}\" y=\"${area[1]}\" width=\"${area[2]}\" height=\"${area[3]}\""
         // Text fits its box by shrinking where the runtime can, and by ellipsing where it cannot.
         String fit = formatVersion >= AUTO_SIZE_FORMAT_VERSION
                 ? "ellipsis=\"TRUE\" maxLines=\"${maxLines}\" isAutoSize=\"TRUE\""
                 : "ellipsis=\"TRUE\" maxLines=\"${maxLines}\""
+        // TextCircular carries the angles itself and lays one line along them, so it takes an
+        // alignment rather than a line count.
+        String shape = curved
+                ? "<TextCircular ${geometry.arc.geometryAttributes()} startAngle=\"${geometry.arc.startAngle}\"" +
+                  " endAngle=\"${geometry.arc.endAngle}\" align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
+                : "<Text ${fit}"
+        String closing = curved ? '</TextCircular>' : '</Text>'
         Closure<String> part = { String textColor, int shown, int inAmbient ->
             """<PartText ${box} alpha="${shown}">
                     <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
                     <Localization calendar="GREGORIAN" />
-                    <Text ${fit}>
+                    ${shape}>
                         <Font family="SYNC_TO_DEVICE" size="${size}" weight="${weight}" color="${textColor}">
                             <Template>%s<Parameter expression="${escapeAttribute(expression)}" /></Template>
                         </Font>
-                    </Text>
+                    ${closing}
                 </PartText>"""
         }
 
@@ -440,19 +513,31 @@ final class ComplicationSlotExpander {
      * battery complication knows better than we do that it should turn red. Ambient stays one flat
      * color, because a screen held lit for hours is the wrong place to ask for a gradient.
      *
+     * <p>An arc slot sweeps along its own band instead, from the angle it starts at to as far
+     * round it as the fraction reaches, so the track the slot already draws reads as the empty
+     * part of the same gauge.
+     *
      * @param type the complication type, naming its {@code _COLORS} sources.
      * @param fraction an expression between 0 and 1, already clamped.
      * @param inset how far inside the slot's edge to draw, for a ring that sits under another.
      */
     private String progressRing(String type, String fraction, int inset) {
-        int thickness = inset > 0 ? 4 : 8
-        String geometryAttributes = "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
-                " width=\"${geometry.w - 2 * inset}\" height=\"${geometry.h - 2 * inset}\""
-        String sweep = "<Transform target=\"endAngle\" value=\"360 * (${fraction})\" />"
+        ArcSpan band = geometry.arc
+        if (band != null && inset > 0) {
+            band = band.insetBy(inset)
+        }
+        int thickness = band != null ? band.thickness : (inset > 0 ? 4 : 8)
+        double from = band != null ? band.startAngle : 0d
+        String geometryAttributes = band != null
+                ? band.geometryAttributes()
+                : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
+                  " width=\"${geometry.w - 2 * inset}\" height=\"${geometry.h - 2 * inset}\""
+        double sweepDegrees = band != null ? band.span() : 360d
+        String sweep = "<Transform target=\"endAngle\" value=\"${from} + ${sweepDegrees} * (${fraction})\" />"
         Closure<String> ring = { String stroke, int shown, int inAmbient ->
             """<PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="${shown}">
                     <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
-                    <Arc startAngle="0" endAngle="0" ${geometryAttributes}>
+                    <Arc startAngle="${from}" endAngle="${from}" ${geometryAttributes}>
                         ${sweep}
                         ${stroke}
                     </Arc>
@@ -501,20 +586,31 @@ final class ComplicationSlotExpander {
      * asks for.
      *
      * <p>A weighted stroke does the dividing, so the whole donut is one Arc. The gap between
-     * segments is what makes them read as separate elements rather than one multicolored ring; a
-     * butt cap keeps each segment inside the share it was given.
+     * segments is what makes them read as separate elements rather than one multicolored ring,
+     * and it has to be wide enough for the round caps on either side of it - see #capGap.
      *
      * <p>The provider may also name a color for the part of the ring nothing accounts for, which is
-     * drawn underneath - a full turn, since the segments cover whatever they cover.
+     * drawn underneath - a full turn, since the segments cover whatever they cover. That one is
+     * butt-capped, because it is a backdrop rather than a reading and should not poke out past the
+     * segments sitting on it.
      */
     private String weightedRing() {
-        String geometryAttributes = "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
-                " width=\"${geometry.w}\" height=\"${geometry.h}\""
+        ArcSpan band = geometry.arc
+        int thickness = band != null ? band.thickness : 8
+        double from = band != null ? band.startAngle : 0d
+        double to = band != null ? band.startAngle + band.span() : 360d
+        String geometryAttributes = band != null
+                ? band.geometryAttributes()
+                : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
+                  " width=\"${geometry.w}\" height=\"${geometry.h}\""
+        String gap = capGap(thickness, band != null
+                ? (band.width + band.height) / 4d
+                : (geometry.w + geometry.h) / 4d)
         return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
                     <Variant mode="AMBIENT" target="alpha" value="255" />
-                    <Arc startAngle="0" endAngle="360" ${geometryAttributes}>
-                        <Stroke color="${ambientColor}" cap="BUTT" thickness="8" />
+                    <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
+                        <Stroke color="${ambientColor}" cap="BUTT" thickness="${thickness}" />
                     </Arc>
                 </PartDraw>
                 <Condition>
@@ -524,19 +620,32 @@ final class ComplicationSlotExpander {
                     <Compare expression="has_background">
                         <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                             <Variant mode="AMBIENT" target="alpha" value="0" />
-                            <Arc startAngle="0" endAngle="360" ${geometryAttributes}>
-                                <Stroke color="[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR]" cap="BUTT" thickness="8" />
+                            <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
+                                <Stroke color="[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR]" cap="BUTT" thickness="${thickness}" />
                             </Arc>
                         </PartDraw>
                     </Compare>
                 </Condition>
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
-                    <Arc startAngle="0" endAngle="360" ${geometryAttributes}>
-                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" discreteGap="8" cap="BUTT" thickness="8" />
+                    <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
+                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" discreteGap="${gap}" cap="ROUND" thickness="${thickness}" />
                     </Arc>
                 </PartDraw>
             </Group>"""
+    }
+
+    /**
+     * How wide, in degrees, the gap between two round-capped segments has to be.
+     *
+     * <p>A round cap is a half-circle drawn past the end of its segment, so two of them facing
+     * each other eat a full stroke width of the gap between them and touch. On an arc that width
+     * is an angle rather than a length, which is what the radius converts, and a quarter again
+     * leaves the gap visible rather than merely closed.
+     */
+    private static String capGap(int thickness, double radius) {
+        double degrees = Math.toDegrees(thickness / radius) * 1.25d
+        return String.format('%.1f', degrees)
     }
 
     /** How far between the minimum and the maximum the value sits, as 0 to 1. */
@@ -626,7 +735,93 @@ final class ComplicationSlotExpander {
             throw new IllegalArgumentException("Unknown ${node.name()} scale '${scale}';" +
                     ' expected large, medium, small or tiny')
         }
-        return Math.max(MIN_FONT_SIZE, (int) Math.round(Math.min(geometry.w, geometry.h) * factor))
+        // A band's height is its thickness, not the slot's, and the slot's is the whole face.
+        double reference = geometry.arc != null
+                ? geometry.arc.thickness / 0.30d * 0.85d
+                : Math.min(geometry.w, geometry.h)
+        return Math.max(MIN_FONT_SIZE, (int) Math.round(reference * factor))
+    }
+
+    /**
+     * A slot drawn as a band around the bezel, rather than as a ring with things inside it.
+     *
+     * <p>The oval the arc is scaled to is inset by the stroke's own half-thickness as well as the
+     * caller's inset, because a stroke straddles the path it follows: an arc drawn on the very
+     * edge of the face would have half of itself off the screen.
+     */
+    private static class ArcSpan {
+        final double centerX, centerY, width, height
+        final double startAngle, endAngle
+        final int thickness
+        final String direction
+
+        ArcSpan(int slotWidth, int slotHeight, double startAngle, double endAngle, int thickness,
+                int inset, String direction) {
+            centerX = slotWidth / 2d
+            centerY = slotHeight / 2d
+            width = slotWidth - 2 * inset - thickness
+            height = slotHeight - 2 * inset - thickness
+            this.startAngle = startAngle
+            this.endAngle = endAngle
+            this.thickness = thickness
+            this.direction = direction
+        }
+
+        private ArcSpan(double centerX, double centerY, double width, double height,
+                        double startAngle, double endAngle, int thickness, String direction) {
+            this.centerX = centerX
+            this.centerY = centerY
+            this.width = width
+            this.height = height
+            this.startAngle = startAngle
+            this.endAngle = endAngle
+            this.thickness = thickness
+            this.direction = direction
+        }
+
+        /** A thinner band just inside this one, for a second reading of the same thing. */
+        ArcSpan insetBy(int inset) {
+            int thinner = Math.max(2, (int) (thickness * 0.4f))
+            double shrink = 2 * inset + thickness - thinner
+            return new ArcSpan(centerX, centerY, width - shrink, height - shrink,
+                    startAngle, endAngle, thinner, direction)
+        }
+
+        /** How far round the band goes, in degrees, whichever way it is travelling. */
+        double span() {
+            double sweep = endAngle - startAngle
+            return sweep < 0 ? sweep + 360 : sweep
+        }
+
+        String geometryAttributes() {
+            return "centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\" height=\"${height}\"" +
+                    " direction=\"${direction}\""
+        }
+
+        String shape(String stroke) {
+            return "<Arc startAngle=\"${startAngle}\" endAngle=\"${endAngle}\" ${geometryAttributes()}>${stroke}</Arc>"
+        }
+
+        /** The region the watch treats as this complication, and outlines in the editor. */
+        String bounding() {
+            return "<BoundingArc centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\"" +
+                    " height=\"${height}\" thickness=\"${thickness}\" startAngle=\"${startAngle}\"" +
+                    " endAngle=\"${endAngle}\" direction=\"${direction}\" isRoundEdge=\"TRUE\"" +
+                    " outlinePadding=\"2\" />"
+        }
+
+        /**
+         * Where something sits that should be centred on the band, as x, y, width, height.
+         *
+         * <p>Zero degrees is twelve o'clock and the angle runs clockwise, so the offsets are sine
+         * for x and minus cosine for y rather than the other way round.
+         */
+        int[] centred(double atAngle, int size) {
+            double radians = Math.toRadians(atAngle)
+            double x = centerX + (width / 2d) * Math.sin(radians)
+            double y = centerY - (height / 2d) * Math.cos(radians)
+            return [(int) Math.round(x - size / 2d), (int) Math.round(y - size / 2d), size, size] as int[]
+        }
     }
 
     /**
@@ -652,10 +847,13 @@ final class ComplicationSlotExpander {
         final int backgroundIconSize
         final int glyphSize
         final int overshootInset
+        /** Set when the slot is a band around the bezel rather than a ring in a box. */
+        final ArcSpan arc
 
-        Geometry(int w, int h) {
+        Geometry(int w, int h, ArcSpan arc = null) {
             this.w = w
             this.h = h
+            this.arc = arc
             isHorizontal = w > h
             padH = isHorizontal ? (int) (h / 2) : (int) (h / 6)
             padV = (int) (h / 6)
@@ -698,6 +896,17 @@ final class ComplicationSlotExpander {
         }
 
         Map<String, int[]> areas() {
+            if (arc != null) {
+                int size = (int) (arc.thickness * 0.8f)
+                double middle = arc.startAngle + arc.span() / 2
+                return [
+                        'full'     : [0, 0, w, h] as int[],
+                        // A band has no inside, so what it can hold is one small thing on it.
+                        'arc_icon' : arc.centred(middle, size),
+                        'arc_start': arc.centred(arc.startAngle, size),
+                        'arc_end'  : arc.centred(arc.endAngle, size),
+                ]
+            }
             return [
                     'full'       : [0, 0, w, h] as int[],
                     // The largest square inside a round slot, for an image meant to fill one.

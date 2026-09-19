@@ -8,6 +8,9 @@ import static org.junit.Assert.assertTrue
 import static org.junit.Assert.fail
 
 class ComplicationSlotExpanderTest {
+    /** The layouts the plugin bundles, each a different shape of complication. */
+    private static final List<String> LAYOUTS = ['chip', 'arc', 'background']
+
     private static final String CHIP = '''
         <ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}">
             <Group name="Layout" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
@@ -71,16 +74,8 @@ class ComplicationSlotExpanderTest {
 
     @Test
     void bundledTemplates_expandToValidLookingSlots() {
-        Map<String, String> bundled = [:]
-        for (String type : ['chip', 'background']) {
-            bundled[type] = ComplicationSlotExpanderTest.getResourceAsStream(
-                    "/com/xlythe/watchface/format/templates/complication_${type}.xml").getText('UTF-8')
-        }
-        ComplicationSlotExpander bundledExpander = new ComplicationSlotExpander(bundled, '#FFFFFFFF', '#FF808080')
-
-        for (String type : ['chip', 'background']) {
-            Node root = bundledExpander.expand(TemplateProcessor.parse(
-                    "<Scene><com.xlythe.ComplicationSlot slotId=\"1\" x=\"10\" y=\"20\" width=\"120\" height=\"120\" type=\"${type}\" complicationDrawableStyle=\"line\" /></Scene>"), 2)
+        for (String type : LAYOUTS) {
+            Node root = expandBundled(type, 2)
             String printed = TemplateProcessor.print(root)
 
             assertTrue("${type} left placeholders: ${TemplateProcessor.findPlaceholders(printed)}", TemplateProcessor.findPlaceholders(printed).isEmpty())
@@ -123,7 +118,7 @@ class ComplicationSlotExpanderTest {
 
     @Test
     void bundledTemplates_onlyAskATypeForWhatItCarries() {
-        for (String layout : ['chip', 'background']) {
+        for (String layout : LAYOUTS) {
             eachComplication(layout, 5) { String type, String xml ->
                 List<String> allowed = SOURCES_BY_TYPE[type]
                 assertTrue("${layout} has a layout for ${type}, which is not a complication type",
@@ -139,7 +134,7 @@ class ComplicationSlotExpanderTest {
 
     @Test
     void bundledTemplates_giveEveryTypeTheyAdvertiseALayout() {
-        for (String layout : ['chip', 'background']) {
+        for (String layout : LAYOUTS) {
             Node slot = expandBundled(layout, 5)
             Set<String> advertised = slot.attribute('supportedTypes').toString().split(' ') as Set
             Set<String> laidOut = slot.children()
@@ -187,7 +182,7 @@ class ComplicationSlotExpanderTest {
 
     @Test
     void everyDrawnThingStaysInsideItsSlot() {
-        for (String layout : ['chip', 'background']) {
+        for (String layout : LAYOUTS) {
             Node slot = expandBundled(layout, 5)
             for (Node part : slot.depthFirst().findAll {
                 it instanceof Node && it.name() in ['PartText', 'PartImage', 'PartDraw']
@@ -218,17 +213,26 @@ class ComplicationSlotExpanderTest {
         }
     }
 
+    /** An arc slot is declared by the span it covers, so it needs angles where the others do not. */
+    private static final Map<String, String> EXTRA_ATTRIBUTES =
+            ['arc': ' startAngle="200" endAngle="260" thickness="24" inset="4"']
+
     private static Node expandBundled(String layout, int formatVersion) {
+        Node root = new ComplicationSlotExpander(bundledLayouts(), '#FFFFFFFF', '#FF808080').expand(
+                TemplateProcessor.parse("<Scene><com.xlythe.ComplicationSlot slotId=\"1\" x=\"10\" y=\"20\""
+                        + " width=\"120\" height=\"120\" type=\"${layout}\" complicationDrawableStyle=\"line\""
+                        + "${EXTRA_ATTRIBUTES.get(layout, '')} /></Scene>"),
+                formatVersion)
+        return (Node) root.children()[0]
+    }
+
+    private static Map<String, String> bundledLayouts() {
         Map<String, String> bundled = [:]
-        for (String type : ['chip', 'background']) {
+        for (String type : LAYOUTS) {
             bundled[type] = ComplicationSlotExpanderTest.getResourceAsStream(
                     "/com/xlythe/watchface/format/templates/complication_${type}.xml").getText('UTF-8')
         }
-        Node root = new ComplicationSlotExpander(bundled, '#FFFFFFFF', '#FF808080').expand(
-                TemplateProcessor.parse("<Scene><com.xlythe.ComplicationSlot slotId=\"1\" x=\"10\" y=\"20\""
-                        + " width=\"120\" height=\"120\" type=\"${layout}\" complicationDrawableStyle=\"line\" /></Scene>"),
-                formatVersion)
-        return (Node) root.children()[0]
+        return bundled
     }
 
     private static void eachComplication(String layout, int formatVersion, Closure<?> body) {
