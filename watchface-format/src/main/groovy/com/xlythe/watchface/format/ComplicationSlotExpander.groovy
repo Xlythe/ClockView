@@ -748,8 +748,14 @@ final class ComplicationSlotExpander {
                     ' expected large, medium, small or tiny')
         }
         // A band's height is its thickness, not the slot's, and the slot's is the whole face.
+        //
+        // A line of type takes about a fifth more room than its size, once the parts that reach
+        // above and below the letters are counted, so the largest that fits a band is around two
+        // thirds of its thickness rather than all of it. Type that wants to be bigger than that
+        // needs a thicker band, not a bigger share of this one - there is nowhere else for it to
+        // go, and it ends up over the edge.
         double reference = geometry.arc != null
-                ? geometry.arc.thickness / 0.30d * 0.85d
+                ? geometry.arc.thickness / 0.30d * 0.62d
                 : Math.min(geometry.w, geometry.h)
         return Math.max(MIN_FONT_SIZE, (int) Math.round(reference * factor))
     }
@@ -794,7 +800,13 @@ final class ComplicationSlotExpander {
         /**
          * The oval to lay a line of type on so that the line sits inside this band.
          *
-         * @param size the type's height, which is how far the line grows outwards from the oval.
+         * <p>A line grows outwards from the oval it is laid on rather than straddling it, so the
+         * oval is pulled in by the height of the type, which lands the line in the middle of the
+         * band. Anywhere further out and it runs off the rim; anywhere further in and it meets
+         * whatever the face already draws there. A band that cannot hold its own text between
+         * those two wants to be thicker, or to sit where there is room for it.
+         *
+         * @param size the type's height.
          */
         ArcSpan forText(int size) {
             return new ArcSpan(centerX, centerY, width - size, height - size,
