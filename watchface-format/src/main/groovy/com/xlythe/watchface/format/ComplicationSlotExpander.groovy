@@ -50,6 +50,18 @@ final class ComplicationSlotExpander {
     /** How far a completed lap is held back so the next one over it can be told apart. */
     private static final int PASSED_LAP_ALPHA = 105
 
+    /**
+     * How thick a band is, and how far in from the slot's edge it sits, as shares of the slot.
+     *
+     * <p>Proportions rather than pixels, because a slot is as wide as the face and a face is
+     * whatever size its author chose. A band sits inside whatever the face draws around its rim -
+     * tick marks, numerals - rather than on top of it: out at the rim there is no room for the
+     * band's own text, which then runs off the screen, and the marks are what the band would have
+     * to overlap to find any. A face with a bare rim can pass a smaller inset and take it.
+     */
+    private static final double DEFAULT_BAND_THICKNESS = 0.056d
+    private static final double DEFAULT_BAND_INSET = 0.114d
+
     /** Below this, a font size is too small to read on a watch. Also WFF's own autosize floor. */
     private static final int MIN_FONT_SIZE = 12
 
@@ -262,7 +274,7 @@ final class ComplicationSlotExpander {
      *
      * <pre>
      * &lt;com.xlythe.ComplicationSlot slotId="5" x="0" y="0" width="450" height="450" type="arc"
-     *     startAngle="200" endAngle="250" thickness="24" inset="6" /&gt;
+     *     startAngle="200" endAngle="250" /&gt;
      * </pre>
      *
      * <p>A slot still needs a box, because Watch Face Format asks every ComplicationSlot for one;
@@ -281,8 +293,9 @@ final class ComplicationSlotExpander {
         }
         int width = node.attribute('width').toString().toInteger()
         int height = node.attribute('height').toString().toInteger()
-        int thickness = (attribute(node, 'thickness') ?: '24').toInteger()
-        int inset = (attribute(node, 'inset') ?: '0').toInteger()
+        int across = Math.min(width, height)
+        int thickness = attribute(node, 'thickness')?.toInteger() ?: (int) (across * DEFAULT_BAND_THICKNESS)
+        int inset = attribute(node, 'inset')?.toInteger() ?: (int) (across * DEFAULT_BAND_INSET)
         String direction = attribute(node, 'direction') ?: 'CLOCKWISE'
         if (!['CLOCKWISE', 'COUNTER_CLOCKWISE'].contains(direction)) {
             throw new IllegalArgumentException("Unknown ${TAG} direction '${direction}';" +
