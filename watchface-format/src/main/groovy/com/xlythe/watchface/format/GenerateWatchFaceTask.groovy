@@ -83,10 +83,13 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
         outputRoot.mkdirs()
 
         File templateFile = template.get().asFile
-        Map<String, String> variables
+        Map<Integer, Map<String, String>> variablesByVersion = new LinkedHashMap<>()
         ComplicationSlotExpander expander
         try {
-            variables = TemplateProcessor.resolve(declaredVariables())
+            for (WatchFaceVariant variant : variants.get()) {
+                int version = variant.formatVersion.get()
+                variablesByVersion.computeIfAbsent(version) { TemplateProcessor.resolve(declaredVariables(it)) }
+            }
             expander = new ComplicationSlotExpander(
                     complicationLayouts(), complicationColor.get(), complicationAmbientColor.get())
         } catch (IllegalArgumentException e) {
@@ -109,7 +112,8 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
             }
 
             Map<String, String> replacements = variant.replacements.get()
-            Map<String, String> variantVariables = TemplateProcessor.withReplacements(variables, replacements)
+            Map<String, String> variantVariables = TemplateProcessor.withReplacements(
+                    variablesByVersion.get(variant.formatVersion.get()), replacements)
 
             // Reference arrived in format 4. Older variants inline as usual, so one template
             // serves both and the shared list costs nothing where it can't be honoured.
@@ -172,10 +176,15 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
         }
     }
 
-    private Map<String, String> declaredVariables() {
+    /**
+     * @param formatVersion decides how the date and the UTC offset are worked out. See
+     *     {@link StandardDates}.
+     */
+    private Map<String, String> declaredVariables(int formatVersion) {
         Map<String, String> declared = new LinkedHashMap<>()
         if (standardVariables.get()) {
             declared.putAll(TemplateProcessor.parseVariables(bundledResource('variables/standard.xml'), 'standard variables'))
+            declared.putAll(StandardDates.forFormatVersion(formatVersion))
         }
         for (File file : variableFiles.files) {
             declared.putAll(TemplateProcessor.parseVariables(file.getText('UTF-8'), file.name))

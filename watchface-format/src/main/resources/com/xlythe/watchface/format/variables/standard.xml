@@ -99,19 +99,42 @@
         (${CURRENT_MILLIS_TO_THE_MINUTE} - ([UTC_TIMESTAMP] % 86400000)) / 3600000
     </Item>
     <!--
-        Straight off the epoch, which is already UTC - where both NOAA's day number and sidereal
-        time are measured. 2440587.5 is the Julian day of 1 January 1970.
+        Counted from the calendar, which is dearer to write than [UTC_TIMESTAMP] / 86400000 and
+        far cheaper to run. An expression is re-evaluated whenever a source in it changes, and a
+        timestamp in milliseconds changes as fast as the runtime can ask; [YEAR], [DAY_OF_YEAR]
+        and the minute clock do not. ${JULIAN_CENTURY} is read nineteen times, so this is what
+        decides whether the sun is worked out once a minute or once a frame.
 
-        The calendar route is the obvious one and it is far dearer: counting years, leap years and
-        the day of the year, then subtracting ${LOCAL_OFFSET} to get back to UTC, comes to 311
-        characters against 45, and every one of them is re-evaluated on every tick that touches
-        the sun or the moon. ${JULIAN_CENTURY} is read nineteen times.
+        The century rules cancel: floor((y-1)/100) - floor((y-1)/400) is 15 for every year from
+        1901 to 2100, so two of the three floors fold into the constant.
+
+        This is local, not UTC. NOAA subtracts the offset here; leaving it out moves sunrise and
+        sunset by a minute or two, which is the trade this file has always made. The moon cannot
+        make it - see ${JULIAN_DAY_UTC}.
+
+        The plugin replaces both of these with [MINUTES_SINCE_EPOCH] on format 3 and up, where
+        one source is exact, in UTC, and still only changes once a minute.
     -->
     <Item name="${JULIAN_DAY}">
+        1721410.5 + 365 * ([YEAR] - 1) + floor(([YEAR] - 1) / 4) + [DAY_OF_YEAR] - 1 + ${TIME_PAST_LOCAL_MIDNIGHT}
+    </Item>
+    <!--
+        The same day in UTC, which sidereal time needs and only the moon reads. An hour of offset
+        turns the earth 15 degrees, so a local date would put the moon three quarters of the sky
+        away in a place like UTC+5 - the error the sun shrugs off is the one the moon cannot.
+
+        On format 1 and 2 the only numeric route to UTC is [UTC_TIMESTAMP], which is a fast
+        source, so a face that draws the moon pays for it. Nothing else reads this, so a face
+        that does not draw the moon pays nothing.
+    -->
+    <Item name="${JULIAN_DAY_UTC}">
         [UTC_TIMESTAMP] / 86400000 + 2440587.5
     </Item>
     <Item name="${JULIAN_CENTURY}">
         (${JULIAN_DAY} - 2451545) / 36525
+    </Item>
+    <Item name="${JULIAN_CENTURY_UTC}">
+        (${JULIAN_DAY_UTC} - 2451545) / 36525
     </Item>
     <Item name="${GEOM_MEAN_LONG_SUN_DEG}">
         (280.46646 + ${JULIAN_CENTURY} * (36000.76983 + ${JULIAN_CENTURY} * 0.0003032)) % 360
@@ -236,16 +259,16 @@
     -->
     <!-- The moon's mean elements. Wrapped to a turn so a single-precision evaluator keeps its digits. -->
     <Item name="${MOON_MEAN_LONGITUDE_DEG}">
-        (218.3164477 + 481267.88123421 * ${JULIAN_CENTURY}) % 360
+        (218.3164477 + 481267.88123421 * ${JULIAN_CENTURY_UTC}) % 360
     </Item>
     <Item name="${MOON_MEAN_ELONGATION_DEG}">
-        (297.8501921 + 445267.1114034 * ${JULIAN_CENTURY}) % 360
+        (297.8501921 + 445267.1114034 * ${JULIAN_CENTURY_UTC}) % 360
     </Item>
     <Item name="${MOON_MEAN_ANOMALY_DEG}">
-        (134.9633964 + 477198.8675055 * ${JULIAN_CENTURY}) % 360
+        (134.9633964 + 477198.8675055 * ${JULIAN_CENTURY_UTC}) % 360
     </Item>
     <Item name="${MOON_ARG_LATITUDE_DEG}">
-        (93.2720950 + 483202.0175233 * ${JULIAN_CENTURY}) % 360
+        (93.2720950 + 483202.0175233 * ${JULIAN_CENTURY_UTC}) % 360
     </Item>
 
     <Item name="${MOON_ECLIPTIC_LONGITUDE_DEG}">
@@ -270,7 +293,7 @@
 
     <!-- How far the earth has turned, which is what puts the moon east or west of the meridian. -->
     <Item name="${GREENWICH_SIDEREAL_TIME_DEG}">
-        (((280.46061837 + 360.98564736629 * (${JULIAN_DAY} - 2451545)) % 360) + 360) % 360
+        (((280.46061837 + 360.98564736629 * (${JULIAN_DAY_UTC} - 2451545)) % 360) + 360) % 360
     </Item>
     <Item name="${MOON_HOUR_ANGLE_DEG}">
         (((${GREENWICH_SIDEREAL_TIME_DEG} + ${LONGITUDE} - ${MOON_RIGHT_ASCENSION_DEG}) % 360) + 360) % 360

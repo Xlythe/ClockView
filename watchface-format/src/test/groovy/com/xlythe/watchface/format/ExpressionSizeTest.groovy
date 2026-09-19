@@ -15,16 +15,20 @@ import static org.junit.Assert.assertTrue
 class ExpressionSizeTest {
 
     private static final Map<String, Integer> LIMITS = [
-            '${JULIAN_DAY}'                   : 100,
-            '${SUNRISE_MILLIS_SINCE_MIDNIGHT}': 10_000,
-            '${MOON_DECLINATION_DEG}'         : 5_000,
-            '${MOON_RIGHT_ASCENSION_DEG}'     : 20_000,
-            '${MOON_ALTITUDE_DEG}'            : 30_000,
+            // Measured without the version overrides, so these are the format 1 shapes: the
+            // date is counted from the calendar rather than taken off a timestamp, which is
+            // longer to write and built only from sources that change once a minute or slower.
+            // Format 3 and up get [MINUTES_SINCE_EPOCH] and come out smaller as well as slower.
+            '${JULIAN_DAY}'                   : 200,
+            '${SUNRISE_MILLIS_SINCE_MIDNIGHT}': 20_000,
+            '${MOON_DECLINATION_DEG}'         : 8_000,
+            '${MOON_RIGHT_ASCENSION_DEG}'     : 30_000,
+            '${MOON_ALTITUDE_DEG}'            : 45_000,
             // The dearest of the lot: it inlines the altitude, and the altitude inlines the right
             // ascension. Reach for it once per face, not once per element.
-            '${MOON_AZIMUTH_DEG}'             : 150_000,
-            '${GET_TRANSITION_ALPHA}'         : 70_000,
-            '${PERCENT_OF_DAY}'               : 80_000,
+            '${MOON_AZIMUTH_DEG}'             : 220_000,
+            '${GET_TRANSITION_ALPHA}'         : 140_000,
+            '${PERCENT_OF_DAY}'               : 160_000,
     ]
 
     @Test
