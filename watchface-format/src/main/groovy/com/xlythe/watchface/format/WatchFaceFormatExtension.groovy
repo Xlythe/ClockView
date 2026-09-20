@@ -170,6 +170,23 @@ abstract class WatchFaceFormatExtension {
      */
     abstract Property<String> getPushApplicationId()
 
+    /**
+     * Which screen density the pushed package carries. Defaults to {@code xhdpi}; empty carries
+     * every density there is.
+     *
+     * <p>A store build is a bundle and Google Play sends each watch the one density it can use.
+     * A pushed build is a single APK handed straight to a watch, so nothing strips it: art with
+     * a full density ladder arrives five times over, and the four that go unread still have to
+     * cross to the watch and sit in its storage.
+     *
+     * <p>One, not a list - aapt refuses to filter for several ("Cannot filter assets for
+     * multiple densities"). It is not much of a limit here. A watch face scales its art to a
+     * canvas rather than drawing it at a size in dp, so what matters is how many pixels the art
+     * has against the pixels of the face, and xhdpi art is about face-sized on every Wear OS
+     * device that can be sent a watch face at all.
+     */
+    abstract Property<String> getPushDensity()
+
     void variants(Action<? super NamedDomainObjectContainer<WatchFaceVariant>> action) {
         action.execute(variants)
     }

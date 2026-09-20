@@ -35,6 +35,7 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
         extension.generateFormatVersionResource.convention(true)
         extension.sharedResourceIncludes.convention(SyncSharedResourcesTask.DEFAULT_INCLUDES)
         extension.pruneSharedResources.convention(true)
+        extension.pushDensity.convention('xhdpi')
         extension.bundlePerFormatVersion.convention(false)
         extension.versionCodeMultiplier.convention(10)
 
@@ -210,6 +211,13 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
         android.productFlavors.create('push') { flavor ->
             flavor.dimension = DISTRIBUTION_DIMENSION
             flavor.applicationId = pushApplicationId
+            // A store build is a bundle, and Google Play sends a watch only the density it can
+            // use. A pushed build is one APK handed straight to a watch, so nothing strips it
+            // and every density it carries is dead weight on the way over.
+            String density = extension.pushDensity.get()
+            if (!density.isEmpty()) {
+                flavor.resourceConfigurations.add(density)
+            }
         }
     }
 
