@@ -270,6 +270,19 @@ watchFaceFormat {
 }
 ```
 
+Only what the watch face reaches is copied. A library shared with an app that has screens carries
+button states, selector drawables and the frames behind an `animation-list`, none of which a watch
+face can use - and if some of the art is paid for, art the face doesn't draw and the bundle
+shouldn't hand out. Android's resource shrinker can't help, because it reads code and a bundle has
+none, so the names are followed instead: `resource`, `icon` and `thumbnail` in the generated watch
+faces, plus `@drawable/`-style references in the module's own manifests and resources, and then
+whatever those reach in turn. Anything a face reaches some other way needs the walk turned off:
+```groovy
+watchFaceFormat {
+    pruneSharedResources = false
+}
+```
+
 The manifest declares the format version with a generated resource:
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">

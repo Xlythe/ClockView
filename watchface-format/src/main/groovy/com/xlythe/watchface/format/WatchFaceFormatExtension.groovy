@@ -98,6 +98,18 @@ abstract class WatchFaceFormatExtension {
     abstract ListProperty<String> getSharedResourceIncludes()
 
     /**
+     * Copies only the shared resources the watch face names, following each one into whatever it
+     * names in turn. Defaults to true.
+     *
+     * <p>A shared library is shared with an app that has screens, and so carries button states,
+     * selectors and animation frames a watch face can't reach - and, if some of the art is paid
+     * for, art the face doesn't draw and the bundle shouldn't hand out. Android's resource
+     * shrinker won't do it: it reads code, and a bundle has none. Turn this off for a project
+     * whose art is reached some way the generator can't see.
+     */
+    abstract Property<Boolean> getPruneSharedResources()
+
+    /**
      * Variables to work out once and publish with {@code <Reference>}, rather than inlining at
      * every use. Watch Face Format 4 and up only; variants targeting an older version inline them
      * as usual, so the same template builds for both.

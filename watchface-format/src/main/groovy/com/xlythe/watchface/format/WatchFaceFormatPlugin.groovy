@@ -34,6 +34,7 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
         extension.complicationAmbientColor.convention('#FFFFFFFF')
         extension.generateFormatVersionResource.convention(true)
         extension.sharedResourceIncludes.convention(SyncSharedResourcesTask.DEFAULT_INCLUDES)
+        extension.pruneSharedResources.convention(true)
         extension.bundlePerFormatVersion.convention(false)
         extension.versionCodeMultiplier.convention(10)
 
@@ -46,14 +47,6 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
         extension.variants.create('wff2') { WatchFaceVariant variant ->
             variant.resourceQualifier.set('raw-v34')
             variant.formatVersion.set(2)
-        }
-
-        TaskProvider<SyncSharedResourcesTask> syncShared = project.tasks.register(SHARED_RESOURCES_TASK_NAME, SyncSharedResourcesTask) { SyncSharedResourcesTask task ->
-            task.group = 'build'
-            task.description = 'Copies shared art and values into the watch face without depending on code.'
-            task.resourceDirectories.from(extension.sharedResources)
-            task.includes.set(extension.sharedResourceIncludes)
-            task.outputDirectory.set(project.layout.buildDirectory.dir('generated/watchface-format/shared-res'))
         }
 
         // One bundle: every variant goes into its own version-qualified resource directory.
@@ -88,6 +81,37 @@ class WatchFaceFormatPlugin implements Plugin<Project> {
                 task.validateAgainstLowestVersion.set(false)
                 task.report.set(project.layout.buildDirectory.file("reports/watchface-format/${variant.name}-validation.txt"))
             }
+        }
+
+        // Copying the shared art is last because what to leave out depends on what the generated
+        // faces turned out to name, so this reads their output. One copy serves every Android
+        // variant, so the faces it has to satisfy are all of them at once.
+        TaskProvider<SyncSharedResourcesTask> syncShared = project.tasks.register(SHARED_RESOURCES_TASK_NAME, SyncSharedResourcesTask) { SyncSharedResourcesTask task ->
+            task.group = 'build'
+            task.description = 'Copies shared art and values into the watch face without depending on code.'
+            task.resourceDirectories.from(extension.sharedResources)
+            task.includes.set(extension.sharedResourceIncludes)
+            task.pruneUnreferenced.set(extension.pruneSharedResources)
+            task.referenceFiles.from(project.provider {
+                if (!extension.bundlePerFormatVersion.get()) {
+                    return [generate.flatMap { it.outputDirectory }]
+                }
+                return extension.variants.collect { WatchFaceVariant variant ->
+                    project.tasks
+                            .named("generate${variant.name.capitalize()}WatchFaceFormatResources", GenerateWatchFaceTask)
+                            .flatMap { it.outputDirectory }
+                }
+            })
+            // The template as well as what it expands into: a variant may stub out an element
+            // that names art, and art a build still ships is not art to throw away.
+            task.referenceFiles.from(extension.template)
+            // Whatever the module itself contributes - the launcher icon the manifest names, a
+            // preview in res/xml - reaches shared art the same way the face does.
+            task.referenceFiles.from(project.fileTree('src') { child ->
+                child.include('**/AndroidManifest.xml')
+                child.include('**/res/**/*.xml')
+            })
+            task.outputDirectory.set(project.layout.buildDirectory.dir('generated/watchface-format/shared-res'))
         }
 
         // Validate on every build once a validator is configured, for whichever layout is in use.
