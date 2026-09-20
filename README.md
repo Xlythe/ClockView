@@ -126,6 +126,33 @@ ClockView
 </com.xlythe.view.clock.ClockView>
 ```
 
+A hand turns about the middle of its own view, so art drawn on a face-sized canvas needs nothing
+else: whatever the canvas puts in the middle is what the hand turns about. That costs a canvas of
+transparent pixels around every hand, which compresses to almost nothing in the APK and to nothing
+at all once decoded - a 45x1000 hour hand is 180kB of bitmap to draw 45x299 of art.
+
+Art cropped to the hand can say where the crop came from instead. The view still covers the whole
+face and still turns about the middle of it; only where the art is drawn changes:
+
+```xml
+<com.xlythe.view.clock.ClockHandView
+    android:id="@id/clock_hours"
+    android:src="@drawable/hour_hand"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    clock:handOffsetX="0.477"
+    clock:handOffsetY="0.201"
+    clock:handWidth="0.045"
+    clock:handHeight="0.299" />
+```
+
+Every value is a fraction of the view, so they are the numbers the crop was taken with: rows 201
+to 500 of a thousand-pixel canvas is `handOffsetY="0.201"` with `handHeight="0.299"`. The middle
+of the face lands wherever they put it, which is the point - inside the art for a hand carrying a
+counterweight or a disc past the pivot, at the very edge of it for a hand that stops there. Call
+`setHandBounds` instead when the art changes at runtime, since two hands cut from the same canvas
+rarely share a crop, and `clearHandBounds` to go back to art drawn on a full canvas.
+
 Additionally, on WearOS you can add ComplicationViews.
 While in a watchface editor, the user can tap on these views to attach information to the watchface.
 

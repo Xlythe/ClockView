@@ -13,6 +13,18 @@
         <attr name="ambientModeEnabled" format="boolean" />
     </declare-styleable>
 
+    <declare-styleable name="ClockHandView">
+        <!-- Where the hand's art sits on the face, as a fraction of this view. Left at the
+             defaults the art fills the view, which is what a hand drawn on a full-size canvas
+             wants. Set them to place art that has been cropped to the hand itself: the view still
+             covers the whole face, so it still turns about the middle of it, and the art is drawn
+             where the crop came from. See ClockHandView#setHandBounds. -->
+        <attr name="handOffsetX" format="float" />
+        <attr name="handOffsetY" format="float" />
+        <attr name="handWidth" format="float" />
+        <attr name="handHeight" format="float" />
+    </declare-styleable>
+
     <declare-styleable name="ComplicationView">
         <attr name="complicationId" format="integer" />
         <attr name="complicationDrawableStyle" format="enum">
