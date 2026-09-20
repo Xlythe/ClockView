@@ -478,11 +478,13 @@ it, where a chip puts the number in the middle of its ring.
 Each type gets a layout written for what Wear's
 [Complication reference](https://developer.android.com/training/wearables/wff/complication/complication)
 says it reports, so no layout asks for data its type never sends. `RANGED_VALUE` and
-`GOAL_PROGRESS` take the provider's own colours through a `WeightedStroke` from format 2, a passed
-goal draws its overshoot as a second ring, `WEIGHTED_ELEMENTS` divides one ring between the
-provider's weights, and a provider that sends no text still gets its number written out with
-`numberFormat`. From format 3, text shrinks to fit rather than ellipsing. On format 1 the types
-that arrived later are dropped from `supportedTypes` and their layouts removed.
+`GOAL_PROGRESS` take the provider's own colour ramp from format 2, laid over the whole range with
+the part past the value shaded so the fill ends in the colour of the reading; a passed goal keeps
+its full ring and draws the lap past it thicker; `WEIGHTED_ELEMENTS` divides one ring between the
+provider's weights with a gap at each division; and a provider that sends no text still gets its
+number written out with `numberFormat`. From format 3, text shrinks to fit rather than ellipsing,
+and values are set a size larger to make use of it. On format 1 the types that arrived later are
+dropped from `supportedTypes` and their layouts removed.
 
 Layouts are written in terms of three more tags, which know the slot they are in:
 ```xml
@@ -493,8 +495,9 @@ Layouts are written in terms of three more tags, which know the slot they are in
 `area` is `full`, `photo`, `icon`, `glyph`, `icon_beside`, `text`, `text_beside`, `value`, `label`,
 `header` or `body` in a box slot, and `full`, `arc_icon`, `arc_start` or `arc_end` in a band.
 `scale` is `large`, `medium`, `small` or `tiny`, measured against the slot rather than fixed in
-pixels. `ComplicationText` also takes `weight`, `maxLines`, `dim` and `curved`; `ComplicationArc`
-takes `ranged`, `goal` or `weighted`. To change the layouts, point `complicationTemplates` at a
+pixels. `ComplicationText` also takes `weight`, `maxLines`, `dim`, `curved` and `autoSizeScale`,
+the scale to use from format 3, where text shrinks to fit; `ComplicationArc` takes `ranged`,
+`goal` or `weighted`. To change the layouts, point `complicationTemplates` at a
 directory of `complication_<type>.xml` files, which also adds types of your own.
 
 To publish the plugin, run `./gradlew :watchface-format:publish`. For local testing, run

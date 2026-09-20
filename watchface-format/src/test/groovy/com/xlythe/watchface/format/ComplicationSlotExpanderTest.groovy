@@ -197,6 +197,21 @@ class ComplicationSlotExpanderTest {
         }
     }
 
+    /** A value is set larger where the runtime can shrink it to fit, and no larger where it cannot. */
+    @Test
+    void text_takesTheLargerScaleOnlyWhereTextShrinksToFit() {
+        String tag = '<com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" />'
+        Map<Integer, String> sizes = [2, 3].collectEntries { int version ->
+            Node root = new ComplicationSlotExpander([chip: "<ComplicationSlot slotId=\"\${COMPLICATION_ID}\">${tag}</ComplicationSlot>"],
+                    '#FFFFFFFF', '#FFFFFFFF').expand(TemplateProcessor.parse(
+                    '<Scene><com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="100" height="100" type="chip" /></Scene>'), version)
+            Node font = (Node) root.depthFirst().find { it instanceof Node && it.name() == 'Font' }
+            [(version): font.attribute('size').toString()]
+        }
+        // medium is 0.23 of the slot and large 0.30; only format 3 has isAutoSize to fall back on.
+        assertEquals(['23', '30'], [sizes[2], sizes[3]])
+    }
+
     @Test
     void text_rejectsAnAreaOrScaleThatIsNotThere() {
         for (String tag : ['<com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="middle" />',

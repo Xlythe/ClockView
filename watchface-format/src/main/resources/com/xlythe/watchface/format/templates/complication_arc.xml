@@ -75,7 +75,8 @@
     <!--
         A number between a minimum and a maximum. The band fills from its own start to as far round
         as the value reaches, over the track it already draws, so the whole slot is the gauge and
-        nothing needs to say the number as well.
+        nothing needs to say the number as well. A provider's colour ramp runs the length of the
+        band, with the part past the value shaded, so the fill ends in the colour of the reading.
     -->
     <Complication type="RANGED_VALUE">
         <Group name="RangedValue" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
@@ -92,7 +93,8 @@
         </Group>
     </Complication>
 
-    <!-- The same, with a thinner band inside carrying however far past the goal the value is. -->
+    <!-- The same. A goal that has been passed keeps its full band and carries however far past
+         the goal the value is as a thicker lap over the top of it. -->
     <Complication type="GOAL_PROGRESS">
         <Group name="GoalProgress" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
             ${BACKGROUND_GROUP}
@@ -108,9 +110,14 @@
         </Group>
     </Complication>
 
-    <!-- The band divided between the provider's elements, each taking its share of the span. -->
+    <!--
+        The band divided between the provider's elements, each taking its share of the span, with
+        a gap at each division. The elements are cut square, so the track is kept underneath: its
+        round ends give this band the same outline as the ones beside it.
+    -->
     <Complication type="WEIGHTED_ELEMENTS">
         <Group name="WeightedElements" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
+            ${BACKGROUND_GROUP}
             <com.xlythe.ComplicationArc kind="weighted" />
         </Group>
     </Complication>

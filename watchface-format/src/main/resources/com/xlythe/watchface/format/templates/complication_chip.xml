@@ -14,6 +14,12 @@
     wins: the first one whose expression holds is the one drawn. Wear's guidance is to show an icon
     or a title but not both, so the pairings come before the singles and the icon pairing comes
     first.
+
+    Type follows one rule throughout. A value is set large where the runtime can shrink it to fit
+    its box (format 3 on) and medium where it can only ellipsize, so "72°" is as big as the chip
+    allows and "10,482" still fits; a label is set small and held back; and nothing is set below
+    small, because on a chip a sixth the width of the face, small is already the least that can be
+    read.
 -->
 <ComplicationSlot slotId="${COMPLICATION_ID}" x="${POS_X}" y="${POS_Y}" width="${WIDTH}" height="${HEIGHT}" supportedTypes="EMPTY SHORT_TEXT LONG_TEXT RANGED_VALUE GOAL_PROGRESS WEIGHTED_ELEMENTS MONOCHROMATIC_IMAGE SMALL_IMAGE">
     <BoundingOval x="0" y="0" width="${WIDTH}" height="${HEIGHT}" outlinePadding="2" />
@@ -38,15 +44,15 @@
                 </Expressions>
                 <Compare expression="icon_and_text">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                     <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="icon_and_title">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="text_beside" scale="medium" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="text_beside" scale="medium" autoSizeScale="large" />
                 </Compare>
                 <Compare expression="text">
                     <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="large" weight="MEDIUM" />
@@ -77,8 +83,8 @@
                     <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
                 </Expressions>
                 <Compare expression="title_and_text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="header" scale="tiny" dim="true" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="body" scale="small" maxLines="2" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="header" scale="small" dim="true" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="body" scale="small" autoSizeScale="medium" maxLines="2" />
                 </Compare>
                 <Compare expression="icon_and_text">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
@@ -100,7 +106,9 @@
 
     <!--
         A number between a minimum and a maximum, so the ring is a gauge and the slot's own ring is
-        its track. E.g. a battery, a workout.
+        its track. E.g. a battery, a workout. A provider that sends a colour ramp gets it laid over
+        the whole range, with the part the value has not reached shaded, so the fill ends in the
+        colour of the reading.
 
         A provider that sends no text still sent a number, so the gauge says what it is as a
         percentage rather than leaving the ring to be read off by eye. numberFormat takes a
@@ -119,27 +127,28 @@
                 </Expressions>
                 <Compare expression="icon_and_text">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="small" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="small" weight="MEDIUM" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="tiny" dim="true" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="icon">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
                 </Compare>
                 <Default>
-                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#%&quot;, clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1))" area="text" scale="medium" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#%&quot;, clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1))" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Default>
             </Condition>
         </Group>
     </Complication>
 
     <!--
-        A number counting up towards a target it is allowed to pass. E.g. a step count.
+        A number counting up towards a target it is allowed to pass. E.g. a step count. A goal that
+        has been passed keeps its full ring and draws the lap past it thicker, over the top.
 
         Where a ranged value is a proportion, a goal is a tally, so a provider that sends no text
         gets its own number back with thousands separated rather than a percentage of a target it
@@ -158,22 +167,20 @@
                 </Expressions>
                 <Compare expression="icon_and_text">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="small" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="small" weight="MEDIUM" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="tiny" dim="true" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="icon">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
                 </Compare>
                 <Default>
-                    <!-- A tally runs to four or five digits where a percentage runs to three, so
-                         it is set a size down to keep it clear of the ring. -->
-                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#,###&quot;, [COMPLICATION.GOAL_PROGRESS_VALUE])" area="text" scale="small" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#,###&quot;, [COMPLICATION.GOAL_PROGRESS_VALUE])" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Default>
             </Condition>
         </Group>
@@ -181,7 +188,7 @@
 
     <!--
         A list of things and how much of the whole each one is, drawn as one ring divided between
-        them. E.g. a week's sleep stages, a day's activity split.
+        them with a gap at each division. E.g. a week's sleep stages, a day's activity split.
     -->
     <Complication type="WEIGHTED_ELEMENTS">
         <Group name="WeightedElements" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
@@ -193,11 +200,11 @@
                     <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
                 </Expressions>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="small" weight="MEDIUM" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="tiny" dim="true" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="icon">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
