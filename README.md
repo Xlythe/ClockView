@@ -11,7 +11,7 @@ Where to Download
 -----------------
 ```groovy
 dependencies {
-  implementation 'com.xlythe:clock-view:3.0.0'
+  implementation 'com.xlythe:clock-view:3.2.0'
 }
 ```
 
@@ -258,7 +258,7 @@ share expressions and complication layouts instead of copying them.
 // Top-level build.gradle
 buildscript {
     dependencies {
-        classpath 'com.xlythe:watchface-format:1.0.4'
+        classpath 'com.xlythe:watchface-format:1.0.9'
     }
 }
 ```
