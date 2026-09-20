@@ -593,7 +593,10 @@ final class ComplicationSlotExpander {
         double sweepDegrees = band != null ? band.span() : 360d
         double to = from + sweepDegrees
         String reached = "${from} + ${sweepDegrees} * (${fraction})"
-        Closure<String> ring = { String stroke, int shown, int inAmbient, double startAngle, double endAngle, String transform ->
+        // Number rather than double for the two angles: a primitive double takes two local
+        // variable slots, and Groovy miscounts them when a closure mixes primitives with objects,
+        // which the JVM rejects when it verifies the generated doCall ("Bad local variable type").
+        Closure<String> ring = { String stroke, int shown, int inAmbient, Number startAngle, Number endAngle, String transform ->
             """<PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="${shown}">
                     <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
                     <Arc startAngle="${startAngle}" endAngle="${endAngle}" ${geometryAttributes}>

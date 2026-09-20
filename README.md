@@ -262,6 +262,12 @@ buildscript {
     }
 }
 ```
+
+After changing the plugin, build a watch face with it, not just `gradlew :watchface-format:test`.
+The tests load the expander inside the same JVM that compiled it and will happily pass over a
+class the JVM later refuses: a closure that takes a primitive `double` or `float` is generated
+with its local variable slots miscounted, which only fails when Gradle loads the published jar
+("Bad local variable type ... double_2nd is not assignable to double"). Take a `Number`.
 ```groovy
 // Watch face module. It must be resource-only: no code and no dependencies on modules with code.
 apply plugin: 'com.android.application'
