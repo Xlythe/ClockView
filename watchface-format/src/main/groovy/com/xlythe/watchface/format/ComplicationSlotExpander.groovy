@@ -48,15 +48,15 @@ final class ComplicationSlotExpander {
     private static final int AUTO_SIZE_FORMAT_VERSION = 3
 
     /**
-     * How much thicker than the gauge the lap past a goal is drawn, as a share of the gauge.
+     * How strongly the part of a gauge the value has not reached is drawn, out of 255.
      *
-     * <p>The lap sits on top of a full one in the same color, so thickness is what tells them
-     * apart. Strength cannot: a paler lap under a brighter one reads as a track under a fill, which
-     * is the opposite of what a passed goal is. Three quarters again is enough to see on a chip's
-     * thin ring; twice as thick would make the full lap look like the thin track under a fill,
-     * which is the same misreading by another route.
+     * <p>It serves twice, and the two are the same picture: the lap already completed under the
+     * one past a goal, and the empty part of a gauge whose provider sent no colors. Holding it
+     * back rather than thickening what sits on top keeps the two rings concentric - a thicker lap
+     * has to grow somewhere, and outwards is the bezel, so it grows inwards and stops sharing a
+     * center line with the gauge it is drawn over.
      */
-    private static final double OVERSHOOT_SWELL = 0.75d
+    private static final int TRACK_ALPHA = 105
 
     /**
      * What is drawn over the part of a color ramp the value has not reached.
@@ -182,11 +182,11 @@ final class ComplicationSlotExpander {
             bgShapeAmbient = "<Ellipse x=\"0\" y=\"0\" width=\"${width}\" height=\"${height}\"><Fill color=\"${ambientColor}\" /></Ellipse>"
             bgShapeFullres = "<Ellipse x=\"0\" y=\"0\" width=\"${width}\" height=\"${height}\"><Fill color=\"${color}\" /></Ellipse>"
         } else if (drawableStyle == 'line' || drawableStyle == null) {
-            bgShapeAmbient = arc(w, h, width, height, "<Stroke color=\"${ambientColor}\" cap=\"ROUND\" thickness=\"4\" />")
-            bgShapeFullres = arc(w, h, width, height, "<Stroke color=\"${color}\" cap=\"ROUND\" thickness=\"4\" />")
+            bgShapeAmbient = arc(w, h, 4, "<Stroke color=\"${ambientColor}\" cap=\"ROUND\" thickness=\"4\" />")
+            bgShapeFullres = arc(w, h, 4, "<Stroke color=\"${color}\" cap=\"ROUND\" thickness=\"4\" />")
         } else if (drawableStyle == 'dot') {
-            bgShapeAmbient = arc(w, h, width, height, "<Stroke color=\"${ambientColor}\" cap=\"ROUND\" thickness=\"4\" dashIntervals=\"6 3\" />")
-            bgShapeFullres = arc(w, h, width, height, "<Stroke color=\"${color}\" cap=\"ROUND\" thickness=\"4\" dashIntervals=\"6 3\" />")
+            bgShapeAmbient = arc(w, h, 4, "<Stroke color=\"${ambientColor}\" cap=\"ROUND\" thickness=\"4\" dashIntervals=\"6 3\" />")
+            bgShapeFullres = arc(w, h, 4, "<Stroke color=\"${color}\" cap=\"ROUND\" thickness=\"4\" dashIntervals=\"6 3\" />")
         } else if (drawableStyle != 'empty') {
             throw new IllegalArgumentException(
                     "Unknown complicationDrawableStyle '${drawableStyle}' for ${TAG} ${slotId}; expected fill, line, dot or empty")
@@ -442,13 +442,14 @@ final class ComplicationSlotExpander {
         // TextCircular carries the angles itself and lays one line along them, so it takes an
         // alignment rather than a line count.
         //
-        // The line is laid on the oval given, and grows outwards from it rather than straddling
-        // it, so on a band at the bezel the tops of the letters run off the edge of the screen.
-        // Pulling the oval in by the height of the type puts the line back inside the band it
-        // belongs to, and centres it there.
+        // The line straddles the oval it is laid on, so the band's own oval - its center line -
+        // is what centres the line in the band. The format's reference says what a TextCircular's
+        // width and height are but never where the glyphs sit against them, so this is measured
+        // rather than read: a hairline and a run of capitals drawn on one oval came back with the
+        // capitals spanning a cap height either side of the hairline. Pulling the oval in to make
+        // room, which is what this did before, drops the text half a type-height below the band.
         String shape = curved
-                ? "<TextCircular ${geometry.arc.forText(size).geometryAttributes()}" +
-                  " startAngle=\"${geometry.arc.startAngle}\" endAngle=\"${geometry.arc.sweepEnd()}\"" +
+                ? "<TextCircular ${geometry.arc.textAttributes()}" +
                   " align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
                 : "<Text ${fit}"
         String closing = curved ? '</TextCircular>' : '</Text>'
@@ -566,32 +567,41 @@ final class ComplicationSlotExpander {
      * all of them. Ambient stays one flat color, because a screen held lit for hours is the wrong
      * place to ask for a gradient.
      *
-     * <p>The shaded ramp is cut square. A round cap on the shade would round the fill's end the
-     * wrong way, inwards, and eat into the reading by half the stroke; on a band the track's own
-     * round ends show either side of it instead, and frame it.
+     * <p>On a band the ramp and the shade are capped round, so the color at each end takes the
+     * band's own rounded corner rather than stopping square inside it. A round cap bulges past
+     * the angle it is drawn to by half the stroke, so the shade starts that much late - as an
+     * angle, which is what {@code capOffset} is - and its bulge lands on the value instead of
+     * eating back into the reading. A ring closes on itself and has no free end to round: a cap
+     * there is drawn back over the ramp's first color as a bite out of it, so a ring cuts both
+     * square and the shade starts on the value exactly.
      *
-     * <p>An arc slot sweeps along its own band instead, from the angle it starts at to as far
-     * round it as the fraction reaches, so the track the slot already draws reads as the empty
-     * part of the same gauge.
+     * <p>An arc slot sweeps along its own band, from the angle it starts at to as far round it as
+     * the fraction reaches, so the track the slot already draws reads as the empty part of the
+     * same gauge. A ring has only a hairline behind it, so it is given a track of its own.
      *
      * @param type the complication type, naming its {@code _COLORS} sources.
      * @param fraction an expression between 0 and 1, already clamped.
-     * @param swollen whether this is the lap past a goal, which is drawn thicker than the gauge -
-     *        growing inwards, since outwards is the bezel - and in the slot's color: the provider's
-     *        ramp describes the way up to the goal and has nothing to say about the way past it.
+     * @param alpha how strongly to draw it, so a lap already done can sit behind the next.
+     * @param lapped whether a lap is already drawn underneath this one, which is what a passed
+     *        goal is. Shading the part not reached would darken that lap rather than the face, so
+     *        a lapped ring sweeps its ramp instead, and takes no track of its own.
      */
-    private String progressRing(String type, String fraction, boolean swollen = false) {
+    private String progressRing(String type, String fraction, int alpha = 255,
+                                boolean lapped = false) {
         ArcSpan band = geometry.arc
-        int gauge = band != null ? band.thickness : 8
-        int extra = swollen ? (int) Math.round(gauge * OVERSHOOT_SWELL) : 0
-        int thickness = gauge + extra
+        int thickness = band != null ? band.thickness : 8
         double from = band != null ? band.startAngle : 0d
         String geometryAttributes = band != null
-                ? band.swollen(extra).geometryAttributes()
+                ? band.geometryAttributes()
                 : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
-                  " width=\"${geometry.w - extra}\" height=\"${geometry.h - extra}\""
+                  " width=\"${geometry.w - thickness}\" height=\"${geometry.h - thickness}\""
         double sweepDegrees = band != null ? band.span() : 360d
         double to = from + sweepDegrees
+        double radius = band != null
+                ? (band.width + band.height) / 4d
+                : Math.min(geometry.w, geometry.h) / 2d
+        double capDegrees = Math.toDegrees(thickness / 2d / radius)
+        String capOffset = String.format(Locale.ROOT, '%.1f', capDegrees)
         String reached = "${from} + ${sweepDegrees} * (${fraction})"
         // Number rather than double for the two angles: a primitive double takes two local
         // variable slots, and Groovy miscounts them when a closure mixes primitives with objects,
@@ -609,19 +619,33 @@ final class ComplicationSlotExpander {
             ring(stroke, shown, inAmbient, from, from, "<Transform target=\"endAngle\" value=\"${reached}\" />")
         }
         Closure<String> flat = { String c -> "<Stroke color=\"${c}\" cap=\"ROUND\" thickness=\"${thickness}\" />" }
-        String fullRes = sweep(flat(color), 255, 0)
-        if (formatVersion >= WEIGHTED_FORMAT_VERSION && !swollen) {
+        // A ring's own track. A band already has one - it is the band - and a lap drawn over
+        // another lap has that one behind it, so neither wants a second.
+        String track = band == null && !lapped && alpha == 255
+                ? ring(flat(color), TRACK_ALPHA, 0, from, to, '')
+                : ''
+        String fullRes = track + sweep(flat(color), alpha, 0)
+        if (formatVersion >= WEIGHTED_FORMAT_VERSION) {
+            // A band has two free ends and wants them round, to fill its own rounded corners. A
+            // ring's end is its start, where a round cap is drawn back over the first of the
+            // ramp's colors and shows as a bite taken out of it, so there both are cut square.
+            String cap = band != null ? 'ROUND' : 'BUTT'
+            String start = band != null ? "${reached} + ${capOffset}" : reached
             String ramp = "<WeightedStroke colors=\"[COMPLICATION.${type}_COLORS]\"" +
                     " interpolate=\"[COMPLICATION.${type}_COLORS_INTERPOLATE]\"" +
-                    " cap=\"BUTT\" thickness=\"${thickness}\" />"
-            String shade = "<Stroke color=\"${UNFILLED_RAMP_SHADE}\" cap=\"BUTT\" thickness=\"${thickness}\" />"
+                    " cap=\"${cap}\" thickness=\"${thickness}\" />"
+            String shade = "<Stroke color=\"${UNFILLED_RAMP_SHADE}\" cap=\"${cap}\" thickness=\"${thickness}\" />"
+            String colored = lapped
+                    ? sweep(ramp, alpha, 0)
+                    : ring(ramp, alpha, 0, from, to, '') +
+                      ring(shade, alpha, 0, from, to,
+                              "<Transform target=\"startAngle\" value=\"${start}\" />")
             fullRes = """<Condition>
                     <Expressions>
                         <Expression name="provider_colors">[COMPLICATION.${type}_COLORS] != null</Expression>
                     </Expressions>
                     <Compare expression="provider_colors">
-                        ${ring(ramp, 255, 0, from, to, '')}
-                        ${ring(shade, 255, 0, from, to, "<Transform target=\"startAngle\" value=\"${reached}\" />")}
+                        ${colored}
                     </Compare>
                     <Default>
                         ${fullRes}
@@ -638,15 +662,14 @@ final class ComplicationSlotExpander {
      * A goal is allowed to be passed - that is rather the point of one - and neither a ring nor a
      * band has anywhere to put more than one full pass.
      *
-     * <p>So a passed goal is drawn as two laps: the one done, whole and at full strength, because
-     * a closed ring is what reaching a goal looks like; and however far into the next one the
-     * value has got, drawn thicker over the top of it. Heavier reads as more. Holding the first
-     * lap back instead, to let the second show against it, turns it into a track and the second
-     * lap into an ordinary fill, and a goal beaten by half reads as a goal half done.
+     * <p>So a passed goal is drawn as two laps: the one done, whole and held back, and however far
+     * into the next one the value has got, drawn over it at full strength. The lap being drawn is
+     * the reading, and the one behind it is what has already been counted.
      *
-     * <p>The alternative was a second, thinner arc set apart from the first. On a ring that reads
-     * as two concentric readings; on a band, which is a stripe on the bezel with nothing inside
-     * it, it reads as something come loose. Thickness works on both.
+     * <p>Telling them apart by thickness instead keeps both at full strength, which is two bright
+     * rings of nearly the same size and no way to see which is which; and the thicker one has to
+     * grow inwards, because outwards is the bezel, so it stops sharing a center line with the ring
+     * it covers and reads as having slipped.
      */
     private String goalRings() {
         String overshoot = 'clamp([COMPLICATION.GOAL_PROGRESS_VALUE]' +
@@ -657,8 +680,8 @@ final class ComplicationSlotExpander {
                         <Expression name="passed"><![CDATA[[COMPLICATION.GOAL_PROGRESS_VALUE] > [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE]]]></Expression>
                     </Expressions>
                     <Compare expression="passed">
-                        ${progressRing('GOAL_PROGRESS', '1')}
-                        ${progressRing('GOAL_PROGRESS', overshoot, true)}
+                        ${progressRing('GOAL_PROGRESS', '1', TRACK_ALPHA)}
+                        ${progressRing('GOAL_PROGRESS', overshoot, 255, true)}
                     </Compare>
                     <Default>
                         ${progressRing('GOAL_PROGRESS', goalFraction())}
@@ -671,16 +694,19 @@ final class ComplicationSlotExpander {
      * One ring divided into the provider's elements, each taking the share of the turn its
      * weight asks for.
      *
-     * <p>A weighted stroke does the dividing, so the whole ring is one Arc. The segments are cut
-     * square with a small gap between them, which is what the provider's background color is
-     * for: Wear's own data model names it the color between the elements. Round caps, which
-     * suit a gauge, do not suit a division: each segment's cap is drawn past its end into the
-     * next one, so every boundary is a rounded bite of one color into another, and two elements
-     * of a similar color run together.
+     * <p>A weighted stroke does the dividing, so the whole ring is one Arc. The segments are
+     * capped round and set a gap apart, which is what the provider's background color is for:
+     * Wear's own data model names it the color between the elements. Round, because a band has
+     * rounded ends and a square segment sitting in one leaves a crescent of track showing past
+     * the color; and because the format caps every segment of a weighted stroke the same way,
+     * which makes the ends of the band match at the cost of every element becoming a lozenge.
      *
-     * <p>The gap is a share of the stroke, so it stays a hairline on a thin ring, but capped at a
-     * share of the sweep, because a bezel band is thick and short and a gap sized to its
-     * thickness would take most of its length.
+     * <p>A round cap is drawn half a stroke past the end of its segment, so two facing caps close
+     * a whole stroke's worth of gap between them. The gap asked for therefore carries that stroke
+     * on top of the gap wanted, or the segments meet and the division disappears. It stays a
+     * share of the stroke, so it is a hairline on a thin ring, but it is capped at a share of the
+     * sweep, because a bezel band is thick and short and a gap sized to its thickness would take
+     * most of its length.
      *
      * <p>That backdrop is drawn underneath, a full turn, since the segments cover whatever
      * they cover.
@@ -693,11 +719,11 @@ final class ComplicationSlotExpander {
         String geometryAttributes = band != null
                 ? band.geometryAttributes()
                 : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
-                  " width=\"${geometry.w}\" height=\"${geometry.h}\""
+                  " width=\"${geometry.w - thickness}\" height=\"${geometry.h - thickness}\""
         double radius = band != null
                 ? (band.width + band.height) / 4d
                 : Math.min(geometry.w, geometry.h) / 2d
-        double gap = Math.min(Math.toDegrees(0.75d * thickness / radius), 0.03d * (to - from))
+        double gap = Math.min(Math.toDegrees(1.75d * thickness / radius), 0.06d * (to - from))
         String discreteGap = String.format(Locale.ROOT, '%.1f', gap)
         return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
@@ -722,7 +748,7 @@ final class ComplicationSlotExpander {
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
                     <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
-                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" discreteGap="${discreteGap}" cap="BUTT" thickness="${thickness}" />
+                        <WeightedStroke colors="[COMPLICATION.WEIGHTED_ELEMENTS_COLORS]" weights="[COMPLICATION.WEIGHTED_ELEMENTS_WEIGHTS]" interpolate="false" discreteGap="${discreteGap}" cap="ROUND" thickness="${thickness}" />
                     </Arc>
                 </PartDraw>
             </Group>"""
@@ -740,8 +766,17 @@ final class ComplicationSlotExpander {
                 ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1)'
     }
 
-    private static String arc(int w, int h, Object width, Object height, String stroke) {
-        return "<Arc startAngle=\"0\" endAngle=\"360\" centerX=\"${w / 2}\" centerY=\"${h / 2}\" width=\"${width}\" height=\"${height}\">${stroke}</Arc>"
+    /**
+     * A ring drawn inside a slot's box.
+     *
+     * <p>The oval is pulled in by the stroke's own thickness - half of it at each side - because a
+     * stroke straddles the oval it follows. A ring laid on the box itself has half of its width
+     * outside the slot, and a slot clips what it draws, so it comes back half as thick as it was
+     * asked for and with its outer edge cut flat.
+     */
+    private static String arc(int w, int h, int thickness, String stroke) {
+        return "<Arc startAngle=\"0\" endAngle=\"360\" centerX=\"${w / 2}\" centerY=\"${h / 2}\"" +
+                " width=\"${w - thickness}\" height=\"${h - thickness}\">${stroke}</Arc>"
     }
 
     private Node parse(String xml) {
@@ -868,31 +903,6 @@ final class ComplicationSlotExpander {
             this.direction = direction
         }
 
-        /**
-         * The oval to lay a line of type on so that the line sits inside this band.
-         *
-         * <p>A line grows outwards from the oval it is laid on rather than straddling it, so the
-         * oval is pulled in by the height of the type, which lands the line in the middle of the
-         * band. Anywhere further out and it runs off the rim; anywhere further in and it meets
-         * whatever the face already draws there. A band that cannot hold its own text between
-         * those two wants to be thicker, or to sit where there is room for it.
-         *
-         * @param size the type's height.
-         */
-        ArcSpan forText(int size) {
-            return new ArcSpan(centerX, centerY, width - size, height - size,
-                    startAngle, endAngle, thickness, direction)
-        }
-
-        /**
-         * This band made thicker on its inner side only. A stroke straddles its oval, so pulling
-         * the oval in by the extra keeps the outer edge where it was, against the bezel.
-         */
-        ArcSpan swollen(int extra) {
-            return new ArcSpan(centerX, centerY, width - extra, height - extra,
-                    startAngle, endAngle, thickness + extra, direction)
-        }
-
         /** How far round the band goes, in degrees, whichever way it is travelling. */
         double span() {
             double sweep = endAngle - startAngle
@@ -912,20 +922,57 @@ final class ComplicationSlotExpander {
             return startAngle + span()
         }
 
+        /**
+         * Where a band is drawn.
+         *
+         * <p>Always clockwise, whichever way the band was declared, because {@link #sweepEnd}
+         * counts the end on from the start and so describes a forward sweep. Labelling that same
+         * pair counter-clockwise asks for everything it does not cover - a fortieth of the dial
+         * becomes the other three hundred and twenty degrees of it.
+         *
+         * <p>A band's {@code direction} is about its text, not its stroke: it is what keeps a
+         * reading on the lower half of the dial the right way up. {@link #textAttributes} is
+         * where it belongs.
+         */
         String geometryAttributes() {
             return "centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\" height=\"${height}\"" +
-                    " direction=\"${direction}\""
+                    " direction=\"CLOCKWISE\""
+        }
+
+        /**
+         * Where a line of text on this band runs, and which way along it.
+         *
+         * <p>A counter-clockwise band reads from the end of its sweep back to the start, which on
+         * the lower half of the dial is what puts the letters up the right way, so its two angles
+         * are handed over the other way round.
+         */
+        String textAttributes() {
+            boolean back = direction == 'COUNTER_CLOCKWISE'
+            return "centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\" height=\"${height}\"" +
+                    " direction=\"${direction}\" startAngle=\"${back ? sweepEnd() : startAngle}\"" +
+                    " endAngle=\"${back ? startAngle : sweepEnd()}\""
         }
 
         String shape(String stroke) {
             return "<Arc startAngle=\"${startAngle}\" endAngle=\"${sweepEnd()}\" ${geometryAttributes()}>${stroke}</Arc>"
         }
 
-        /** The region the watch treats as this complication, and outlines in the editor. */
+        /**
+         * The region the watch treats as this complication, and outlines in the editor.
+         *
+         * <p>It is also a clip: nothing the complication draws survives outside it. A BoundingArc
+         * measures its oval from the outside and lays its thickness inwards, where an Arc puts its
+         * oval on the center line and straddles it, so the two want ovals half a thickness apart
+         * to cover the same band. Handed the same one, the region falls half a thickness short of
+         * the band at the rim and cuts the outer half of everything drawn there - the band's own
+         * stroke, and the tops of its text - which looks for all the world like the text sitting
+         * too low in a band that is thinner than it was asked to be.
+         */
         String bounding() {
-            return "<BoundingArc centerX=\"${centerX}\" centerY=\"${centerY}\" width=\"${width}\"" +
-                    " height=\"${height}\" thickness=\"${thickness}\" startAngle=\"${startAngle}\"" +
-                    " endAngle=\"${sweepEnd()}\" direction=\"${direction}\" isRoundEdge=\"TRUE\"" +
+            return "<BoundingArc centerX=\"${centerX}\" centerY=\"${centerY}\"" +
+                    " width=\"${width + thickness}\" height=\"${height + thickness}\"" +
+                    " thickness=\"${thickness}\" startAngle=\"${startAngle}\"" +
+                    " endAngle=\"${sweepEnd()}\" direction=\"CLOCKWISE\" isRoundEdge=\"TRUE\"" +
                     " outlinePadding=\"2\" />"
         }
 

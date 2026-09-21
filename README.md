@@ -258,7 +258,7 @@ share expressions and complication layouts instead of copying them.
 // Top-level build.gradle
 buildscript {
     dependencies {
-        classpath 'com.xlythe:watchface-format:1.0.9'
+        classpath 'com.xlythe:watchface-format:1.0.11'
     }
 }
 ```
@@ -485,12 +485,39 @@ Each type gets a layout written for what Wear's
 [Complication reference](https://developer.android.com/training/wearables/wff/complication/complication)
 says it reports, so no layout asks for data its type never sends. `RANGED_VALUE` and
 `GOAL_PROGRESS` take the provider's own colour ramp from format 2, laid over the whole range with
-the part past the value shaded so the fill ends in the colour of the reading; a passed goal keeps
-its full ring and draws the lap past it thicker; `WEIGHTED_ELEMENTS` divides one ring between the
-provider's weights with a gap at each division; and a provider that sends no text still gets its
-number written out with `numberFormat`. From format 3, text shrinks to fit rather than ellipsing,
-and values are set a size larger to make use of it. On format 1 the types that arrived later are
-dropped from `supportedTypes` and their layouts removed.
+the part past the value shaded so the fill ends in the colour of the reading; a gauge whose
+provider sends no colours gets a dim full turn under the fill instead, since four units of
+thickness in one colour is not a reading you can take at a glance. A passed goal holds the
+completed lap back and draws the next one over it at full strength, so the lap being drawn is the
+reading. `WEIGHTED_ELEMENTS` divides one ring between the provider's weights with a gap at each
+division, and a provider that sends no text still gets its number written out with `numberFormat`.
+From format 3 text shrinks to fit rather than ellipsing, which lets a value be set a size larger
+where nothing competes with it; inside a gauge it stays a size down, because the slack is what
+separates it from its label. On format 1 the types that arrived later are dropped from
+`supportedTypes` and their layouts removed.
+
+Strokes are capped round where a band's free ends are, so the colour fills the band's own rounded
+corners, and square on a ring, whose end is its start and where a round cap is drawn back over the
+ramp's first colour as a bite out of it.
+
+Two things about bands are worth knowing, because the format's reference states neither and both
+were settled by drawing them on a watch and measuring the pixels:
+
+* `TextCircular` straddles the oval it is given rather than growing outwards from it, so a line is
+  centred in a band by laying it on the band's own centre line. No correction is wanted, and one
+  applied anyway moves the text by half of whatever it corrects by.
+* `BoundingArc` measures its oval from the *outside* and lays its thickness inwards, where `Arc`
+  puts its oval on the centre line and straddles it. Since the bounding region is also a clip,
+  handing both the same oval cuts the outer half off everything the slot draws - the band's own
+  stroke, and the tops of its text. The two want ovals half a thickness apart to cover the same
+  band.
+
+A slot clips what it draws, which catches rings as well: a ring laid on the slot's own box has
+half its stroke outside the box and comes back half as thick with its outer edge cut flat, so the
+ovals here are pulled in by a stroke's thickness. And a band's `direction` describes its text, not
+its stroke - the angles are always counted forward, so an `Arc` told to run counter-clockwise
+between them covers everything the band does not. Only the `TextCircular` takes the direction, and
+takes its two angles the other way round to go with it.
 
 Layouts are written in terms of three more tags, which know the slot they are in:
 ```xml

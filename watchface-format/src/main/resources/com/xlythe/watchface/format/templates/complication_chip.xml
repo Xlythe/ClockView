@@ -127,20 +127,20 @@
                 </Expressions>
                 <Compare expression="icon_and_text">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" weight="MEDIUM" />
                     <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="icon">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
                 </Compare>
                 <Default>
-                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#%&quot;, clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1))" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#%&quot;, clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1))" area="text" scale="medium" weight="MEDIUM" />
                 </Default>
             </Condition>
         </Group>
@@ -167,20 +167,20 @@
                 </Expressions>
                 <Compare expression="icon_and_text">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" weight="MEDIUM" />
                     <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="icon">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
                 </Compare>
                 <Default>
-                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#,###&quot;, [COMPLICATION.GOAL_PROGRESS_VALUE])" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="numberFormat(&quot;#,###&quot;, [COMPLICATION.GOAL_PROGRESS_VALUE])" area="text" scale="medium" weight="MEDIUM" />
                 </Default>
             </Condition>
         </Group>
@@ -200,11 +200,11 @@
                     <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
                 </Expressions>
                 <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" weight="MEDIUM" />
                     <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
                 </Compare>
                 <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="medium" weight="MEDIUM" />
                 </Compare>
                 <Compare expression="icon">
                     <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon" />
