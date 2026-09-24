@@ -180,6 +180,33 @@ class ComplicationSlotExpanderTest {
                 xml.contains('[COMPLICATION.RANGED_VALUE_COLORS] != null'))
     }
 
+    /** A band's gauges are pills side by side: no ramp, no track under them to show through. */
+    @Test
+    void bandGauges_arePillsWithNothingUnderneath() {
+        Map<String, String> printed = [:]
+        eachComplication('arc', 5) { String type, String xml -> printed[type] = xml }
+        for (String type : ['RANGED_VALUE', 'GOAL_PROGRESS', 'WEIGHTED_ELEMENTS']) {
+            assertFalse("${type} draws the slot's track under its pills",
+                    printed[type].contains('name="Background"'))
+        }
+        for (String type : ['RANGED_VALUE', 'GOAL_PROGRESS']) {
+            assertFalse("${type} draws a ramp on a band", printed[type].contains('WeightedStroke'))
+            assertTrue("${type} has no remainder pill", printed[type].contains('<Stroke color="#FF303030"'))
+        }
+        assertFalse('a band draws no backdrop under its elements',
+                printed['WEIGHTED_ELEMENTS'].contains('WEIGHTED_ELEMENTS_BACKGROUND_COLOR'))
+    }
+
+    /** Two round caps close a thickness of gap, so a band's gap is always more than that. */
+    @Test
+    void bandElements_neverTouch() {
+        Node slot = expandBundled('arc', 5)
+        Node stroke = (Node) slot.depthFirst().find { it instanceof Node && it.name() == 'WeightedStroke' }
+        // A 120 slot with a 24 thickness and a 4 inset lays its center line on a radius of 44.
+        double caps = Math.toDegrees(24 / 44d)
+        assertTrue(stroke.attribute('discreteGap').toString().toDouble() > caps)
+    }
+
     @Test
     void everyDrawnThingStaysInsideItsSlot() {
         for (String layout : LAYOUTS) {

@@ -496,9 +496,16 @@ where nothing competes with it; inside a gauge it stays a size down, because the
 separates it from its label. On format 1 the types that arrived later are dropped from
 `supportedTypes` and their layouts removed.
 
-Strokes are capped round where a band's free ends are, so the colour fills the band's own rounded
-corners, and square on a ring, whose end is its start and where a round cap is drawn back over the
-ramp's first colour as a bite out of it.
+On a band the gauges are pills instead: rounded at both ends, laid end to end with a small margin
+between them, and never drawn over one another or over the band's track. A ranged value or a goal
+is a pill in the slot's colour for the value and a greyish-black one for the remainder, with no
+colour ramp; a passed goal's remainder is the completed lap, held back. Weighted elements are a
+pill each in the provider's colours. A pill is never shorter than it is thick, so a short band only
+has room for a few elements - a 40° band as thick as ReflectiveScenery's fits four, which come out
+as dots - and one that gets more draws nothing.
+
+On a ring, strokes are capped square, because a ring's end is its start and a round cap there is
+drawn back over the ramp's first colour as a bite out of it.
 
 Two things about bands are worth knowing, because the format's reference states neither and both
 were settled by drawing them on a watch and measuring the pixels:

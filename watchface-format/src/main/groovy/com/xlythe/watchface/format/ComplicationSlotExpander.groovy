@@ -71,6 +71,18 @@ final class ComplicationSlotExpander {
     private static final String UNFILLED_RAMP_SHADE = '#B3000000'
 
     /**
+     * The part of a band's gauge the value has not reached.
+     *
+     * <p>A band draws its gauge as pills laid end to end rather than as a fill over a track, so
+     * the remainder is a shape of its own and wants a color of its own: a grey just off black,
+     * which reads as empty on a dark face without disappearing into it.
+     */
+    private static final String UNFILLED_PILL_COLOR = '#FF303030'
+
+    /** The gap between two pills on a band, as a share of the band's thickness. */
+    private static final double PILL_MARGIN = 0.2d
+
+    /**
      * How thick a band is, and how far in from the slot's edge it sits, as shares of the slot.
      *
      * <p>Proportions rather than pixels, because a slot is as wide as the face and a face is
@@ -553,7 +565,7 @@ final class ComplicationSlotExpander {
 
     /**
      * A sweep from twelve o'clock, which is where Watch Face Format puts zero degrees, clockwise to
-     * the fraction given.
+     * the fraction given. A band draws its gauge as pills instead; see {@link #bandGauge}.
      *
      * <p>endAngle takes a number rather than an expression - which is the only reason an Arc
      * accepts a Transform at all - so the sweep is applied as one.
@@ -567,17 +579,10 @@ final class ComplicationSlotExpander {
      * all of them. Ambient stays one flat color, because a screen held lit for hours is the wrong
      * place to ask for a gradient.
      *
-     * <p>On a band the ramp and the shade are capped round, so the color at each end takes the
-     * band's own rounded corner rather than stopping square inside it. A round cap bulges past
-     * the angle it is drawn to by half the stroke, so the shade starts that much late - as an
-     * angle, which is what {@code capOffset} is - and its bulge lands on the value instead of
-     * eating back into the reading. A ring closes on itself and has no free end to round: a cap
-     * there is drawn back over the ramp's first color as a bite out of it, so a ring cuts both
-     * square and the shade starts on the value exactly.
-     *
-     * <p>An arc slot sweeps along its own band, from the angle it starts at to as far round it as
-     * the fraction reaches, so the track the slot already draws reads as the empty part of the
-     * same gauge. A ring has only a hairline behind it, so it is given a track of its own.
+     * <p>A ring closes on itself and has no free end to round: a cap there is drawn back over the
+     * ramp's first color as a bite out of it, so the ramp and the shade are both cut square and
+     * the shade starts on the value exactly. A ring has only a hairline behind it, so it is given
+     * a track of its own.
      *
      * @param type the complication type, naming its {@code _COLORS} sources.
      * @param fraction an expression between 0 and 1, already clamped.
@@ -588,21 +593,13 @@ final class ComplicationSlotExpander {
      */
     private String progressRing(String type, String fraction, int alpha = 255,
                                 boolean lapped = false) {
-        ArcSpan band = geometry.arc
-        int thickness = band != null ? band.thickness : 8
-        double from = band != null ? band.startAngle : 0d
-        String geometryAttributes = band != null
-                ? band.geometryAttributes()
-                : "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
-                  " width=\"${geometry.w - thickness}\" height=\"${geometry.h - thickness}\""
-        double sweepDegrees = band != null ? band.span() : 360d
-        double to = from + sweepDegrees
-        double radius = band != null
-                ? (band.width + band.height) / 4d
-                : Math.min(geometry.w, geometry.h) / 2d
-        double capDegrees = Math.toDegrees(thickness / 2d / radius)
-        String capOffset = String.format(Locale.ROOT, '%.1f', capDegrees)
-        String reached = "${from} + ${sweepDegrees} * (${fraction})"
+        if (geometry.arc != null) {
+            return bandGauge(fraction)
+        }
+        int thickness = 8
+        String geometryAttributes = "centerX=\"${geometry.w / 2}\" centerY=\"${geometry.h / 2}\"" +
+                " width=\"${geometry.w - thickness}\" height=\"${geometry.h - thickness}\""
+        String reached = "360 * (${fraction})"
         // Number rather than double for the two angles: a primitive double takes two local
         // variable slots, and Groovy miscounts them when a closure mixes primitives with objects,
         // which the JVM rejects when it verifies the generated doCall ("Bad local variable type").
@@ -616,30 +613,24 @@ final class ComplicationSlotExpander {
                 </PartDraw>"""
         }
         Closure<String> sweep = { String stroke, int shown, int inAmbient ->
-            ring(stroke, shown, inAmbient, from, from, "<Transform target=\"endAngle\" value=\"${reached}\" />")
+            ring(stroke, shown, inAmbient, 0, 0, "<Transform target=\"endAngle\" value=\"${reached}\" />")
         }
         Closure<String> flat = { String c -> "<Stroke color=\"${c}\" cap=\"ROUND\" thickness=\"${thickness}\" />" }
-        // A ring's own track. A band already has one - it is the band - and a lap drawn over
-        // another lap has that one behind it, so neither wants a second.
-        String track = band == null && !lapped && alpha == 255
-                ? ring(flat(color), TRACK_ALPHA, 0, from, to, '')
+        // A lap drawn over another lap has that one behind it as its track, so it wants no second.
+        String track = !lapped && alpha == 255
+                ? ring(flat(color), TRACK_ALPHA, 0, 0, 360, '')
                 : ''
         String fullRes = track + sweep(flat(color), alpha, 0)
         if (formatVersion >= WEIGHTED_FORMAT_VERSION) {
-            // A band has two free ends and wants them round, to fill its own rounded corners. A
-            // ring's end is its start, where a round cap is drawn back over the first of the
-            // ramp's colors and shows as a bite taken out of it, so there both are cut square.
-            String cap = band != null ? 'ROUND' : 'BUTT'
-            String start = band != null ? "${reached} + ${capOffset}" : reached
             String ramp = "<WeightedStroke colors=\"[COMPLICATION.${type}_COLORS]\"" +
                     " interpolate=\"[COMPLICATION.${type}_COLORS_INTERPOLATE]\"" +
-                    " cap=\"${cap}\" thickness=\"${thickness}\" />"
-            String shade = "<Stroke color=\"${UNFILLED_RAMP_SHADE}\" cap=\"${cap}\" thickness=\"${thickness}\" />"
+                    " cap=\"BUTT\" thickness=\"${thickness}\" />"
+            String shade = "<Stroke color=\"${UNFILLED_RAMP_SHADE}\" cap=\"BUTT\" thickness=\"${thickness}\" />"
             String colored = lapped
                     ? sweep(ramp, alpha, 0)
-                    : ring(ramp, alpha, 0, from, to, '') +
-                      ring(shade, alpha, 0, from, to,
-                              "<Transform target=\"startAngle\" value=\"${start}\" />")
+                    : ring(ramp, alpha, 0, 0, 360, '') +
+                      ring(shade, alpha, 0, 0, 360,
+                              "<Transform target=\"startAngle\" value=\"${reached}\" />")
             fullRes = """<Condition>
                     <Expressions>
                         <Expression name="provider_colors">[COMPLICATION.${type}_COLORS] != null</Expression>
@@ -659,6 +650,71 @@ final class ComplicationSlotExpander {
     }
 
     /**
+     * A band's gauge: two pills laid end to end with a little margin between them, the value
+     * from the start of the band and the remainder after it, each rounded at both ends.
+     *
+     * <p>Neither is drawn over the other, and there is no track underneath, so the band never
+     * shows one color through another. That also rules out the provider's color ramp, which
+     * only means anything as a gradient: the fill is the slot's own color.
+     *
+     * <p>A round cap bulges half a thickness past each end of the arc it is drawn on, so a pill
+     * is an arc a whole thickness shorter than the length it covers. The band's outline is the
+     * track the slot would otherwise draw - its span, capped round - and the pills share it out:
+     * the value's arc runs from the start as far as the fraction reaches of whatever is left
+     * once the caps and the margin are paid for, and the remainder's arc starts that much after
+     * it and runs to the end. At nothing the value is not drawn and at everything the remainder
+     * is not, rather than either shrinking to a dot.
+     *
+     * @param fraction an expression between 0 and 1, already clamped.
+     * @param restColor what the remainder is drawn in.
+     * @param restAlpha how strongly, so a lap already done can be told from the one being drawn.
+     */
+    private String bandGauge(String fraction, String restColor = UNFILLED_PILL_COLOR,
+                             int restAlpha = 255) {
+        ArcSpan band = geometry.arc
+        double from = band.startAngle
+        double to = band.sweepEnd()
+        double radius = (band.width + band.height) / 4d
+        double capsAndMargin = Math.toDegrees((1 + PILL_MARGIN) * band.thickness / radius)
+        String reach = String.format(Locale.ROOT, '%.2f', Math.max(0d, band.span() - capsAndMargin))
+        String offset = String.format(Locale.ROOT, '%.2f', capsAndMargin)
+        String reached = "${from} + ${reach} * (${fraction})"
+        Closure<String> pill = { String stroke, int shown, int inAmbient, String transform ->
+            """<PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="${shown}">
+                    <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
+                    <Arc startAngle="${from}" endAngle="${to}" ${band.geometryAttributes()}>
+                        ${transform}
+                        ${stroke}
+                    </Arc>
+                </PartDraw>"""
+        }
+        Closure<String> flat = { String c -> "<Stroke color=\"${c}\" cap=\"ROUND\" thickness=\"${band.thickness}\" />" }
+        String valueEnd = "<Transform target=\"endAngle\" value=\"${reached}\" />"
+        String restStart = "<Transform target=\"startAngle\" value=\"${reached} + ${offset}\" />"
+        String value = pill(flat(ambientColor), 0, 255, valueEnd) + pill(flat(color), 255, 0, valueEnd)
+        String rest = pill(flat(restColor), restAlpha, restAlpha, restStart)
+        return """<Group name="Progress" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                <Condition>
+                    <Expressions>
+                        <Expression name="none"><![CDATA[(${fraction}) <= 0]]></Expression>
+                        <Expression name="all"><![CDATA[(${fraction}) >= 1]]></Expression>
+                    </Expressions>
+                    <Compare expression="none">
+                        ${pill(flat(restColor), restAlpha, restAlpha, '')}
+                    </Compare>
+                    <Compare expression="all">
+                        ${pill(flat(ambientColor), 0, 255, '')}
+                        ${pill(flat(color), 255, 0, '')}
+                    </Compare>
+                    <Default>
+                        ${value}
+                        ${rest}
+                    </Default>
+                </Condition>
+            </Group>"""
+    }
+
+    /**
      * A goal is allowed to be passed - that is rather the point of one - and neither a ring nor a
      * band has anywhere to put more than one full pass.
      *
@@ -674,17 +730,25 @@ final class ComplicationSlotExpander {
     private String goalRings() {
         String overshoot = 'clamp([COMPLICATION.GOAL_PROGRESS_VALUE]' +
                 ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE] - 1, 0, 1)'
+        // A band's pills cannot be laid over one another, so there the lap already done is the
+        // remainder of the next one, in the slot's own color held back, rather than a lap beneath.
+        String passed = geometry.arc != null
+                ? bandGauge(overshoot, color, TRACK_ALPHA)
+                : progressRing('GOAL_PROGRESS', '1', TRACK_ALPHA) +
+                  progressRing('GOAL_PROGRESS', overshoot, 255, true)
+        String reaching = geometry.arc != null
+                ? bandGauge(goalFraction())
+                : progressRing('GOAL_PROGRESS', goalFraction())
         return """<Group name="Goal" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
                 <Condition>
                     <Expressions>
                         <Expression name="passed"><![CDATA[[COMPLICATION.GOAL_PROGRESS_VALUE] > [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE]]]></Expression>
                     </Expressions>
                     <Compare expression="passed">
-                        ${progressRing('GOAL_PROGRESS', '1', TRACK_ALPHA)}
-                        ${progressRing('GOAL_PROGRESS', overshoot, 255, true)}
+                        ${passed}
                     </Compare>
                     <Default>
-                        ${progressRing('GOAL_PROGRESS', goalFraction())}
+                        ${reaching}
                     </Default>
                 </Condition>
             </Group>"""
@@ -710,6 +774,10 @@ final class ComplicationSlotExpander {
      *
      * <p>That backdrop is drawn underneath, a full turn, since the segments cover whatever
      * they cover.
+     *
+     * <p>A band is the exception to both. Its elements are pills, like its other gauges, so they
+     * sit a margin apart however short the band is - the gap is always the two caps and the
+     * margin, never less - and nothing is drawn beneath them to show through the gaps.
      */
     private String weightedRing() {
         ArcSpan band = geometry.arc
@@ -723,16 +791,11 @@ final class ComplicationSlotExpander {
         double radius = band != null
                 ? (band.width + band.height) / 4d
                 : Math.min(geometry.w, geometry.h) / 2d
-        double gap = Math.min(Math.toDegrees(1.75d * thickness / radius), 0.06d * (to - from))
+        double gap = band != null
+                ? Math.toDegrees((1 + PILL_MARGIN) * thickness / radius)
+                : Math.min(Math.toDegrees(1.75d * thickness / radius), 0.06d * (to - from))
         String discreteGap = String.format(Locale.ROOT, '%.1f', gap)
-        return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
-                <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
-                    <Variant mode="AMBIENT" target="alpha" value="255" />
-                    <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
-                        <Stroke color="${ambientColor}" cap="ROUND" thickness="${thickness}" />
-                    </Arc>
-                </PartDraw>
-                <Condition>
+        String backdrop = band != null ? '' : """<Condition>
                     <Expressions>
                         <Expression name="has_background">[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR] != null</Expression>
                     </Expressions>
@@ -744,7 +807,15 @@ final class ComplicationSlotExpander {
                             </Arc>
                         </PartDraw>
                     </Compare>
-                </Condition>
+                </Condition>"""
+        return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
+                    <Variant mode="AMBIENT" target="alpha" value="255" />
+                    <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
+                        <Stroke color="${ambientColor}" cap="ROUND" thickness="${thickness}" />
+                    </Arc>
+                </PartDraw>
+                ${backdrop}
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
                     <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
