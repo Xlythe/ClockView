@@ -4,6 +4,8 @@ import org.junit.Test
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertFalse
+import static org.junit.Assert.assertNotNull
+import static org.junit.Assert.assertNull
 import static org.junit.Assert.assertTrue
 import static org.junit.Assert.fail
 
@@ -161,6 +163,34 @@ class ComplicationSlotExpanderTest {
 
         assertTrue('format 3 should let text shrink to fit',
                 TemplateProcessor.print(expandBundled('chip', 3)).contains('isAutoSize="TRUE"'))
+    }
+
+    @Test
+    void curvedComplicationText_autoSizesOnlyInFormatFive() {
+        for (int version : [4, 5]) {
+            List<Node> circularText = expandBundled('arc', version).depthFirst().findAll {
+                it instanceof Node && it.name() == 'TextCircular'
+            } as List<Node>
+            assertFalse('the arc should contain curved labels', circularText.isEmpty())
+            circularText.each { Node text ->
+                Node font = text.children().find { it instanceof Node && it.name() == 'Font' } as Node
+                assertNotNull(font)
+                if (version == 5) {
+                    assertEquals('TRUE', text.attribute('isAutoSize'))
+                    int size = font.attribute('size').toString().toInteger()
+                    if (size > 12) {
+                        int minSize = font.attribute('minSize').toString().toInteger()
+                        assertTrue(minSize >= 12)
+                        assertTrue(minSize < size)
+                    } else {
+                        assertNull(font.attribute('minSize'))
+                    }
+                } else {
+                    assertNull(text.attribute('isAutoSize'))
+                    assertNull(font.attribute('minSize'))
+                }
+            }
+        }
     }
 
     /** A gauge in the provider's own colors: a battery knows better than we do when to turn red. */

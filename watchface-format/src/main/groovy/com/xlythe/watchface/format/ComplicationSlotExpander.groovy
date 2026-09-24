@@ -46,6 +46,7 @@ final class ComplicationSlotExpander {
 
     /** Text that shrinks to fit its box, rather than ellipsing, arrived in format 3. */
     private static final int AUTO_SIZE_FORMAT_VERSION = 3
+    private static final int CIRCULAR_AUTO_SIZE_FORMAT_VERSION = 5
 
     /**
      * How strongly the part of a gauge the value has not reached is drawn, out of 255.
@@ -479,6 +480,12 @@ final class ComplicationSlotExpander {
         String fit = formatVersion >= AUTO_SIZE_FORMAT_VERSION
                 ? "ellipsis=\"TRUE\" maxLines=\"${maxLines}\" isAutoSize=\"TRUE\""
                 : "ellipsis=\"TRUE\" maxLines=\"${maxLines}\""
+        // Curved text could not auto-size until WFF 5. Keep a legible floor on the font while
+        // allowing long complication labels to fit before the runtime falls back to an ellipsis.
+        boolean autoSizeCircular = curved && formatVersion >= CIRCULAR_AUTO_SIZE_FORMAT_VERSION
+        int minimumSize = Math.max(12, Math.round(size * 0.6f))
+        String circularFit = autoSizeCircular ? ' isAutoSize="TRUE"' : ''
+        String fontFloor = autoSizeCircular && size > 12 ? " minSize=\"${minimumSize}\"" : ''
         // TextCircular carries the angles itself and lays one line along them, so it takes an
         // alignment rather than a line count.
         //
@@ -490,7 +497,7 @@ final class ComplicationSlotExpander {
         // room, which is what this did before, drops the text half a type-height below the band.
         String shape = curved
                 ? "<TextCircular ${geometry.arc.textAttributes()}" +
-                  " align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\""
+                  " align=\"${attribute(node, 'align') ?: 'CENTER'}\" ellipsis=\"TRUE\"${circularFit}"
                 : "<Text ${fit}"
         String closing = curved ? '</TextCircular>' : '</Text>'
         Closure<String> part = { String textColor, int shown, int inAmbient ->
@@ -498,7 +505,7 @@ final class ComplicationSlotExpander {
                     <Variant mode="AMBIENT" target="alpha" value="${inAmbient}" />
                     <Localization calendar="GREGORIAN" />
                     ${shape}>
-                        <Font family="SYNC_TO_DEVICE" size="${size}" weight="${weight}" color="${textColor}">
+                        <Font family="SYNC_TO_DEVICE" size="${size}"${fontFloor} weight="${weight}" color="${textColor}">
                             <Template>%s<Parameter expression="${escapeAttribute(expression)}" /></Template>
                         </Font>
                     ${closing}
