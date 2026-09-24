@@ -53,6 +53,27 @@ class TimeZoneTableTest {
             'America/Sao_Paulo'  : -180,
             'Africa/Johannesburg': 120,
             'Asia/Kathmandu'     : 345,
+            'Europe/Dublin'      : 0,
+    ]
+
+    /**
+     * Current standard offsets and the values still reported by JDK 19's tzdb 2022c. The table
+     * was checked against IANA 2026d; these exact differences are historical JDK data, not table
+     * errors. Keep the current values pinned so this exception cannot conceal a bad edit.
+     */
+    private static final Map<String, List<Integer>> CHANGED_SINCE_2022C = [
+            'America/Asuncion'     : [-180, -240],
+            'America/Chihuahua'    : [-360, -420],
+            'America/Godthab'      : [-120, -180],
+            'America/Nuuk'         : [-120, -180],
+            'America/Ojinaga'      : [-360, -420],
+            'America/Scoresbysund' : [-120, -60],
+            'Antarctica/Casey'     : [480, 660],
+            'Antarctica/Vostok'    : [300, 360],
+            'Asia/Almaty'         : [300, 360],
+            'Asia/Amman'          : [180, 120],
+            'Asia/Damascus'       : [180, 120],
+            'Asia/Qostanay'       : [300, 360],
     ]
 
     @Test
@@ -60,6 +81,31 @@ class TimeZoneTableTest {
         Map<String, Integer> table = ROWS.collectEntries { [(it[0]): it[3] as Integer] }
         SETTLED.each { zone, expected ->
             assertEquals(zone, expected, table[zone])
+        }
+    }
+
+    @Test
+    void recentlyChangedZonesKeepTheirCurrentOffsets() {
+        Map<String, Integer> table = ROWS.collectEntries { [(it[0]): it[3] as Integer] }
+        CHANGED_SINCE_2022C.each { zone, offsets ->
+            assertEquals(zone, offsets[0], table[zone])
+        }
+    }
+
+    @Test
+    void dublinUsesTheSameDaylightConventionAsTheWatch() {
+        Node dublin = (Node) TemplateProcessor.parse(read()).children().find {
+            it instanceof Node && it.attribute('name') == 'Europe/Dublin'
+        }
+        assertTrue('Dublin is missing from the table', dublin != null)
+        int base = dublin.attribute('utcOffsetMinutes') as int
+        int daylight = (dublin.attribute('dstMinutes') ?: '60') as int
+        TimeZone zone = TimeZone.getTimeZone('Europe/Dublin')
+        for (int month : [1, 7]) {
+            Date date = Date.from(LocalDate.of(2026, month, 15).atStartOfDay(ZoneId.of('Europe/Dublin')).toInstant())
+            int actual = zone.getOffset(date.time) / 60000
+            int computed = base + (zone.inDaylightTime(date) ? daylight : 0)
+            assertEquals("Dublin month $month", actual, computed)
         }
     }
 
@@ -73,12 +119,7 @@ class TimeZoneTableTest {
         }
     }
 
-    /**
-     * The table is compared with the JDK's copy of the database rather than pinned to it. The two
-     * drift: the JDK bundles whatever tzdata it was cut with, and countries change their minds -
-     * Paraguay gave up daylight saving in 2024, so an older JDK still has Asuncion an hour out.
-     * A handful of disagreements is the world moving on; a lot of them is a broken table.
-     */
+    /** Compare with the JDK while recognizing only the exact changes its older tzdb may lack. */
     @Test
     void theTableAgreesWithTheDatabaseAlmostEverywhere() {
         List<String> differing = []
@@ -102,13 +143,17 @@ class TimeZoneTableTest {
                 continue
             }
             checked++
-            if (expected.intValue() != (row[3] as Integer).intValue()) {
-                differing.add("${row[0]} table=${row[3]} jdk=${expected}".toString())
+            int table = row[3] as Integer
+            if (expected.intValue() != table) {
+                List<Integer> currentAndOld = CHANGED_SINCE_2022C[row[0]]
+                if (currentAndOld == null || currentAndOld[0] != table || currentAndOld[1] != expected) {
+                    differing.add("${row[0]} table=${table} jdk=${expected}".toString())
+                }
             }
         }
         assertTrue("only $checked offsets were checkable", checked > 300)
-        assertTrue("${differing.size()} of $checked zones disagree with this JDK's database, which is"
-                + " more than tzdata drift explains: ${differing.take(10)}", differing.size() <= 10)
+        assertTrue("${differing.size()} of $checked zones differ beyond known JDK tzdata drift: ${differing}",
+                differing.isEmpty())
     }
 
     @Test

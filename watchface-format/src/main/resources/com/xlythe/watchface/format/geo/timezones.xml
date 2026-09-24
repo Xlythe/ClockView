@@ -330,7 +330,8 @@
     <Location name="Europe/Budapest" latitude="47.50000" longitude="19.08333" utcOffsetMinutes="60" />
     <Location name="Europe/Chisinau" latitude="47.00000" longitude="28.83333" utcOffsetMinutes="120" />
     <Location name="Europe/Copenhagen" latitude="55.66667" longitude="12.58333" utcOffsetMinutes="60" />
-    <Location name="Europe/Dublin" latitude="53.33333" longitude="-6.25000" utcOffsetMinutes="60" dstMinutes="0" />
+    <!-- WFF's Java daylight flag treats winter GMT as standard and summer IST as daylight time. -->
+    <Location name="Europe/Dublin" latitude="53.33333" longitude="-6.25000" utcOffsetMinutes="0" />
     <Location name="Europe/Gibraltar" latitude="36.13333" longitude="-5.35000" utcOffsetMinutes="60" />
     <Location name="Europe/Kaliningrad" latitude="54.71667" longitude="20.50000" utcOffsetMinutes="120" dstMinutes="0" />
     <Location name="Europe/Kiev" latitude="50.43333" longitude="30.51667" utcOffsetMinutes="120" />
