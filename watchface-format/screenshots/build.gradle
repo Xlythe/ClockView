@@ -1,9 +1,9 @@
 // Screenshot tests for the complication layouts the plugin draws.
 //
 // Watch Face Format is drawn by the watch, not by anything that runs on the JVM, so the only true
-// picture of a layout is one taken on a watch. This build makes a watch face per file in faces/,
-// feeds its slots from the fixed data sources in provider/, photographs each face on a connected
-// Wear OS device, and compares the photographs with the goldens in goldens/.
+// picture of a layout is one taken on a watch. This build makes a watch face per entry in
+// cases.groovy, feeds its slots from the fixed data sources in provider/, photographs each face on
+// a connected Wear OS device, and compares the photographs with the goldens in goldens/.
 //
 //   gradlew recordScreenshots   write what the device shows into goldens/
 //   gradlew verifyScreenshots   fail if what the device shows differs from goldens/
@@ -32,11 +32,94 @@ allprojects {
     }
 }
 
-/** The faces, by name: each directory in faces/ holds one watchface.xml. */
-List<String> faceNames = file('faces').listFiles().findAll { it.directory }*.name.sort()
+/** Every face and every case in it; see cases.groovy. The provider reads this too. */
+List<Map> faces = new GroovyShell().evaluate(file('cases.groovy')) as List<Map>
+ext.faces = faces
+List<String> faceNames = faces*.name
 
 String facePackage(String name) {
     return "com.xlythe.watchface.screenshots.${name}"
+}
+
+/** The data source a case is fed from, as the class the provider generates for it. */
+static String sourceClass(String face, int index) {
+    return "${face}_${index}"
+}
+
+static String escape(Object text) {
+    return text.toString().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+}
+
+/** A line of text on the face, centred in the box given. */
+static String label(int x, int y, int width, int size, String text, String color = '#FFA0A0A0', String weight = 'NORMAL') {
+    return """
+        <PartText x="${x}" y="${y}" width="${width}" height="${size + 8}">
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="${size}" weight="${weight}" color="${color}">${escape(text)}</Font>
+            </Text>
+        </PartText>"""
+}
+
+/** Writes one face's watchface.xml, laying its cases out as its layout says. */
+String faceXml(Map face) {
+    List<Map> cases = face.cases as List<Map>
+    // Clockwise from the top, the bands of an arc face; each is 70 degrees.
+    List<List<Object>> BANDS = [['top', 325, 35], ['right', 55, 125], ['bottom', 145, 215], ['left', 235, 305]]
+    StringBuilder labels = new StringBuilder()
+    List<String> slots = []
+    cases.eachWithIndex { Map c, int i ->
+        Map<String, Object> attributes = [slotId: i + 1]
+        switch (face.layout) {
+            case 'chip':
+                if (i >= 4) throw new GradleException("${face.name}: a chip face holds four cases")
+                int x = [82, 252][i % 2], y = [78, 250][i.intdiv(2)]
+                attributes += [x: x, y: y, width: 116, height: 116, type: 'chip']
+                labels << label(x - 32, y + 118, 180, 15, c.caption)
+                break
+            case 'arc':
+                if (i >= 4) throw new GradleException("${face.name}: an arc face holds four cases")
+                attributes += [x: 0, y: 0, width: 450, height: 450, type: 'arc',
+                               startAngle: BANDS[i][1], endAngle: BANDS[i][2]]
+                labels << label(60, 190 + i * 26, 330, 16, "${BANDS[i][0]}: ${c.caption}")
+                break
+            case 'background':
+                if (i >= 1) throw new GradleException("${face.name}: a background face holds one case")
+                attributes += [x: 0, y: 0, width: 450, height: 450, type: 'background']
+                break
+            default:
+                throw new GradleException("${face.name}: unknown layout ${face.layout}")
+        }
+        attributes.complicationDrawableStyle = 'line'
+        attributes += [defaultProvider: 'EMPTY', defaultProviderType: 'EMPTY']
+        if (c.type) {
+            attributes += [primaryProvider: "com.xlythe.watchface.screenshots.provider/" +
+                    "com.xlythe.watchface.screenshots.provider.Cases\$${sourceClass(face.name as String, i)}",
+                           primaryProviderType: c.type]
+        }
+        attributes += (c.slot ?: [:]) as Map
+        slots << "        <com.xlythe.ComplicationSlot " +
+                attributes.collect { k, v -> "${k}=\"${escape(v)}\"" }.join(' ') + ' />'
+    }
+    // Arc faces list their cases in the middle, under the title; the others title the top, except
+    // a background face, whose slot is the whole face, which says what it is at the foot.
+    String title = face.layout == 'arc'
+            ? label(60, 150, 330, 22, face.title, '#FFFFFFFF', 'MEDIUM')
+            : face.layout == 'background'
+            ? label(75, 395, 300, 18, face.title, '#FFFFFFFF', 'MEDIUM')
+            : label(75, 30, 300, 18, face.title, '#FFFFFFFF', 'MEDIUM')
+    // A background slot draws behind the rest, so its title goes after it.
+    boolean titleLast = face.layout == 'background'
+    return """<!-- Generated from cases.groovy (${face.name}). -->
+<WatchFace width="450" height="450">
+    <Metadata key="CLOCK_TYPE" value="DIGITAL" />
+    <Scene backgroundColor="#FF000000">
+${titleLast ? '' : title}${labels}
+
+${slots.join('\n')}
+${titleLast ? title : ''}
+    </Scene>
+</WatchFace>
+"""
 }
 
 subprojects { Project face ->
@@ -45,6 +128,9 @@ subprojects { Project face ->
     }
     apply plugin: 'com.android.application'
     apply plugin: 'com.xlythe.watchface-format'
+
+    File templateFile = face.file('watchface.xml')
+    templateFile.text = faceXml(faces.find { it.name == face.name })
 
     android {
         namespace facePackage(face.name)
@@ -65,7 +151,7 @@ subprojects { Project face ->
     }
 
     watchFaceFormat {
-        template = face.file('watchface.xml')
+        template = templateFile
         // The newest format a Wear OS 6 watch runs, and the one the layouts give the most to.
         variants {
             remove(getByName('wff1'))
@@ -225,6 +311,26 @@ int compare(BufferedImage expected, BufferedImage actual, File diff) {
     return differing
 }
 
+/** A page showing every golden beside what its face is fed, written whenever they are recorded. */
+static String goldenIndex(List<Map> faces) {
+    StringBuilder page = new StringBuilder()
+    page << '# Goldens\n\n'
+    page << 'Written by `recordScreenshots` from [`cases.groovy`](../cases.groovy); do not edit by hand.\n\n'
+    faces.each { Map face ->
+        page << "## ${face.name}\n\n"
+        page << '| Lit | Ambient |\n| --- | --- |\n'
+        page << "| ![](${face.name}.png) | ![](${face.name}_ambient.png) |\n\n"
+        face.cases.eachWithIndex { Map c, int i ->
+            String where = face.layout == 'arc' ? ['Top', 'Right', 'Bottom', 'Left'][i] + ': ' : ''
+            String data = c.findAll { k, v -> !(k in ['caption', 'slot']) }.collect { k, v -> "${k} ${v}" }.join(', ')
+            String slot = c.slot ? "; slot ${c.slot.collect { k, v -> "${k}=${v}" }.join(', ')}" : ''
+            page << "- ${where}**${c.caption}** - ${data ?: 'no provider'}${slot}\n"
+        }
+        page << '\n'
+    }
+    return page.toString()
+}
+
 List<String> buildTasks = [':provider:assembleDebug'] + faceNames.collect { ":faces:${it}:assembleDebug" }
 
 tasks.register('recordScreenshots') {
@@ -237,6 +343,7 @@ tasks.register('recordScreenshots') {
         goldens.mkdirs()
         goldens.listFiles().findAll { it.name.endsWith('.png') }*.delete()
         actualDir.listFiles().each { File shot -> new File(goldens, shot.name).bytes = shot.bytes }
+        new File(goldens, 'README.md').text = goldenIndex(faces)
         logger.lifecycle("Recorded ${actualDir.listFiles().size()} goldens from ${device.serial} into ${goldens}")
     }
 }

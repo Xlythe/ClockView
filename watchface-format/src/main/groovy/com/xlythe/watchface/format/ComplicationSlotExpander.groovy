@@ -177,6 +177,12 @@ final class ComplicationSlotExpander {
                 arcSpan(node))
         int w = geometry.w
         int h = geometry.h
+        // A chip is a ring. Stretched into an oval, its text and icon had nowhere good to sit and
+        // its gauge bulged at the ends, so a chip is square and something wider is an arc.
+        if (node.attribute('type') == 'chip' && w != h) {
+            throw new IllegalArgumentException("${TAG} ${slotId} is a chip ${w} wide and ${h} tall;" +
+                    ' a chip is round, so its width and height must match')
+        }
 
         // An arc slot's track follows its own span rather than closing into a ring, and the four
         // styles say how solid it is rather than what shape it is.
@@ -519,6 +525,8 @@ final class ComplicationSlotExpander {
      * {@code PHOTO_IMAGE}. A monochromatic image is a single-color glyph the watch face is expected
      * to tint; the other two carry their own color and are left alone.
      *
+     * <p>{@code round="true"} crops the image to the circle its area holds.
+     *
      * <p>Each source has an {@code _AMBIENT} companion that a provider may or may not supply, so
      * ambient falls back to the full-res image rather than going blank.
      */
@@ -531,13 +539,23 @@ final class ComplicationSlotExpander {
         boolean hasAmbient = source != 'PHOTO_IMAGE'
         String tint = source == 'MONOCHROMATIC_IMAGE' ? " tintColor=\"${contentColor}\"" : ''
         String ambientTint = source == 'MONOCHROMATIC_IMAGE' ? " tintColor=\"${ambientContentColor}\"" : ''
+        // Cropped to the circle its box holds, for a picture that should fill a round slot. The
+        // format cannot clip, but a group can mask: the circle is drawn as the mask and the image
+        // as what shows through it.
+        boolean round = 'true' == attribute(node, 'round')
+        String mode = round ? ' renderMode="SOURCE"' : ''
+        String mask = round
+                ? "<PartDraw ${box} renderMode=\"MASK\"><Ellipse x=\"0\" y=\"0\" width=\"${area[2]}\"" +
+                  " height=\"${area[3]}\"><Fill color=\"#FFFFFFFF\" /></Ellipse></PartDraw>"
+                : ''
 
-        String fullRes = """<PartImage ${box}${tint} alpha="255">
+        String fullRes = """<PartImage ${box}${tint}${mode} alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
                     <Image resource="[COMPLICATION.${source}]" />
                 </PartImage>"""
         if (!hasAmbient) {
             return parse("""<Group name="Image" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${mask}
                 ${fullRes}
             </Group>""")
         }
@@ -546,19 +564,20 @@ final class ComplicationSlotExpander {
                         <Expression name="has_ambient">[COMPLICATION.${source}_AMBIENT] != null</Expression>
                     </Expressions>
                     <Compare expression="has_ambient">
-                        <PartImage ${box}${ambientTint} alpha="0">
+                        <PartImage ${box}${ambientTint}${mode} alpha="0">
                             <Variant mode="AMBIENT" target="alpha" value="255" />
                             <Image resource="[COMPLICATION.${source}_AMBIENT]" />
                         </PartImage>
                     </Compare>
                     <Default>
-                        <PartImage ${box}${ambientTint} alpha="0">
+                        <PartImage ${box}${ambientTint}${mode} alpha="0">
                             <Variant mode="AMBIENT" target="alpha" value="255" />
                             <Image resource="[COMPLICATION.${source}]" />
                         </PartImage>
                     </Default>
                 </Condition>"""
         return parse("""<Group name="Image" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
+                ${mask}
                 ${ambient}
                 ${fullRes}
             </Group>""")
@@ -780,26 +799,15 @@ final class ComplicationSlotExpander {
      * One ring divided into the provider's elements, each taking the share of the turn its
      * weight asks for.
      *
-     * <p>A weighted stroke does the dividing, so the whole ring is one Arc. The segments are
-     * capped round and set a gap apart, which is what the provider's background color is for:
-     * Wear's own data model names it the color between the elements. Round, because a band has
-     * rounded ends and a square segment sitting in one leaves a crescent of track showing past
-     * the color; and because the format caps every segment of a weighted stroke the same way,
-     * which makes the ends of the band match at the cost of every element becoming a lozenge.
+     * <p>A weighted stroke does the dividing, so the whole ring is one Arc. Each element is a
+     * pill, rounded at both ends and set a small margin from the next, with nothing drawn beneath
+     * them to show through the gaps - the provider's background color, which Wear names as the
+     * color between the elements, is not used, because between them there is only the face.
      *
      * <p>A round cap is drawn half a stroke past the end of its segment, so two facing caps close
-     * a whole stroke's worth of gap between them. The gap asked for therefore carries that stroke
-     * on top of the gap wanted, or the segments meet and the division disappears. It stays a
-     * share of the stroke, so it is a hairline on a thin ring, but it is capped at a share of the
-     * sweep, because a bezel band is thick and short and a gap sized to its thickness would take
-     * most of its length.
-     *
-     * <p>That backdrop is drawn underneath, a full turn, since the segments cover whatever
-     * they cover.
-     *
-     * <p>A band is the exception to both. Its elements are pills, like its other gauges, so they
-     * sit a margin apart however short the band is - the gap is always the two caps and the
-     * margin, never less - and nothing is drawn beneath them to show through the gaps.
+     * a whole stroke's worth of gap between them. The gap asked for is therefore the stroke plus
+     * the margin, never less, or the pills would run into one another. On a short band that is a
+     * large share of the length, so a band only has room for a few elements.
      */
     private String weightedRing() {
         ArcSpan band = geometry.arc
@@ -813,23 +821,14 @@ final class ComplicationSlotExpander {
         double radius = band != null
                 ? (band.width + band.height) / 4d
                 : Math.min(geometry.w, geometry.h) / 2d
-        double gap = band != null
-                ? Math.toDegrees((1 + PILL_MARGIN) * thickness / radius)
-                : Math.min(Math.toDegrees(1.75d * thickness / radius), 0.06d * (to - from))
-        String discreteGap = String.format(Locale.ROOT, '%.1f', gap)
-        String backdrop = band != null ? '' : """<Condition>
-                    <Expressions>
-                        <Expression name="has_background">[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR] != null</Expression>
-                    </Expressions>
-                    <Compare expression="has_background">
-                        <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
-                            <Variant mode="AMBIENT" target="alpha" value="0" />
-                            <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
-                                <Stroke color="[COMPLICATION.WEIGHTED_ELEMENTS_BACKGROUND_COLOR]" cap="ROUND" thickness="${thickness}" />
-                            </Arc>
-                        </PartDraw>
-                    </Compare>
-                </Condition>"""
+        String discreteGap = String.format(Locale.ROOT, '%.1f', Math.toDegrees((1 + PILL_MARGIN) * thickness / radius))
+        double gap = discreteGap.toDouble()
+        if (band == null) {
+            // A ring's last element comes back round to meet its first, so the ring stops half a
+            // gap short at each end and the seam at twelve is a gap like the others.
+            from = gap / 2
+            to = 360d - gap / 2
+        }
         return """<Group name="Weighted" x="0" y="0" width="${geometry.w}" height="${geometry.h}">
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="0">
                     <Variant mode="AMBIENT" target="alpha" value="255" />
@@ -837,7 +836,6 @@ final class ComplicationSlotExpander {
                         <Stroke color="${ambientColor}" cap="ROUND" thickness="${thickness}" />
                     </Arc>
                 </PartDraw>
-                ${backdrop}
                 <PartDraw x="0" y="0" width="${geometry.w}" height="${geometry.h}" alpha="255">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
                     <Arc startAngle="${from}" endAngle="${to}" ${geometryAttributes}>
@@ -910,6 +908,7 @@ final class ComplicationSlotExpander {
      * <ul>
      *   <li>{@code full} - the whole slot.
      *   <li>{@code photo} - the largest square that fits inside a round slot.
+     *   <li>{@code disc} - everything inside a round slot's ring, for an image cropped round.
      *   <li>{@code icon} - an icon on its own, centered.
      *   <li>{@code glyph} - an icon on its own and larger, for a slot showing nothing else.
      *   <li>{@code icon_beside} - an icon paired with {@code text_beside}.
@@ -1181,6 +1180,9 @@ final class ComplicationSlotExpander {
                     // outside the ring.
                     'photo'      : [(int) (w * 0.1465f), (int) (h * 0.1465f),
                                     (int) (w * 0.707f), (int) (h * 0.707f)] as int[],
+                    // Everything inside the ring, for a photo cropped round to fill it. The ring
+                    // is four wide at the edge, and two more keep the photo off it.
+                    'disc'       : [6, 6, w - 12, h - 12] as int[],
                     'icon'       : [iconXSingle, iconYSingle, iconSize, iconSize] as int[],
                     'glyph'      : [(int) ((w - glyphSize) / 2), (int) ((h - glyphSize) / 2),
                                     glyphSize, glyphSize] as int[],

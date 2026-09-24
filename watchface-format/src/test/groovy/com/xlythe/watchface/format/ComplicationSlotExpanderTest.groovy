@@ -49,7 +49,7 @@ class ComplicationSlotExpanderTest {
     void expand_prefersColorsFromTheTag() {
         Node root = expander.expand(TemplateProcessor.parse('''
             <Scene>
-                <com.xlythe.ComplicationSlot slotId="2" x="0" y="0" width="120" height="60" type="chip"
+                <com.xlythe.ComplicationSlot slotId="2" x="0" y="0" width="60" height="60" type="chip"
                     complicationDrawableStyle="empty" color="[CONFIGURATION.themeColor.0]" ambientColor="#FF000000" />
             </Scene>'''), 2)
 
@@ -221,6 +221,51 @@ class ComplicationSlotExpanderTest {
             fail('Expected a primaryProvider with no system provider to fall back on to be rejected')
         } catch (IllegalArgumentException expected) {
             assertTrue(expected.message.contains('defaultProvider'))
+        }
+    }
+
+    /** A ring's elements are pills too, and its seam at twelve is a gap like the others. */
+    @Test
+    void chipElements_arePillsWithAGapAtTheSeam() {
+        Map<String, String> printed = [:]
+        eachComplication('chip', 5) { String type, String xml -> printed[type] = xml }
+        assertFalse('a ring draws no backdrop under its elements',
+                printed['WEIGHTED_ELEMENTS'].contains('WEIGHTED_ELEMENTS_BACKGROUND_COLOR'))
+        Node arc = (Node) expandBundled('chip', 5).depthFirst().find {
+            it instanceof Node && it.name() == 'Arc' && it.children().any { isElements(it) }
+        }
+        Node stroke = (Node) arc.children().find { isElements(it) }
+        double gap = stroke.attribute('discreteGap').toString().toDouble()
+        double from = arc.attribute('startAngle').toString().toDouble()
+        double to = arc.attribute('endAngle').toString().toDouble()
+        assertEquals(gap, from + 360 - to, 0.01d)
+    }
+
+    /** The weighted stroke that divides the elements, rather than one laying out a colour ramp. */
+    private static boolean isElements(Object node) {
+        return node instanceof Node && node.name() == 'WeightedStroke' && node.attribute('weights') != null
+    }
+
+    /** A photo in a chip fills the ring, masked to a circle rather than inscribed as a square. */
+    @Test
+    void chipPhotos_areCroppedRound() {
+        String smallImage = null
+        eachComplication('chip', 5) { String type, String xml ->
+            if (type == 'SMALL_IMAGE') smallImage = xml
+        }
+        assertTrue('no mask', smallImage.contains('renderMode="MASK"'))
+        assertTrue('nothing shows through the mask', smallImage.contains('renderMode="SOURCE"'))
+    }
+
+    /** A chip is a ring, so it is square; something wider is an arc. */
+    @Test
+    void chips_mustBeSquare() {
+        try {
+            new ComplicationSlotExpander(bundledLayouts(), '#FFFFFFFF', '#FFFFFFFF').expand(TemplateProcessor.parse(
+                    '<Scene><com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="200" height="80" type="chip" /></Scene>'), 5)
+            fail('Expected an oblong chip to be rejected')
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.message, expected.message.contains('round'))
         }
     }
 

@@ -1,23 +1,17 @@
 # Complication screenshots
 
-Pictures of the `arc` complication layouts as a watch draws them, kept as goldens so a change to
-the plugin shows up as a change to a picture.
+Pictures of every complication layout the plugin bundles - chips, arcs and backgrounds, each
+complication type they take, the arrangements each type falls into depending on what the provider
+sends, colour ramps and the four drawable styles - as a watch draws them, lit and in ambient. They
+are kept as goldens so a change to the plugin shows up as a change to a picture.
+
+**[See the goldens](goldens/README.md).**
 
 Watch Face Format is drawn by the watch rather than by anything on the JVM, so these are taken on
-one. This directory is its own Gradle build: it builds a watch face for each directory in
-[`faces/`](faces) with the plugin in this checkout, feeds every slot from the fixed data sources
-in [`provider/`](provider), photographs each face lit and in ambient, and compares the photographs
-with [`goldens/`](goldens).
-
-## Goldens
-
-Each face has four bands, clockwise from the top, and says in the middle what each is fed.
-
-| | Lit | Ambient |
-| --- | --- | --- |
-| Ranged values: 0%, 15%, 60%, 100% | ![](goldens/ranged.png) | ![](goldens/ranged_ambient.png) |
-| Goals: 0%, 70%, 100%, 130% | ![](goldens/goal.png) | ![](goldens/goal_ambient.png) |
-| Weighted elements: 1, 2, 3, 5 | ![](goldens/weighted.png) | ![](goldens/weighted_ambient.png) |
+one. This directory is its own Gradle build. Every case is a line in
+[`cases.groovy`](cases.groovy); from that table it builds a watch face per entry with the plugin
+in this checkout, a data source per case in [`provider/`](provider), photographs each face lit and
+in ambient, and compares the photographs with [`goldens/`](goldens).
 
 ## Running
 
@@ -47,7 +41,10 @@ Options, as `-P` properties:
 
 ## Adding a case
 
-A face is a directory in `faces/` holding a `watchface.xml`, which the build picks up by itself.
-Its slots name their data with `primaryProvider`, pointing at a class in
-[`Sources.java`](provider/src/main/java/com/xlythe/watchface/screenshots/provider/Sources.java)
-that is also declared, with its type, in the provider's manifest. Then record.
+Add a line to [`cases.groovy`](cases.groovy) - a face holds four chips, four bands or one
+background - and run `recordScreenshots`. The table says what each case is fed; the build writes
+the face, the data source and its manifest entry, and the index in `goldens/README.md`.
+
+Some arrangements cannot be reached: Jetpack will not build a `SHORT_TEXT` or `LONG_TEXT` without
+text, nor a ranged value, goal or weighted elements with no text, title or icon. A case that asks
+for none of the three is sent a blank title, which the layouts treat as no text.

@@ -187,8 +187,8 @@
     </Complication>
 
     <!--
-        A list of things and how much of the whole each one is, drawn as one ring divided between
-        them with a gap at each division. E.g. a week's sleep stages, a day's activity split.
+        A list of things and how much of the whole each one is, drawn as a ring of pills, one per
+        element, a small margin apart. E.g. a week's sleep stages, a day's activity split.
     -->
     <Complication type="WEIGHTED_ELEMENTS">
         <Group name="WeightedElements" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
@@ -226,8 +226,8 @@
 
     <!--
         An image that carries its own color, so it is not tinted. The provider says whether it is a
-        photograph, which should fill what room there is, or an icon, which should not be crowded:
-        IMAGE_STYLE is 1 for a photo and 2 for an icon.
+        photograph, which is cropped round to fill the inside of the ring, or an icon, which should
+        not be crowded and is not cropped: IMAGE_STYLE is 1 for a photo and 2 for an icon.
     -->
     <Complication type="SMALL_IMAGE">
         <Group name="SmallImage" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
@@ -237,7 +237,7 @@
                     <Expression name="photo">[COMPLICATION.IMAGE_STYLE] == 1</Expression>
                 </Expressions>
                 <Compare expression="photo">
-                    <com.xlythe.ComplicationImage source="SMALL_IMAGE" area="photo" />
+                    <com.xlythe.ComplicationImage source="SMALL_IMAGE" area="disc" round="true" />
                 </Compare>
                 <Default>
                     <com.xlythe.ComplicationImage source="SMALL_IMAGE" area="glyph" />

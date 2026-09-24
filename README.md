@@ -489,8 +489,8 @@ the part past the value shaded so the fill ends in the colour of the reading; a 
 provider sends no colours gets a dim full turn under the fill instead, since four units of
 thickness in one colour is not a reading you can take at a glance. A passed goal holds the
 completed lap back and draws the next one over it at full strength, so the lap being drawn is the
-reading. `WEIGHTED_ELEMENTS` divides one ring between the provider's weights with a gap at each
-division, and a provider that sends no text still gets its number written out with `numberFormat`.
+reading. `WEIGHTED_ELEMENTS` divides one ring between the provider's weights, one pill per
+element, and a provider that sends no text still gets its number written out with `numberFormat`.
 From format 3 text shrinks to fit rather than ellipsing, which lets a value be set a size larger
 where nothing competes with it; inside a gauge it stays a size down, because the slack is what
 separates it from its label. On format 1 the types that arrived later are dropped from
@@ -504,7 +504,11 @@ pill each in the provider's colours. A pill is never shorter than it is thick, s
 has room for a few elements - a 40° band as thick as ReflectiveScenery's fits four, which come out
 as dots - and one that gets more draws nothing.
 
-Screenshots of the band layouts on a Wear OS 6 emulator are kept in
+A chip's weighted elements are pills in the same way, round the ring with a gap at twelve where
+the last meets the first, and a chip crops a photo round to fill the inside of its ring. A chip is
+round, so its slot must be square; something wider belongs in an arc.
+
+Screenshots of every layout and type on a Wear OS 6 emulator are kept in
 [`watchface-format/screenshots`](watchface-format/screenshots), with the build that takes them and
 checks a change against them.
 

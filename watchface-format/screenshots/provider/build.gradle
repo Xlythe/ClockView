@@ -1,4 +1,70 @@
+import groovy.json.JsonOutput
+
 apply plugin: 'com.android.application'
+
+// A data source per case in cases.groovy, each a class of its own because a watch face binds a
+// slot to a component. The classes, the manifest declaring them and the data they serve are all
+// written from the table, so that a case is added in one place.
+File generated = layout.buildDirectory.dir('generated/cases').get().asFile
+List<Map> faces = rootProject.ext.faces as List<Map>
+Map<String, Map> cases = [:]
+faces.each { Map face ->
+    face.cases.eachWithIndex { Map c, int i ->
+        if (c.type) {
+            cases["${face.name}_${i}".toString()] = c
+        }
+    }
+}
+
+// A data source declares its types by their older names, which is what Wear checks the data it
+// sends against: a monochromatic image declared as one is refused as unexpected.
+Map<String, String> MANIFEST_TYPES = [MONOCHROMATIC_IMAGE: 'ICON', PHOTO_IMAGE: 'LARGE_IMAGE']
+
+File generatedJava = new File(generated, 'java/com/xlythe/watchface/screenshots/provider/Cases.java')
+generatedJava.parentFile.mkdirs()
+generatedJava.text = """package com.xlythe.watchface.screenshots.provider;
+
+/** Generated from cases.groovy: one data source per case. */
+public final class Cases {
+    private Cases() {}
+${cases.keySet().collect { "    public static class ${it} extends Sources {}" }.join('\n')}
+}
+"""
+
+File generatedAssets = new File(generated, 'assets')
+generatedAssets.mkdirs()
+new File(generatedAssets, 'cases.json').text = JsonOutput.prettyPrint(JsonOutput.toJson(cases))
+
+File generatedManifest = new File(generated, 'AndroidManifest.xml')
+generatedManifest.text = """<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <application
+        android:icon="@drawable/small_image"
+        android:label="Screenshot data">
+
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+${cases.collect { String name, Map c -> """
+        <service
+            android:name=".Cases\$${name}"
+            android:exported="true"
+            android:icon="@drawable/small_image"
+            android:label="${name}"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="${MANIFEST_TYPES.get(c.type, c.type)}" />
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="0" />
+        </service>""" }.join('\n')}
+
+    </application>
+
+</manifest>
+"""
 
 android {
     namespace 'com.xlythe.watchface.screenshots.provider'
@@ -12,6 +78,13 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets {
+        main {
+            manifest.srcFile generatedManifest
+            java.srcDirs += new File(generated, 'java')
+            assets.srcDirs += generatedAssets
+        }
     }
 }
 

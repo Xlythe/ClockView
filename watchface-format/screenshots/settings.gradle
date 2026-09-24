@@ -20,5 +20,15 @@ includeBuild('../..') {
 }
 
 include ':provider'
-// Every directory under faces/ is a watch face, drawn and photographed as one golden.
-file('faces').eachDir { include ":faces:${it.name}" }
+// Every face in cases.groovy is a project of its own, since each is a watch face of its own. They
+// are written into build/ rather than kept in the tree: the table is the source.
+List<Map> faces = new GroovyShell().evaluate(file('cases.groovy')) as List<Map>
+file('build/faces').mkdirs()
+include ':faces'
+project(':faces').projectDir = file('build/faces')
+faces.each { Map face ->
+    File dir = file("build/faces/${face.name}")
+    dir.mkdirs()
+    include ":faces:${face.name}"
+    project(":faces:${face.name}").projectDir = dir
+}
