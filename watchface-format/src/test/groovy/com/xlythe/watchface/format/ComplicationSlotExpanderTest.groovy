@@ -89,6 +89,28 @@ class ComplicationSlotExpanderTest {
         }
     }
 
+    @Test
+    void shortTextLayouts_suppressLockedPlaceholderWithTheirContents() {
+        for (String layout : ['chip', 'arc']) {
+            Node slot = expandBundled(layout, 5)
+            Node shortText = (Node) slot.children().find {
+                it instanceof Node && it.name() == 'Complication' && it.attribute('type') == 'SHORT_TEXT'
+            }
+            Node outerCondition = (Node) ((Node) shortText.children().find {
+                it instanceof Node && it.name() == 'Group'
+            }).children().find { it instanceof Node && it.name() == 'Condition' }
+            Node guard = outerCondition.depthFirst().find {
+                it instanceof Node && it.name() == 'Expression' && it.attribute('name') == 'has_real_text'
+            }
+            assertEquals('[COMPLICATION.TEXT] != "--"', guard.text())
+            Node content = outerCondition.children().find {
+                it instanceof Node && it.name() == 'Compare' && it.attribute('expression') == 'has_real_text'
+            }
+            assertNotNull(content.depthFirst().find { it instanceof Node && it.name() == 'PartText' })
+            assertNotNull(content.depthFirst().find { it instanceof Node && it.name() == 'Group' && it.attribute('name') == 'Background' })
+        }
+    }
+
     /**
      * What each complication type carries, from Wear's Complication reference.
      *

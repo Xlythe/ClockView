@@ -33,21 +33,28 @@
     -->
     <Complication type="SHORT_TEXT">
         <Group name="ShortText" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
-            ${BACKGROUND_GROUP}
             <Condition>
                 <Expressions>
-                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
-                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
-                    <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="has_real_text">[COMPLICATION.TEXT] != "--"</Expression>
                 </Expressions>
-                <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" scale="large" weight="MEDIUM" />
-                </Compare>
-                <Compare expression="title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="full" curved="true" scale="large" />
-                </Compare>
-                <Compare expression="icon">
-                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_icon" />
+                <Compare expression="has_real_text">
+                    ${BACKGROUND_GROUP}
+                    <Condition>
+                        <Expressions>
+                            <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                            <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                            <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                        </Expressions>
+                        <Compare expression="text">
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="full" curved="true" scale="large" weight="MEDIUM" />
+                        </Compare>
+                        <Compare expression="title">
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="full" curved="true" scale="large" />
+                        </Compare>
+                        <Compare expression="icon">
+                            <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="arc_icon" />
+                        </Compare>
+                    </Condition>
                 </Compare>
             </Condition>
         </Group>

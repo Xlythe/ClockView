@@ -32,36 +32,45 @@
     <!-- A short string with an optional qualifier or icon. E.g. an alarm, a temperature. -->
     <Complication type="SHORT_TEXT">
         <Group name="ShortText" x="0" y="0" width="${WIDTH}" height="${HEIGHT}">
-            ${BACKGROUND_GROUP}
+            <!-- Wear substitutes this text when a locked face cannot show complication data.
+                 Hide the entire chip, including any outline, until its real text returns. -->
             <Condition>
                 <Expressions>
-                    <Expression name="icon_and_text"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TEXT] != null]]></Expression>
-                    <Expression name="text_and_title"><![CDATA[[COMPLICATION.TEXT] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                    <Expression name="icon_and_title"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                    <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
-                    <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
-                    <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                    <Expression name="has_real_text">[COMPLICATION.TEXT] != "--"</Expression>
                 </Expressions>
-                <Compare expression="icon_and_text">
-                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
-                </Compare>
-                <Compare expression="text_and_title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
-                </Compare>
-                <Compare expression="icon_and_title">
-                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="text_beside" scale="medium" autoSizeScale="large" />
-                </Compare>
-                <Compare expression="text">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="large" weight="MEDIUM" />
-                </Compare>
-                <Compare expression="title">
-                    <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="text" scale="large" />
-                </Compare>
-                <Compare expression="icon">
-                    <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="glyph" />
+                <Compare expression="has_real_text">
+                    ${BACKGROUND_GROUP}
+                    <Condition>
+                        <Expressions>
+                            <Expression name="icon_and_text"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TEXT] != null]]></Expression>
+                            <Expression name="text_and_title"><![CDATA[[COMPLICATION.TEXT] != null && [COMPLICATION.TITLE] != null]]></Expression>
+                            <Expression name="icon_and_title"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
+                            <Expression name="text">[COMPLICATION.TEXT] != null</Expression>
+                            <Expression name="title">[COMPLICATION.TITLE] != null</Expression>
+                            <Expression name="icon">[COMPLICATION.MONOCHROMATIC_IMAGE] != null</Expression>
+                        </Expressions>
+                        <Compare expression="icon_and_text">
+                            <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text_beside" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                        </Compare>
+                        <Compare expression="text_and_title">
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="value" scale="medium" autoSizeScale="large" weight="MEDIUM" />
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="label" scale="small" dim="true" />
+                        </Compare>
+                        <Compare expression="icon_and_title">
+                            <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="icon_beside" />
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="text_beside" scale="medium" autoSizeScale="large" />
+                        </Compare>
+                        <Compare expression="text">
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TEXT]" area="text" scale="large" weight="MEDIUM" />
+                        </Compare>
+                        <Compare expression="title">
+                            <com.xlythe.ComplicationText expression="[COMPLICATION.TITLE]" area="text" scale="large" />
+                        </Compare>
+                        <Compare expression="icon">
+                            <com.xlythe.ComplicationImage source="MONOCHROMATIC_IMAGE" area="glyph" />
+                        </Compare>
+                    </Condition>
                 </Compare>
             </Condition>
         </Group>
