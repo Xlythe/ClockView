@@ -1,0 +1,24 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'watchface-format-screenshots'
+
+// The plugin under test is the one in this checkout, not the last one released.
+includeBuild('../..') {
+    dependencySubstitution {
+        substitute module('com.xlythe:watchface-format') using project(':watchface-format')
+    }
+}
+
+include ':provider'
+// Every directory under faces/ is a watch face, drawn and photographed as one golden.
+file('faces').eachDir { include ":faces:${it.name}" }

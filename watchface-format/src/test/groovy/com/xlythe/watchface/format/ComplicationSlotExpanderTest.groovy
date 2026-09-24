@@ -197,6 +197,33 @@ class ComplicationSlotExpanderTest {
                 printed['WEIGHTED_ELEMENTS'].contains('WEIGHTED_ELEMENTS_BACKGROUND_COLOR'))
     }
 
+    /** An app's own data source is tried first, with the system provider to fall back on. */
+    @Test
+    void primaryProvider_goesIntoThePolicyBesideTheSystemOne() {
+        ComplicationSlotExpander expander = new ComplicationSlotExpander(bundledLayouts(), '#FFFFFFFF', '#FF808080')
+        Node root = expander.expand(TemplateProcessor.parse('''
+            <Scene>
+                <com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="100" height="100" type="chip"
+                    primaryProvider="com.example/com.example.Steps" primaryProviderType="GOAL_PROGRESS"
+                    defaultProvider="EMPTY" defaultProviderType="EMPTY" />
+            </Scene>'''), 2)
+        Node policy = (Node) root.depthFirst().find { it instanceof Node && it.name() == 'DefaultProviderPolicy' }
+        assertEquals(['EMPTY', 'EMPTY', 'com.example/com.example.Steps', 'GOAL_PROGRESS'],
+                ['defaultSystemProvider', 'defaultSystemProviderType', 'primaryProvider',
+                 'primaryProviderType'].collect { policy.attribute(it) })
+
+        try {
+            expander.expand(TemplateProcessor.parse('''
+                <Scene>
+                    <com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="100" height="100" type="chip"
+                        primaryProvider="com.example/com.example.Steps" primaryProviderType="GOAL_PROGRESS" />
+                </Scene>'''), 2)
+            fail('Expected a primaryProvider with no system provider to fall back on to be rejected')
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.message.contains('defaultProvider'))
+        }
+    }
+
     /** Two round caps close a thickness of gap, so a band's gap is always more than that. */
     @Test
     void bandElements_neverTouch() {

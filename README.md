@@ -504,6 +504,10 @@ pill each in the provider's colours. A pill is never shorter than it is thick, s
 has room for a few elements - a 40° band as thick as ReflectiveScenery's fits four, which come out
 as dots - and one that gets more draws nothing.
 
+Screenshots of the band layouts on a Wear OS 6 emulator are kept in
+[`watchface-format/screenshots`](watchface-format/screenshots), with the build that takes them and
+checks a change against them.
+
 On a ring, strokes are capped square, because a ring's end is its start and a round cap there is
 drawn back over the ramp's first colour as a bite out of it.
 

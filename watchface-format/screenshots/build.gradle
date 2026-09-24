@@ -1,0 +1,283 @@
+// Screenshot tests for the complication layouts the plugin draws.
+//
+// Watch Face Format is drawn by the watch, not by anything that runs on the JVM, so the only true
+// picture of a layout is one taken on a watch. This build makes a watch face per file in faces/,
+// feeds its slots from the fixed data sources in provider/, photographs each face on a connected
+// Wear OS device, and compares the photographs with the goldens in goldens/.
+//
+//   gradlew recordScreenshots   write what the device shows into goldens/
+//   gradlew verifyScreenshots   fail if what the device shows differs from goldens/
+//
+// See README.md for the device the goldens were taken on.
+
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.2.1'
+        // Substituted by settings.gradle with the plugin in this checkout, whatever the version.
+        classpath 'com.xlythe:watchface-format:local'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+/** The faces, by name: each directory in faces/ holds one watchface.xml. */
+List<String> faceNames = file('faces').listFiles().findAll { it.directory }*.name.sort()
+
+String facePackage(String name) {
+    return "com.xlythe.watchface.screenshots.${name}"
+}
+
+subprojects { Project face ->
+    if (face.parent?.name != 'faces') {
+        return
+    }
+    apply plugin: 'com.android.application'
+    apply plugin: 'com.xlythe.watchface-format'
+
+    android {
+        namespace facePackage(face.name)
+        compileSdk 36
+
+        defaultConfig {
+            applicationId facePackage(face.name)
+            minSdk 33
+            targetSdk 36
+            manifestPlaceholders = [faceLabel: "Screenshots: ${face.name}"]
+        }
+        sourceSets {
+            main {
+                manifest.srcFile rootProject.file('face/AndroidManifest.xml')
+                res.srcDirs += rootProject.file('face/res')
+            }
+        }
+    }
+
+    watchFaceFormat {
+        template = face.file('watchface.xml')
+        // The newest format a Wear OS 6 watch runs, and the one the layouts give the most to.
+        variants {
+            remove(getByName('wff1'))
+            remove(getByName('wff2'))
+            wff4 {
+                resourceQualifier = 'raw'
+                formatVersion = 4
+            }
+        }
+    }
+}
+
+/** Where the goldens live, and where a run leaves what it saw and how that differed. */
+File goldens = file('goldens')
+File actualDir = layout.buildDirectory.dir('screenshots/actual').get().asFile
+File diffDir = layout.buildDirectory.dir('screenshots/diff').get().asFile
+
+/** The SDK the Android plugin was pointed at: local.properties, then the environment. */
+File sdkDirectory() {
+    Properties local = new Properties()
+    File localFile = file('local.properties')
+    if (localFile.exists()) {
+        localFile.withInputStream { local.load(it) }
+    }
+    String path = local.getProperty('sdk.dir') ?: System.getenv('ANDROID_HOME') ?: System.getenv('ANDROID_SDK_ROOT')
+    if (path == null) {
+        throw new GradleException('No Android SDK: set sdk.dir in local.properties, or ANDROID_HOME')
+    }
+    return new File(path)
+}
+
+/**
+ * Talks to the device. The serial is -PscreenshotDevice, then ANDROID_SERIAL, then the one
+ * device attached; a run with more than one and neither set does not guess.
+ */
+class Device {
+    final String adb
+    final String serial
+
+    Device(File sdk, String requested) {
+        boolean windows = System.getProperty('os.name').toLowerCase().contains('win')
+        adb = new File(sdk, "platform-tools/adb${windows ? '.exe' : ''}").absolutePath
+        if (requested) {
+            serial = requested
+            return
+        }
+        List<String> attached = run([adb, 'devices']).readLines().drop(1)
+                .findAll { it.endsWith('\tdevice') }.collect { it.split('\t')[0] }
+        if (attached.size() != 1) {
+            throw new GradleException("Expected one device, but found ${attached.size()} ${attached};" +
+                    ' name one with -PscreenshotDevice=<serial> or ANDROID_SERIAL')
+        }
+        serial = attached[0]
+    }
+
+    private static String run(List<String> command, boolean check = true) {
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).start()
+        String output = process.inputStream.text
+        if (process.waitFor() != 0 && check) {
+            throw new GradleException("${command.join(' ')} failed:\n${output}")
+        }
+        return output
+    }
+
+    String adb(List<String> args, boolean check = true) {
+        return run([adb, '-s', serial] + args, check)
+    }
+
+    String shell(String... args) {
+        return adb(['shell'] + args.toList())
+    }
+
+    byte[] screenshot() {
+        Process process = new ProcessBuilder([adb, '-s', serial, 'exec-out', 'screencap', '-p']).start()
+        byte[] png = process.inputStream.bytes
+        if (process.waitFor() != 0) {
+            throw new GradleException('screencap failed')
+        }
+        return png
+    }
+}
+
+/**
+ * Installs every face in turn and photographs it lit and in ambient.
+ *
+ * <p>A face is uninstalled before it is installed, because the watch remembers which data source
+ * the user put in a slot and a slot it remembers ignores the face's own choice. The battery is
+ * unplugged for the run, since a charging watch shows its charging screen over the face.
+ */
+Map<String, BufferedImage> photograph(Device device, List<String> faceNames, File actualDir) {
+    long settle = (findProperty('screenshotSettleMillis') ?: '10000').toString().toLong()
+    Map<String, BufferedImage> shots = [:]
+    actualDir.deleteDir()
+    actualDir.mkdirs()
+    device.shell('dumpsys', 'battery', 'unplug')
+    try {
+        device.adb(['install', '-r', project(':provider').layout.buildDirectory
+                .file('outputs/apk/debug/provider-debug.apk').get().asFile.absolutePath])
+        for (String name : faceNames) {
+            File apk = project(":faces:${name}").layout.buildDirectory
+                    .file("outputs/apk/debug/${name}-debug.apk").get().asFile
+            device.adb(['uninstall', facePackage(name)], false)
+            device.adb(['install', apk.absolutePath])
+            device.shell('input', 'keyevent', 'KEYCODE_WAKEUP')
+            device.shell('am', 'broadcast', '-a', 'com.google.android.wearable.app.DEBUG_SURFACE',
+                    '--es', 'operation', 'set-watchface', '--es', 'watchFaceId', facePackage(name))
+            Thread.sleep(settle)
+            shots[name] = capture(device, actualDir, name)
+
+            device.shell('input', 'keyevent', 'KEYCODE_SLEEP')
+            Thread.sleep(settle.intdiv(2))
+            shots["${name}_ambient".toString()] = capture(device, actualDir, "${name}_ambient")
+            device.shell('input', 'keyevent', 'KEYCODE_WAKEUP')
+        }
+    } finally {
+        device.shell('dumpsys', 'battery', 'reset')
+    }
+    return shots
+}
+
+BufferedImage capture(Device device, File dir, String name) {
+    File png = new File(dir, "${name}.png")
+    png.bytes = device.screenshot()
+    BufferedImage image = ImageIO.read(png)
+    if (image == null) {
+        throw new GradleException("The device's screenshot of ${name} is not an image")
+    }
+    return image
+}
+
+/**
+ * How many pixels of {@code actual} differ from {@code expected} by more than a channel's
+ * tolerance, with those drawn red over a faded copy of the golden into {@code diff}.
+ */
+int compare(BufferedImage expected, BufferedImage actual, File diff) {
+    int tolerance = 24
+    int differing = 0
+    BufferedImage out = new BufferedImage(expected.width, expected.height, BufferedImage.TYPE_INT_RGB)
+    for (int y = 0; y < expected.height; y++) {
+        for (int x = 0; x < expected.width; x++) {
+            int e = expected.getRGB(x, y)
+            int a = actual.getRGB(x, y)
+            boolean same = [16, 8, 0].every { int shift ->
+                Math.abs(((e >> shift) & 0xFF) - ((a >> shift) & 0xFF)) <= tolerance
+            }
+            if (same) {
+                int grey = (((e >> 16) & 0xFF) + ((e >> 8) & 0xFF) + (e & 0xFF)).intdiv(12)
+                out.setRGB(x, y, (grey << 16) | (grey << 8) | grey)
+            } else {
+                differing++
+                out.setRGB(x, y, 0xFF0000)
+            }
+        }
+    }
+    diff.parentFile.mkdirs()
+    ImageIO.write(out, 'png', diff)
+    return differing
+}
+
+List<String> buildTasks = [':provider:assembleDebug'] + faceNames.collect { ":faces:${it}:assembleDebug" }
+
+tasks.register('recordScreenshots') {
+    group = 'verification'
+    description = 'Photographs every face on the connected watch and saves the pictures as the goldens.'
+    dependsOn buildTasks
+    doLast {
+        Device device = new Device(sdkDirectory(), (findProperty('screenshotDevice') ?: System.getenv('ANDROID_SERIAL')) as String)
+        photograph(device, faceNames, actualDir)
+        goldens.mkdirs()
+        goldens.listFiles().findAll { it.name.endsWith('.png') }*.delete()
+        actualDir.listFiles().each { File shot -> new File(goldens, shot.name).bytes = shot.bytes }
+        logger.lifecycle("Recorded ${actualDir.listFiles().size()} goldens from ${device.serial} into ${goldens}")
+    }
+}
+
+tasks.register('verifyScreenshots') {
+    group = 'verification'
+    description = 'Photographs every face on the connected watch and fails if any differs from its golden.'
+    dependsOn buildTasks
+    doLast {
+        Device device = new Device(sdkDirectory(), (findProperty('screenshotDevice') ?: System.getenv('ANDROID_SERIAL')) as String)
+        Map<String, BufferedImage> shots = photograph(device, faceNames, actualDir)
+        // The same emulator draws the same pixels run after run, and widening the gap between
+        // pills by a fifth of the band's thickness moves three hundred, so the allowance is a
+        // few dozen: room for antialiasing to land differently, and no room for a layout change.
+        double allowed = (findProperty('screenshotTolerance') ?: '0.0001').toString().toDouble()
+        List<String> failures = []
+        diffDir.deleteDir()
+        shots.each { String name, BufferedImage actual ->
+            File golden = new File(goldens, "${name}.png")
+            if (!golden.exists()) {
+                failures << "${name}: no golden; run recordScreenshots"
+                return
+            }
+            BufferedImage expected = ImageIO.read(golden)
+            if (expected.width != actual.width || expected.height != actual.height) {
+                failures << "${name}: the device is ${actual.width}x${actual.height} but the golden is" +
+                        " ${expected.width}x${expected.height}; see README.md for the device to use"
+                return
+            }
+            int differing = compare(expected, actual, new File(diffDir, "${name}.png"))
+            double share = differing / (double) (expected.width * expected.height)
+            logger.lifecycle("${name}: ${differing} pixels differ")
+            if (share > allowed) {
+                failures << String.format(Locale.ROOT, '%s: %d pixels (%.2f%%) differ', name, differing, share * 100)
+            }
+        }
+        if (!failures.isEmpty()) {
+            throw new GradleException("Screenshots differ from their goldens:\n  ${failures.join('\n  ')}\n" +
+                    "What the device showed is in ${actualDir}, and the differences in red in ${diffDir}." +
+                    ' If the change is intended, run recordScreenshots and commit the goldens.')
+        }
+        logger.lifecycle("${shots.size()} screenshots match their goldens")
+    }
+}

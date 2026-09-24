@@ -1,0 +1,62 @@
+<!--
+    Goals on arc slots, one case per band, for the screenshot goldens. The bands run clockwise
+    from the top; the label in the middle says what each is fed. See ../../README.md.
+-->
+<WatchFace width="450" height="450">
+    <Metadata key="CLOCK_TYPE" value="DIGITAL" />
+    <Scene backgroundColor="#FF000000">
+        <PartText x="75" y="150" width="300" height="36">
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="26" weight="MEDIUM" color="#FFFFFFFF">GOALS</Font>
+            </Text>
+        </PartText>
+        <PartText x="75" y="194" width="300" height="32">
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="22" weight="NORMAL" color="#FFB0B0B0">top  0%</Font>
+            </Text>
+        </PartText>
+        <PartText x="75" y="224" width="300" height="32">
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="22" weight="NORMAL" color="#FFB0B0B0">right  70%</Font>
+            </Text>
+        </PartText>
+        <PartText x="75" y="254" width="300" height="32">
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="22" weight="NORMAL" color="#FFB0B0B0">bottom  100%</Font>
+            </Text>
+        </PartText>
+        <PartText x="75" y="284" width="300" height="32">
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="22" weight="NORMAL" color="#FFB0B0B0">left  130%</Font>
+            </Text>
+        </PartText>
+
+        <!-- Top: 0% -->
+        <com.xlythe.ComplicationSlot slotId="1" x="0" y="0" width="450" height="450" type="arc"
+            startAngle="325" endAngle="35" complicationDrawableStyle="line"
+            defaultProvider="EMPTY" defaultProviderType="EMPTY"
+            primaryProvider="com.xlythe.watchface.screenshots.provider/com.xlythe.watchface.screenshots.provider.Sources$Goal0"
+            primaryProviderType="GOAL_PROGRESS" />
+
+        <!-- Right: 70% -->
+        <com.xlythe.ComplicationSlot slotId="2" x="0" y="0" width="450" height="450" type="arc"
+            startAngle="55" endAngle="125" complicationDrawableStyle="line"
+            defaultProvider="EMPTY" defaultProviderType="EMPTY"
+            primaryProvider="com.xlythe.watchface.screenshots.provider/com.xlythe.watchface.screenshots.provider.Sources$Goal70"
+            primaryProviderType="GOAL_PROGRESS" />
+
+        <!-- Bottom: 100% -->
+        <com.xlythe.ComplicationSlot slotId="3" x="0" y="0" width="450" height="450" type="arc"
+            startAngle="145" endAngle="215" complicationDrawableStyle="line"
+            defaultProvider="EMPTY" defaultProviderType="EMPTY"
+            primaryProvider="com.xlythe.watchface.screenshots.provider/com.xlythe.watchface.screenshots.provider.Sources$Goal100"
+            primaryProviderType="GOAL_PROGRESS" />
+
+        <!-- Left: 130% -->
+        <com.xlythe.ComplicationSlot slotId="4" x="0" y="0" width="450" height="450" type="arc"
+            startAngle="235" endAngle="305" complicationDrawableStyle="line"
+            defaultProvider="EMPTY" defaultProviderType="EMPTY"
+            primaryProvider="com.xlythe.watchface.screenshots.provider/com.xlythe.watchface.screenshots.provider.Sources$Goal130"
+            primaryProviderType="GOAL_PROGRESS" />
+    </Scene>
+</WatchFace>

@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <application
+        android:icon="@drawable/preview"
+        android:label="${faceLabel}"
+        android:hasCode="false">
+
+        <property
+            android:name="com.google.wear.watchface.format.version"
+            android:value="@integer/watchface_format_version" />
+
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
+    </application>
+
+</manifest>

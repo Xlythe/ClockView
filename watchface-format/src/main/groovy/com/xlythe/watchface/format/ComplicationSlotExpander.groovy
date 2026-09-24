@@ -359,13 +359,32 @@ final class ComplicationSlotExpander {
      * go and find the editor to fix it. Naming a system provider costs nothing and the user can
      * still change it.
      *
+     * <p>A slot may also name an app's own data source to try first, as a component name, falling
+     * back to the system provider when that app is not installed:
+     *
+     * <pre>
+     * &lt;com.xlythe.ComplicationSlot ... primaryProvider="com.example/com.example.StepsService"
+     *     primaryProviderType="GOAL_PROGRESS" defaultProvider="EMPTY" defaultProviderType="EMPTY" /&gt;
+     * </pre>
+     *
      * <p>A type the format version has never heard of cannot be asked for either, so the whole
      * policy is dropped there and the slot starts empty as it would have anyway.
      */
     private String defaultProviderPolicy(Node node) {
         String provider = attribute(node, 'defaultProvider')
         String type = attribute(node, 'defaultProviderType')
+        String primary = attribute(node, 'primaryProvider')
+        String primaryType = attribute(node, 'primaryProviderType')
+        if ((primary == null) != (primaryType == null)) {
+            throw new IllegalArgumentException("${TAG} ${node.attribute('slotId')} needs both" +
+                    ' primaryProvider and primaryProviderType, or neither')
+        }
         if (provider == null && type == null) {
+            if (primary != null) {
+                throw new IllegalArgumentException("${TAG} ${node.attribute('slotId')} names a" +
+                        ' primaryProvider, which Watch Face Format only takes alongside a' +
+                        ' defaultProvider and defaultProviderType to fall back on')
+            }
             return ''
         }
         if (provider == null || type == null) {
@@ -376,11 +395,14 @@ final class ComplicationSlotExpander {
             throw new IllegalArgumentException("Unknown defaultProvider '${provider}';" +
                     " expected one of ${SYSTEM_PROVIDERS.join(', ')}")
         }
-        if (formatVersion < WEIGHTED_FORMAT_VERSION && WEIGHTED_TYPES.contains(type)) {
+        if (formatVersion < WEIGHTED_FORMAT_VERSION &&
+                (WEIGHTED_TYPES.contains(type) || WEIGHTED_TYPES.contains(primaryType))) {
             return ''
         }
+        String primaryAttributes = primary == null ? '' :
+                " primaryProvider=\"${primary}\" primaryProviderType=\"${primaryType}\""
         return "<DefaultProviderPolicy defaultSystemProvider=\"${provider}\"" +
-                " defaultSystemProviderType=\"${type}\" />"
+                " defaultSystemProviderType=\"${type}\"${primaryAttributes} />"
     }
 
     /**
