@@ -23,6 +23,21 @@ class SolarMathTest {
 
     private final WffExpressions mExpressions = new WffExpressions()
 
+    @Test
+    void solarAltitudeMatchesTorontoSunset() {
+        // 26 September 2026, 19:08 EDT is 23:08 UTC. The Sun's center is about
+        // 0.833 degrees below the horizon when its upper edge appears to set.
+        double altitude = mExpressions.evaluate('${SOLAR_ALTITUDE_DEG}', 43.65d, -79.38333d,
+                2026, 269, 23d + 8d / 60d)
+        assertEquals(-0.833d, altitude, 0.2d)
+    }
+
+    @Test
+    void midnightSunDoesNotCreateAFalseSunset() {
+        assertEquals(0d, mExpressions.evaluate('${IS_SUNSET}', 70d, 20d,
+                2026, 172, 21d), 0d)
+    }
+
 
     @Test
     void atAnEquinoxTheDayIsTwelveHoursAtEveryLatitude() {

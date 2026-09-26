@@ -5,64 +5,40 @@
         Variables declared by the watch face override these.
     -->
     <Item name="${IS_SUNRISE}">
-        <!-- Sunrise is defined as -1hr / +1hr from exact sunrise -->
+        <!-- The Sun climbs from nautical dawn (-12 degrees) to +6 degrees. -->
         <![CDATA[
-            ${CURRENT_MILLIS_TO_THE_MINUTE} >= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
-            && ${CURRENT_MILLIS_TO_THE_MINUTE} <= (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            ${SOLAR_HOUR_ANGLE_DEG} < 0
+            && ${HAS_HORIZON_CROSSING}
+            && ${SOLAR_ALTITUDE_DEG} >= -12
+            && ${SOLAR_ALTITUDE_DEG} <= 6
         ]]>
     </Item>
     <Item name="${IS_DAY}">
-        <!-- Day is defined as +1hr from exact sunrise and -1hr from exact sunset -->
-        <![CDATA[
-            ${CURRENT_MILLIS_TO_THE_MINUTE} > (${SUNRISE_MILLIS_SINCE_MIDNIGHT} + 3600000)
-            && ${CURRENT_MILLIS_TO_THE_MINUTE} < (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
-        ]]>
+        ${SOLAR_ALTITUDE_DEG} > 6
     </Item>
     <Item name="${IS_SUNSET}">
-        <!-- Sunset is defined as -1hr / +1hr from exact sunset -->
+        <!-- The Sun descends from +6 degrees to nautical dusk (-12 degrees). -->
         <![CDATA[
-            ${CURRENT_MILLIS_TO_THE_MINUTE} >= (${SUNSET_MILLIS_SINCE_MIDNIGHT} - 3600000)
-            && ${CURRENT_MILLIS_TO_THE_MINUTE} <= (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
+            ${SOLAR_HOUR_ANGLE_DEG} >= 0
+            && ${HAS_HORIZON_CROSSING}
+            && ${SOLAR_ALTITUDE_DEG} <= 6
+            && ${SOLAR_ALTITUDE_DEG} >= -12
         ]]>
     </Item>
     <Item name="${IS_NIGHT}">
-        <!-- Night is defined as -1hr from exact sunrise or +1hr from exact sunset -->
-        <![CDATA[
-            ${CURRENT_MILLIS_TO_THE_MINUTE} < (${SUNRISE_MILLIS_SINCE_MIDNIGHT} - 3600000)
-            || ${CURRENT_MILLIS_TO_THE_MINUTE} > (${SUNSET_MILLIS_SINCE_MIDNIGHT} + 3600000)
-        ]]>
+        <![CDATA[${SOLAR_ALTITUDE_DEG} < -12]]>
     </Item>
     <Item name="${IS_TRANSITIONING_OVER_DAY}">
-        <!-- Day is defined as sunrise_time <= current_hour < sunset_time  -->
-        <![CDATA[
-            ${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
-            && ${CURRENT_MILLIS_TO_THE_MINUTE} < ${SUNSET_MILLIS_SINCE_MIDNIGHT}
-        ]]>
+        ${SOLAR_ALTITUDE_DEG} >= -0.833
     </Item>
-    <!-- Only true during sunrise/sunset. 2hr-1hr before sunrise ends, 1hr-0hr before sunset ends. -->
     <Item name="${IS_TRANSITIONING_OVER_NIGHT}">
-        <!-- Night is defined as current_hour < sunrise_time or sunset_time <= current_hour  -->
-        <![CDATA[
-            ${CURRENT_MILLIS_TO_THE_MINUTE} < ${SUNRISE_MILLIS_SINCE_MIDNIGHT}
-            || ${CURRENT_MILLIS_TO_THE_MINUTE} >= ${SUNSET_MILLIS_SINCE_MIDNIGHT}
-        ]]>
+        <![CDATA[${SOLAR_ALTITUDE_DEG} < -0.833]]>
     </Item>
-    <!--
-        Calculates the alpha (0-255) for the foreground as we transition between Night -> Sunrise -> Day -> Sunset -> Night
-    -->
-    <!--
-        Every branch clamps the same way and differs only in which edge it measures to and which
-        way round, so the clamp is written once and the sign is chosen instead. "Until" is just
-        "since" negated, which is what lets the two halves share one subtraction.
-
-        abs() would be shorter still and is not the same thing. Each half has to keep its own
-        test, because which side of the edge we are on decides the sign, and the answers at the
-        far end of the night depend on the difference going negative rather than growing.
-    -->
+    <!-- Warm artwork peaks at the apparent horizon. Its width follows the Sun's actual path. -->
     <Item name="${GET_TRANSITION_ALPHA}">
-        clamp(255 * (1 - ((${IS_SUNRISE}) ?
-            (${MILLIS_SINCE_SUNRISE} * ((${IS_TRANSITIONING_OVER_NIGHT}) ? -1 : 1)) :
-            (${MILLIS_SINCE_SUNSET} * ((${IS_TRANSITIONING_OVER_DAY}) ? -1 : 1))) / 3600000), 0, 255)
+        clamp(255 * ((${SOLAR_ALTITUDE_DEG} >= -0.833) ?
+            ((6 - ${SOLAR_ALTITUDE_DEG}) / 6.833) :
+            ((${SOLAR_ALTITUDE_DEG} + 12) / 11.167)), 0, 255)
     </Item>
     <!--
         Returns the time in millis since 12:00am.
@@ -177,6 +153,18 @@
     </Item>
     <Item name="${EQ_OF_TIME_MINUTES}">
         4 * deg(${VAR_Y} * sin(2 * rad(${GEOM_MEAN_LONG_SUN_DEG})) - 2 * ${ECCENT_EARTH_ORBIT} * sin(rad(${GEOM_MEAN_ANOM_SUN_DEG})) + 4 * ${ECCENT_EARTH_ORBIT} * ${VAR_Y} * sin(rad(${GEOM_MEAN_ANOM_SUN_DEG})) * cos(2 * rad(${GEOM_MEAN_LONG_SUN_DEG})) - 0.5 * ${VAR_Y} * ${VAR_Y} * sin(4 * rad(${GEOM_MEAN_LONG_SUN_DEG})) - 1.25 * ${ECCENT_EARTH_ORBIT} * ${ECCENT_EARTH_ORBIT} * sin(2 * rad(${GEOM_MEAN_ANOM_SUN_DEG})))
+    </Item>
+    <Item name="${SOLAR_HOUR_ANGLE_DEG}">
+        ((((${CURRENT_MILLIS_TO_THE_MINUTE} / 60000 - ${LOCAL_OFFSET} * 60 + ${EQ_OF_TIME_MINUTES} + 4 * ${LONGITUDE}) % 1440) + 1440) % 1440) / 4 - 180
+    </Item>
+    <Item name="${SOLAR_ALTITUDE_DEG}">
+        deg(asin(clamp(sin(rad(${LATITUDE})) * sin(rad(${SUN_DECLIN_DEG})) + cos(rad(${LATITUDE})) * cos(rad(${SUN_DECLIN_DEG})) * cos(rad(${SOLAR_HOUR_ANGLE_DEG})), -1, 1)))
+    </Item>
+    <Item name="${HAS_HORIZON_CROSSING}">
+        <![CDATA[
+            (sin(rad(-0.833)) - sin(rad(${LATITUDE})) * sin(rad(${SUN_DECLIN_DEG}))) / (cos(rad(${LATITUDE})) * cos(rad(${SUN_DECLIN_DEG}))) >= -1
+            && (sin(rad(-0.833)) - sin(rad(${LATITUDE})) * sin(rad(${SUN_DECLIN_DEG}))) / (cos(rad(${LATITUDE})) * cos(rad(${SUN_DECLIN_DEG}))) <= 1
+        ]]>
     </Item>
     <Item name="${HA_SUNRISE_DEG}">
         deg(acos(cos(rad(90.833)) / (cos(rad(${LATITUDE})) * cos(rad(${SUN_DECLIN_DEG}))) - tan(rad(${LATITUDE})) * tan(rad(${SUN_DECLIN_DEG}))))
