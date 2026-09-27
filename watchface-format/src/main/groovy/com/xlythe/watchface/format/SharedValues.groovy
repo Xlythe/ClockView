@@ -13,9 +13,9 @@ package com.xlythe.watchface.format
  * an integer from 0 to 255 and would round every value it carried.
  *
  * <p>Each published expression is still complete in itself: a shared variable that uses another
- * shared variable inlines it rather than reading its reference. Chaining would be smaller again,
- * but the format's own documentation warns that a reference reached through another reference
- * "is updated only once", and a sun that stops moving is worse than a sun that costs more.
+ * shared variable inlines it rather than reading its reference. Chained references did update on
+ * a Wear OS 6 emulator when the source changed every second, so factoring common inputs into
+ * references is possible. The generator does not yet preserve dependencies between shared values.
  */
 class SharedValues {
     /** A group that draws nothing, sized so it is laid out rather than skipped. */

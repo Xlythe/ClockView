@@ -23,7 +23,11 @@ class CadenceTest {
 
     private static final List<String> SOLAR = ['${SUNRISE_MILLIS_SINCE_MIDNIGHT}',
                                                '${SUNSET_MILLIS_SINCE_MIDNIGHT}',
-                                               '${IS_SUNRISE}', '${IS_DAY}', '${IS_NIGHT}',
+                                               '${SOLAR_HOUR_ANGLE_DEG}', '${SOLAR_ALTITUDE_DEG}',
+                                               '${HAS_HORIZON_CROSSING}',
+                                               '${IS_SUNRISE}', '${IS_DAY}', '${IS_SUNSET}',
+                                               '${IS_NIGHT}', '${IS_TRANSITIONING_OVER_DAY}',
+                                               '${IS_TRANSITIONING_OVER_NIGHT}',
                                                '${GET_TRANSITION_ALPHA}', '${PERCENT_OF_DAY}',
                                                '${LOCAL_OFFSET}', '${JULIAN_DAY}']
 
@@ -32,7 +36,7 @@ class CadenceTest {
                                                '${IS_MOON_UP}', '${JULIAN_DAY_UTC}']
 
     /** Every format version, because the plugin swaps the date and the offset around by version. */
-    private static final List<Integer> VERSIONS = [1, 2, 3, 4]
+    private static final List<Integer> VERSIONS = [1, 2, 3, 4, 5]
 
     @Test
     void theSunNeverReadsAFastSource() {

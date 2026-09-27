@@ -118,9 +118,8 @@ abstract class WatchFaceFormatExtension {
      * the sun or moon - because the watch re-evaluates an inlined expression once per use, every
      * time a data source in it changes.
      *
-     * <p>Unverified on a device. The format says a reference falls back to its default value while
-     * its element "is not available", and whether a group that draws nothing counts as available
-     * is not written down anywhere. Check a published value arrives before relying on it.
+     * <p>A one-pixel group carrying a changing reference was confirmed available on a Wear OS 6
+     * emulator. The format uses the default value if the element is unavailable.
      */
     abstract ListProperty<String> getSharedVariables()
 
