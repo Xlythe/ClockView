@@ -1,5 +1,8 @@
 package com.xlythe.watchface.format
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 /**
  * Publishes a variable once and lets the rest of the face read it, on Watch Face Format 4 and up.
  *
@@ -12,14 +15,15 @@ package com.xlythe.watchface.format
  * <p>The published value rides on {@code scaleX}, which is a float. The obvious choice, alpha, is
  * an integer from 0 to 255 and would round every value it carried.
  *
- * <p>Each published expression is still complete in itself: a shared variable that uses another
- * shared variable inlines it rather than reading its reference. Chained references did update on
- * a Wear OS 6 emulator when the source changed every second, so factoring common inputs into
- * references is possible. The generator does not yet preserve dependencies between shared values.
+ * <p>Chained references updated on a Wear OS 6 emulator when the source changed every second.
+ * Shared inputs can therefore be evaluated once and read by downstream publishers. Publishers
+ * are emitted in dependency order so each source exists before its consumers.
  */
 class SharedValues {
     /** A group that draws nothing, sized so it is laid out rather than skipped. */
     private static final String PUBLISHER_SIZE = '1'
+    private static final Pattern PLACEHOLDER = Pattern.compile('\\$\\{[A-Za-z0-9_.]+\\}')
+    private static final Pattern REFERENCE = Pattern.compile('\\[REFERENCE\\.([A-Za-z0-9_.]+)\\]')
 
     private SharedValues() {}
 
@@ -42,6 +46,90 @@ class SharedValues {
             references.put(placeholder(name), "[REFERENCE.${referenceName(name)}]".toString())
         }
         return references
+    }
+
+    static final class Plan {
+        final Map<String, String> templateVariables
+        final Map<String, String> publisherExpressions
+        final List<String> publisherOrder
+
+        Plan(Map<String, String> templateVariables, Map<String, String> publisherExpressions,
+             List<String> publisherOrder) {
+            this.templateVariables = templateVariables
+            this.publisherExpressions = publisherExpressions
+            this.publisherOrder = publisherOrder
+        }
+    }
+
+    /** Expands ordinary variables, stopping at each published value so it can be read by name. */
+    static Plan plan(Map<String, String> declared, Collection<String> names) {
+        Set<String> shared = new LinkedHashSet<>(names.collect { placeholder(it) })
+        for (String name : shared) {
+            if (!declared.containsKey(name)) {
+                throw new IllegalArgumentException("sharedVariables names ${name}, which is not defined")
+            }
+        }
+
+        Map<String, String> publishers = new LinkedHashMap<>()
+        for (String name : shared) {
+            publishers.put(name, expand(declared.get(name), declared, shared,
+                    new LinkedHashSet<String>([name])))
+        }
+
+        Map<String, String> template = new LinkedHashMap<>()
+        for (Map.Entry<String, String> entry : declared.entrySet()) {
+            template.put(entry.key, shared.contains(entry.key)
+                    ? "[REFERENCE.${referenceName(entry.key)}]".toString()
+                    : expand(entry.value, declared, shared,
+                            new LinkedHashSet<String>([entry.key])))
+        }
+        return new Plan(template, publishers, dependencyOrder(publishers))
+    }
+
+    private static String expand(String expression, Map<String, String> declared,
+                                 Set<String> shared, Set<String> active) {
+        Matcher matcher = PLACEHOLDER.matcher(expression)
+        StringBuffer result = new StringBuffer()
+        while (matcher.find()) {
+            String name = matcher.group()
+            String replacement
+            if (!declared.containsKey(name)) {
+                replacement = name
+            } else if (active.contains(name)) {
+                throw new IllegalArgumentException("Variable ${name} refers to itself")
+            } else if (shared.contains(name)) {
+                replacement = "[REFERENCE.${referenceName(name)}]"
+            } else {
+                active.add(name)
+                replacement = expand(declared.get(name), declared, shared, active)
+                active.remove(name)
+            }
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement))
+        }
+        matcher.appendTail(result)
+        return result.toString()
+    }
+
+    private static List<String> dependencyOrder(Map<String, String> publishers) {
+        Map<String, Integer> states = [:]
+        List<String> ordered = []
+        Closure visit
+        visit = { String name ->
+            if (states.get(name) == 1) {
+                throw new IllegalArgumentException("Shared variable ${name} depends on itself")
+            }
+            if (states.get(name) == 2) return
+            states.put(name, 1)
+            Matcher matcher = REFERENCE.matcher(publishers.get(name))
+            while (matcher.find()) {
+                String dependency = placeholder(matcher.group(1))
+                if (publishers.containsKey(dependency)) visit(dependency)
+            }
+            states.put(name, 2)
+            ordered.add(referenceName(name))
+        }
+        for (String name : publishers.keySet()) visit(name)
+        return ordered
     }
 
     /**

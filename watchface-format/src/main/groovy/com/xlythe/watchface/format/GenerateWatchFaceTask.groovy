@@ -101,7 +101,7 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
             for (WatchFaceVariant variant : variants.get()) {
                 int version = variant.formatVersion.get()
                 if (!variablesByVersion.containsKey(version)) {
-                    variablesByVersion.put(version, TemplateProcessor.resolve(declaredVariables(version)))
+                    variablesByVersion.put(version, declaredVariables(version))
                 }
             }
             expander = new ComplicationSlotExpander(
@@ -132,8 +132,8 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
             }
 
             Map<String, String> replacements = variant.replacements.get()
-            Map<String, String> variantVariables = TemplateProcessor.withReplacements(
-                    variablesByVersion.get(variant.formatVersion.get()), replacements)
+            Map<String, String> declared = variablesByVersion.get(variant.formatVersion.get())
+            Map<String, String> variantVariables
 
             // Reference arrived in format 4. Older variants inline as usual, so one template
             // serves both and the shared list costs nothing where it can't be honoured.
@@ -141,13 +141,17 @@ abstract class GenerateWatchFaceTask extends DefaultTask {
             List<String> shared = sharedVariables.getOrElse([])
             if (!shared.isEmpty() && variant.formatVersion.get() >= REFERENCE_FORMAT_VERSION) {
                 try {
+                    SharedValues.Plan plan = SharedValues.plan(
+                            TemplateProcessor.withReplacements(declared, replacements), shared)
                     variantTemplate = SharedValues.insertIntoScene(variantTemplate,
-                            SharedValues.publisherXml(variantVariables, shared))
+                            SharedValues.publisherXml(plan.publisherExpressions, plan.publisherOrder))
+                    variantVariables = plan.templateVariables
                 } catch (IllegalArgumentException e) {
                     throw new GradleException("${templateFile.name} (${variant.name}): ${e.message}", e)
                 }
-                variantVariables = new LinkedHashMap<>(variantVariables)
-                variantVariables.putAll(SharedValues.asReferences(shared))
+            } else {
+                variantVariables = TemplateProcessor.withReplacements(
+                        TemplateProcessor.resolve(declared), replacements)
             }
 
             String expanded = TemplateProcessor.replaceTokens(

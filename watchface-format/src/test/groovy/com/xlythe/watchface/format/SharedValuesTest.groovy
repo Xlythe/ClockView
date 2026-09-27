@@ -38,17 +38,47 @@ class SharedValuesTest {
         assertTrue("the value must not ride on alpha:\n$xml", !xml.contains('target="alpha"'))
     }
 
-    /** A shared variable that reads another one inlines it, rather than chaining references. */
+    /** The XML writer uses exactly the expressions supplied by the caller. */
     @Test
-    void aPublishedExpressionStandsAlone() {
+    void theXmlWriterUsesTheSuppliedExpression() {
         Map<String, String> resolved = [
                 '${A}': '(1)',
                 '${B}': '((1) + 2)',
         ]
         String xml = SharedValues.publisherXml(resolved, ['A', 'B'])
-        assertTrue("B should hold A's value, not a reference to it:\n$xml",
+        assertTrue("B should hold the supplied expression:\n$xml",
                 xml.contains('value="((1) + 2)"'))
-        assertTrue("nothing published should read a reference:\n$xml", !xml.contains('[REFERENCE.'))
+    }
+
+    @Test
+    void publishersShareInputsInDependencyOrder() {
+        Map<String, String> declared = [
+                '${LATITUDE}': '([TIMEZONE_ID] == &quot;America/Toronto&quot; ? 43.65 : 0)',
+                '${ALTITUDE}': '(${LATITUDE} + [MINUTE])',
+                '${ALPHA}'   : '(255 * ${ALTITUDE})',
+                '${POSITION}': '(${ALTITUDE} / 90)',
+        ]
+        SharedValues.Plan plan = SharedValues.plan(declared,
+                ['ALPHA', 'ALTITUDE', 'LATITUDE'])
+
+        assertEquals(['LATITUDE', 'ALTITUDE', 'ALPHA'], plan.publisherOrder)
+        assertTrue(plan.publisherExpressions['${ALTITUDE}'].contains('[REFERENCE.LATITUDE]'))
+        assertTrue(plan.publisherExpressions['${ALPHA}'].contains('[REFERENCE.ALTITUDE]'))
+        assertTrue(plan.templateVariables['${POSITION}'].contains('[REFERENCE.ALTITUDE]'))
+        assertEquals('[REFERENCE.ALPHA]', plan.templateVariables['${ALPHA}'])
+        String xml = SharedValues.publisherXml(plan.publisherExpressions, plan.publisherOrder)
+        assertTrue(xml.indexOf('name="LATITUDE"') < xml.indexOf('name="ALTITUDE"'))
+        assertTrue(xml.indexOf('name="ALTITUDE"') < xml.indexOf('name="ALPHA"'))
+    }
+
+    @Test
+    void cyclicPublishersAreRejected() {
+        try {
+            SharedValues.plan(['${A}': '(${B} + 1)', '${B}': '(${A} + 1)'], ['A', 'B'])
+            fail('Expected a cyclic reference to be rejected')
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.message, expected.message.contains('depends on itself'))
+        }
     }
 
     @Test

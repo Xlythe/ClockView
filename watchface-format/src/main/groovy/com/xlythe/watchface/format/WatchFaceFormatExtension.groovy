@@ -116,7 +116,8 @@ abstract class WatchFaceFormatExtension {
      *
      * <p>Worth doing for anything expensive that several elements read - sunrise, the position of
      * the sun or moon - because the watch re-evaluates an inlined expression once per use, every
-     * time a data source in it changes.
+     * time a data source in it changes. Shared variables can depend on other shared variables;
+     * the generator publishes their references in dependency order.
      *
      * <p>A one-pixel group carrying a changing reference was confirmed available on a Wear OS 6
      * emulator. The format uses the default value if the element is unavailable.
